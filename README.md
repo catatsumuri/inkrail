@@ -1,6 +1,14 @@
 # Laravel + React Starter Kit — i18n Edition
 
+English | [日本語](README.ja.md)
+
 A fork of the official [Laravel React starter kit](https://laravel.com/docs/starter-kits) with internationalization (i18n) built in.
+
+## Live demo
+
+https://react-starter-kit-i18n-production-sbhkku.laravel.cloud
+
+The demo database is seeded and then locked read-only (`chmod 444`), so sign-up, login, and other writes will fail with a database-is-readonly error. It resets on every redeploy.
 
 ## What's different from the official kit
 
@@ -8,6 +16,7 @@ A fork of the official [Laravel React starter kit](https://laravel.com/docs/star
 - **Translation pipeline** — `lang/vendor-patches/` controls which locales are generated; add a JSON file, run `lang:update`, done
 - **Translations in React** — `__()` helper available in all React components via Inertia shared props
 - **Session-based locale persistence** — active locale survives page reloads via `LocalizationBySession` middleware
+- **AI agent rules** — `.ai/rules/` (not present upstream) documents this fork's conventions — translating React UI, treating `lang/` as generated output, patching starter-kit translations — for coding agents working in this repo
 
 ## Requirements
 
