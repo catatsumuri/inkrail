@@ -12,6 +12,9 @@
         "localization"
     ],
     "license": "MIT",
+    "replace": {
+        "laravel/react-starter-kit": "*"
+    },
     "require": {
         "php": "^8.3",
         "erag/laravel-lang-sync-inertia": "^2.2",
