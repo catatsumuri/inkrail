@@ -28,6 +28,11 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'alerts' => [
+        'mail_to' => env('ALERT_MAIL_TO'),
+        'slack_webhook_url' => env('ALERT_SLACK_WEBHOOK_URL', env('LOG_SLACK_WEBHOOK_URL')),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
