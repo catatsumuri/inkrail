@@ -12,6 +12,7 @@ use Laravel\Fortify\Events\RecoveryCodesGenerated;
 use Laravel\Fortify\Events\TwoFactorAuthenticationConfirmed;
 use Laravel\Fortify\Events\TwoFactorAuthenticationDisabled;
 use Laravel\Fortify\Events\TwoFactorAuthenticationEnabled;
+use Laravel\Fortify\Events\TwoFactorAuthenticationEvent;
 use Laravel\Fortify\Features;
 use Laravel\Passkeys\Events\PasskeyDeleted;
 use Laravel\Passkeys\Events\PasskeyRegistered;
@@ -37,22 +38,25 @@ class SecurityNotificationServiceProvider extends ServiceProvider
         $this->listenFor(
             TwoFactorAuthenticationConfirmed::class,
             SecurityEvent::TwoFactorEnabled,
-            fn (object $event): bool => $this->freshUser($event)?->two_factor_confirmed_at !== null,
+            fn (object $event): bool => $event instanceof TwoFactorAuthenticationConfirmed
+                && $this->freshUser($event)?->two_factor_confirmed_at !== null,
         );
         $this->listenFor(
             TwoFactorAuthenticationDisabled::class,
             SecurityEvent::TwoFactorDisabled,
-            fn (object $event): bool => $this->freshUser($event)?->two_factor_secret === null,
+            fn (object $event): bool => $event instanceof TwoFactorAuthenticationDisabled
+                && $this->freshUser($event)?->two_factor_secret === null,
         );
         $this->listenFor(
             PasskeyRegistered::class,
             SecurityEvent::PasskeyAdded,
-            fn (object $event): bool => $event->passkey->exists,
+            fn (object $event): bool => $event instanceof PasskeyRegistered && $event->passkey->exists,
         );
         $this->listenFor(
             PasskeyDeleted::class,
             SecurityEvent::PasskeyRemoved,
-            fn (object $event): bool => ! $event->passkey->newQuery()->whereKey($event->passkey->getKey())->exists(),
+            fn (object $event): bool => $event instanceof PasskeyDeleted
+                && ! $event->passkey->newQuery()->whereKey($event->passkey->getKey())->exists(),
         );
 
         // With confirmation required, "enabled" only creates the secret; the
@@ -60,7 +64,8 @@ class SecurityNotificationServiceProvider extends ServiceProvider
         $this->listenFor(
             TwoFactorAuthenticationEnabled::class,
             SecurityEvent::TwoFactorEnabled,
-            fn (object $event): bool => ! Features::optionEnabled(Features::twoFactorAuthentication(), 'confirm')
+            fn (object $event): bool => $event instanceof TwoFactorAuthenticationEnabled
+                && ! Features::optionEnabled(Features::twoFactorAuthentication(), 'confirm')
                 && $this->freshUser($event)?->two_factor_secret !== null,
         );
     }
@@ -74,8 +79,10 @@ class SecurityNotificationServiceProvider extends ServiceProvider
     private function listenFor(string $eventClass, SecurityEvent $securityEvent, ?callable $when = null): void
     {
         Event::listen($eventClass, function (object $event) use ($securityEvent, $when): void {
-            if ($event->user instanceof User && ($when === null || $when($event))) {
-                SecurityNotifier::notify($event->user, $securityEvent);
+            $user = $this->eventUser($event);
+
+            if ($user instanceof User && ($when === null || $when($event))) {
+                SecurityNotifier::notify($user, $securityEvent);
             }
         });
     }
@@ -85,6 +92,23 @@ class SecurityNotificationServiceProvider extends ServiceProvider
      */
     private function freshUser(object $event): ?User
     {
-        return $event->user->fresh();
+        return $this->eventUser($event)?->fresh();
+    }
+
+    /**
+     * Get the user carried by one of the security events this provider listens for.
+     */
+    private function eventUser(object $event): ?User
+    {
+        $user = match (true) {
+            $event instanceof PasswordReset,
+            $event instanceof RecoveryCodesGenerated,
+            $event instanceof TwoFactorAuthenticationEvent,
+            $event instanceof PasskeyRegistered,
+            $event instanceof PasskeyDeleted => $event->user,
+            default => null,
+        };
+
+        return $user instanceof User ? $user : null;
     }
 }
