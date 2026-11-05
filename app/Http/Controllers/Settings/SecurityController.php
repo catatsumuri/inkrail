@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers\Settings;
 
+use App\Actions\Notifications\SendGeneralNotification;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\PasswordUpdateRequest;
 use App\Http\Requests\Settings\TwoFactorAuthenticationRequest;
 use App\Support\SecurityEvent;
-use App\Support\SecurityNotifier;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
@@ -61,13 +61,19 @@ class SecurityController extends Controller
     /**
      * Update the user's password.
      */
-    public function update(PasswordUpdateRequest $request): RedirectResponse
+    public function update(PasswordUpdateRequest $request, SendGeneralNotification $sendGeneralNotification): RedirectResponse
     {
         $request->user()->update([
             'password' => $request->password,
         ]);
 
-        SecurityNotifier::notify($request->user(), SecurityEvent::PasswordChanged);
+        $sendGeneralNotification->handle(
+            $request->user(),
+            SecurityEvent::PasswordChanged->subject(),
+            SecurityEvent::PasswordChanged->mailBody(),
+            channels: ['mail'],
+            deferred: true,
+        );
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Password updated.')]);
 

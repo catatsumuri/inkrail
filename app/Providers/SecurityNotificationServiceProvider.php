@@ -2,9 +2,9 @@
 
 namespace App\Providers;
 
+use App\Actions\Notifications\SendGeneralNotification;
 use App\Models\User;
 use App\Support\SecurityEvent;
-use App\Support\SecurityNotifier;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
@@ -25,11 +25,15 @@ use Laravel\Passkeys\Events\PasskeyRegistered;
  */
 class SecurityNotificationServiceProvider extends ServiceProvider
 {
+    private SendGeneralNotification $sendGeneralNotification;
+
     /**
      * Bootstrap any application services.
      */
-    public function boot(): void
+    public function boot(SendGeneralNotification $sendGeneralNotification): void
     {
+        $this->sendGeneralNotification = $sendGeneralNotification;
+
         $this->listenFor(PasswordReset::class, SecurityEvent::PasswordReset);
         $this->listenFor(RecoveryCodesGenerated::class, SecurityEvent::RecoveryCodesRegenerated);
 
@@ -82,7 +86,13 @@ class SecurityNotificationServiceProvider extends ServiceProvider
             $user = $this->eventUser($event);
 
             if ($user instanceof User && ($when === null || $when($event))) {
-                SecurityNotifier::notify($user, $securityEvent);
+                $this->sendGeneralNotification->handle(
+                    $user,
+                    $securityEvent->subject(),
+                    $securityEvent->mailBody(),
+                    channels: ['mail'],
+                    deferred: true,
+                );
             }
         });
     }

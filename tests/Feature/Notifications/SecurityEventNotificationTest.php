@@ -3,7 +3,7 @@
 namespace Tests\Feature\Notifications;
 
 use App\Models\User;
-use App\Notifications\SecurityNotification;
+use App\Notifications\GeneralNotification;
 use App\Support\SecurityEvent;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\AnonymousNotifiable;
@@ -112,7 +112,7 @@ class SecurityEventNotificationTest extends TestCase
 
         $this->post(route('password.email'), ['email' => $user->email]);
 
-        Notification::assertNotSentTo($user, SecurityNotification::class);
+        Notification::assertNotSentTo($user, GeneralNotification::class);
     }
 
     // Two-factor authentication
@@ -315,12 +315,13 @@ class SecurityEventNotificationTest extends TestCase
         $this->assertSame('new@example.com', $user->fresh()->email);
         Notification::assertCount(1);
         Notification::assertSentOnDemand(
-            SecurityNotification::class,
-            fn (SecurityNotification $notification, array $channels, AnonymousNotifiable $notifiable) => $notification->event === SecurityEvent::EmailChanged
+            GeneralNotification::class,
+            fn (GeneralNotification $notification, array $channels, AnonymousNotifiable $notifiable) => $notification->title === SecurityEvent::EmailChanged->subject()
+                && $notification->body === SecurityEvent::EmailChanged->mailBody()
                 && $channels === ['mail']
                 && $notifiable->routes === ['mail' => 'old@example.com'],
         );
-        Notification::assertNotSentTo($user, SecurityNotification::class);
+        Notification::assertNotSentTo($user, GeneralNotification::class);
     }
 
     public function test_email_change_with_wrong_password_does_not_notify(): void
@@ -383,8 +384,10 @@ class SecurityEventNotificationTest extends TestCase
         $this->assertModelMissing($user);
         Notification::assertCount(1);
         Notification::assertSentOnDemand(
-            SecurityNotification::class,
-            fn (SecurityNotification $notification, array $channels, AnonymousNotifiable $notifiable) => $notification->event === SecurityEvent::AccountDeleted
+            GeneralNotification::class,
+            fn (GeneralNotification $notification, array $channels, AnonymousNotifiable $notifiable) => $notification->title === SecurityEvent::AccountDeleted->subject()
+                && $notification->body === SecurityEvent::AccountDeleted->mailBody()
+                && $channels === ['mail']
                 && $notifiable->routes === ['mail' => 'gone@example.com'],
         );
     }
@@ -422,7 +425,7 @@ class SecurityEventNotificationTest extends TestCase
         $user = User::factory()->create(['email' => 'old@example.com']);
 
         foreach (SecurityEvent::cases() as $event) {
-            $mail = (new SecurityNotification($event))->toMail($user);
+            $mail = (new GeneralNotification($event->subject(), $event->mailBody()))->toMail($user);
             $rendered = strtolower($mail->subject.' '.implode(' ', $mail->introLines).' '.implode(' ', $mail->outroLines));
 
             $this->assertNotEmpty($mail->subject, $event->name);
@@ -499,8 +502,9 @@ class SecurityEventNotificationTest extends TestCase
         Notification::assertCount(1);
         Notification::assertSentTo(
             $user,
-            SecurityNotification::class,
-            fn (SecurityNotification $notification, array $channels) => $notification->event === $event
+            GeneralNotification::class,
+            fn (GeneralNotification $notification, array $channels) => $notification->title === $event->subject()
+                && $notification->body === $event->mailBody()
                 && $channels === ['mail'],
         );
     }

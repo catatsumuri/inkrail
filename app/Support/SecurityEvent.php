@@ -49,4 +49,12 @@ enum SecurityEvent
             self::AccountDeleted => __('Your account was deleted.'),
         };
     }
+
+    /**
+     * Get the full mail body, including the reassurance line, as separate paragraphs.
+     */
+    public function mailBody(): string
+    {
+        return $this->message()."\n\n".__('If you did not make this change, reset your password and review your account security settings immediately.');
+    }
 }

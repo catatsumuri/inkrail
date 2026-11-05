@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers\Settings;
 
+use App\Actions\Notifications\SendGeneralNotification;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ProfileDeleteRequest;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
 use App\Support\SecurityEvent;
-use App\Support\SecurityNotifier;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -30,7 +30,7 @@ class ProfileController extends Controller
     /**
      * Update the user's profile information.
      */
-    public function update(ProfileUpdateRequest $request): RedirectResponse
+    public function update(ProfileUpdateRequest $request, SendGeneralNotification $sendGeneralNotification): RedirectResponse
     {
         $previousEmail = $request->user()->email;
 
@@ -45,7 +45,11 @@ class ProfileController extends Controller
         $request->user()->save();
 
         if ($isEmailChanged) {
-            SecurityNotifier::notifyAddress($previousEmail, SecurityEvent::EmailChanged);
+            $sendGeneralNotification->toEmailAddress(
+                $previousEmail,
+                SecurityEvent::EmailChanged->subject(),
+                SecurityEvent::EmailChanged->mailBody(),
+            );
         }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Profile updated.')]);
@@ -56,7 +60,7 @@ class ProfileController extends Controller
     /**
      * Delete the user's profile.
      */
-    public function destroy(ProfileDeleteRequest $request): RedirectResponse
+    public function destroy(ProfileDeleteRequest $request, SendGeneralNotification $sendGeneralNotification): RedirectResponse
     {
         $user = $request->user();
         $email = $user->email;
@@ -68,7 +72,11 @@ class ProfileController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        SecurityNotifier::notifyAddress($email, SecurityEvent::AccountDeleted);
+        $sendGeneralNotification->toEmailAddress(
+            $email,
+            SecurityEvent::AccountDeleted->subject(),
+            SecurityEvent::AccountDeleted->mailBody(),
+        );
 
         return redirect('/');
     }
