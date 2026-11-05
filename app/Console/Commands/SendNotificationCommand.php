@@ -21,7 +21,7 @@ class SendNotificationCommand extends Command
         {--alert : Send to the shared alert mailbox and Slack channel instead of a user}
         {--exception : Report a test exception through the same path as real errors (implies --alert)}
         {--no-throttle : With --exception, skip the five-minute duplicate suppression}
-        {--channel=* : Alert channels to use (mail, slack); defaults to all}
+        {--channel=* : Alert channels to use (mail, slack); defaults to mail only, Slack is opt-in}
         {--title= : Notification title}
         {--body= : Notification body}
         {--url= : Optional relative or HTTPS action URL}';
@@ -106,7 +106,7 @@ class SendNotificationCommand extends Command
         ?string $actionUrl,
     ): int {
         /** @var array<int, string> $requested */
-        $requested = $this->option('channel') ?: ['mail', 'slack'];
+        $requested = $this->option('channel') ?: ['mail'];
 
         if (array_diff($requested, ['mail', 'slack']) !== []) {
             $this->error('The --channel option accepts only mail and slack.');

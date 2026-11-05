@@ -25,16 +25,16 @@ class SendGeneralNotification
     }
 
     /**
-     * Send a notification to the shared alert mailbox and Slack channel.
+     * Send a notification to the shared alert mailbox, and to Slack only when asked.
      *
-     * @param  array<int, string>  $channels  Subset of `mail` and `slack`.
+     * @param  array<int, string>  $channels  Subset of `mail` and `slack`. Slack is opt-in.
      * @return array<int, string> The channels the notification was actually sent to.
      */
     public function toAlertRecipients(
         string $title,
         string $body,
         ?string $actionUrl = null,
-        array $channels = ['mail', 'slack'],
+        array $channels = ['mail'],
     ): array {
         if (! $this->isValidActionUrl($actionUrl)) {
             throw new InvalidArgumentException(

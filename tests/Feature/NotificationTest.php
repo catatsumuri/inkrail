@@ -88,7 +88,7 @@ class NotificationTest extends TestCase
             'services.alerts.slack_webhook_url' => 'https://hooks.slack.com/services/T/B/X',
         ]);
 
-        $sent = (new SendGeneralNotification)->toAlertRecipients('Down', 'Queue is failing.');
+        $sent = (new SendGeneralNotification)->toAlertRecipients('Down', 'Queue is failing.', channels: ['mail', 'slack']);
 
         $this->assertSame(['mail', 'slack'], $sent);
         Notification::assertSentOnDemand(
