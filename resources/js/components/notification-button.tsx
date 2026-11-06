@@ -1,12 +1,12 @@
-import { Link, usePage, usePoll } from '@inertiajs/react';
+import { router, usePage, usePoll } from '@inertiajs/react';
 import { lang } from '@erag/lang-sync-inertia/react';
-import { Bell } from 'lucide-react';
+import { Bell, X } from 'lucide-react';
+import DeleteNotificationController from '@/actions/App/Http/Controllers/DeleteNotificationController';
 import MarkNotificationAsReadController from '@/actions/App/Http/Controllers/MarkNotificationAsReadController';
 import { Button } from '@/components/ui/button';
 import {
     DropdownMenu,
     DropdownMenuContent,
-    DropdownMenuItem,
     DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
@@ -85,21 +85,26 @@ export function NotificationButton() {
                 ) : (
                     <div className="p-1">
                         {notifications.items.map((notification) => (
-                            <DropdownMenuItem
+                            <div
                                 key={notification.id}
-                                asChild
-                                className="p-0"
+                                className={cn(
+                                    'flex items-stretch gap-0.5 rounded-sm',
+                                    notification.read_at === null &&
+                                        'bg-accent/50',
+                                )}
                             >
-                                <Link
-                                    href={MarkNotificationAsReadController(
-                                        notification.id,
-                                    )}
-                                    as="button"
-                                    className={cn(
-                                        'flex w-full cursor-pointer items-start gap-3 rounded-sm px-3 py-2.5 text-left',
-                                        notification.read_at === null &&
-                                            'bg-accent/50',
-                                    )}
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        router.patch(
+                                            MarkNotificationAsReadController(
+                                                notification.id,
+                                            ).url,
+                                            {},
+                                            { preserveScroll: true },
+                                        )
+                                    }
+                                    className="flex min-w-0 flex-1 cursor-pointer items-start gap-3 rounded-sm px-3 py-2.5 text-left hover:bg-accent"
                                 >
                                     <span
                                         className={cn(
@@ -129,8 +134,24 @@ export function NotificationButton() {
                                             </time>
                                         )}
                                     </span>
-                                </Link>
-                            </DropdownMenuItem>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        router.delete(
+                                            DeleteNotificationController(
+                                                notification.id,
+                                            ).url,
+                                            { preserveScroll: true },
+                                        )
+                                    }
+                                    aria-label={__('Dismiss notification')}
+                                    className="my-1 mr-1 flex shrink-0 cursor-pointer items-center rounded-sm px-2 text-muted-foreground hover:bg-accent hover:text-foreground"
+                                >
+                                    <X className="size-3.5" />
+                                </button>
+                            </div>
                         ))}
                     </div>
                 )}

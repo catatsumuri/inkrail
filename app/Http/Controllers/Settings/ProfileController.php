@@ -47,7 +47,11 @@ class ProfileController extends Controller
         if (! $saved) {
             Inertia::flash('toast', ['type' => 'error', 'message' => __('Profile could not be updated.')]);
 
-            return to_route('profile.edit');
+            // withErrors (not a plain redirect) so Inertia treats this as a
+            // failed submission: onSuccess must not fire and reset
+            // isEmailChanged, which would hide the current_password field
+            // while the page still shows the unsaved, attempted email.
+            return back()->withErrors(['email' => __('Profile could not be updated.')]);
         }
 
         if ($isEmailChanged) {
@@ -74,7 +78,7 @@ class ProfileController extends Controller
         if (! $user->delete()) {
             Inertia::flash('toast', ['type' => 'error', 'message' => __('Your account could not be deleted.')]);
 
-            return back();
+            return back()->withErrors(['password' => __('Your account could not be deleted.')]);
         }
 
         // Logging out would otherwise cycle and save() a remember token onto

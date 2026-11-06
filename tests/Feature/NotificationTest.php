@@ -80,6 +80,33 @@ class NotificationTest extends TestCase
         $this->assertNull($notification->fresh()->read_at);
     }
 
+    public function test_a_user_can_delete_their_notification(): void
+    {
+        $user = User::factory()->create();
+        $user->notify(new GeneralNotification('Welcome', 'Thanks for joining.'));
+        $notification = $user->notifications()->sole();
+
+        $this->actingAs($user)
+            ->delete(route('notifications.destroy', $notification))
+            ->assertRedirect();
+
+        $this->assertDatabaseMissing('notifications', ['id' => $notification->id]);
+    }
+
+    public function test_a_user_cannot_delete_another_users_notification(): void
+    {
+        $user = User::factory()->create();
+        $otherUser = User::factory()->create();
+        $otherUser->notify(new GeneralNotification('Private', 'For the recipient only.'));
+        $notification = $otherUser->notifications()->sole();
+
+        $this->actingAs($user)
+            ->delete(route('notifications.destroy', $notification))
+            ->assertNotFound();
+
+        $this->assertDatabaseHas('notifications', ['id' => $notification->id]);
+    }
+
     public function test_an_alert_is_sent_to_the_configured_mail_and_slack_routes(): void
     {
         Notification::fake();
