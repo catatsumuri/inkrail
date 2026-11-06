@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import {
     DropdownMenu,
     DropdownMenuContent,
+    DropdownMenuItem,
     DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
@@ -93,9 +94,8 @@ export function NotificationButton() {
                                         'bg-accent/50',
                                 )}
                             >
-                                <button
-                                    type="button"
-                                    onClick={() =>
+                                <DropdownMenuItem
+                                    onSelect={() =>
                                         router.patch(
                                             MarkNotificationAsReadController(
                                                 notification.id,
@@ -104,7 +104,7 @@ export function NotificationButton() {
                                             { preserveScroll: true },
                                         )
                                     }
-                                    className="flex min-w-0 flex-1 cursor-pointer items-start gap-3 rounded-sm px-3 py-2.5 text-left hover:bg-accent"
+                                    className="min-w-0 flex-1 cursor-pointer items-start gap-3 rounded-sm px-3 py-2.5"
                                 >
                                     <span
                                         className={cn(
@@ -134,23 +134,23 @@ export function NotificationButton() {
                                             </time>
                                         )}
                                     </span>
-                                </button>
+                                </DropdownMenuItem>
 
-                                <button
-                                    type="button"
-                                    onClick={() =>
+                                <DropdownMenuItem
+                                    onSelect={(event) => {
+                                        event.preventDefault();
                                         router.delete(
                                             DeleteNotificationController(
                                                 notification.id,
                                             ).url,
                                             { preserveScroll: true },
-                                        )
-                                    }
+                                        );
+                                    }}
                                     aria-label={__('Dismiss notification')}
-                                    className="my-1 mr-1 flex shrink-0 cursor-pointer items-center rounded-sm px-2 text-muted-foreground hover:bg-accent hover:text-foreground"
+                                    className="my-1 mr-1 w-auto shrink-0 cursor-pointer justify-center rounded-sm px-2 text-muted-foreground"
                                 >
                                     <X className="size-3.5" />
-                                </button>
+                                </DropdownMenuItem>
                             </div>
                         ))}
                     </div>

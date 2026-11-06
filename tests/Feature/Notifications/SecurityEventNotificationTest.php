@@ -75,7 +75,7 @@ class SecurityEventNotificationTest extends TestCase
         User::saving(fn () => false);
 
         $this->updatePassword($user, 'password')
-            ->assertSessionHasErrors('password')
+            ->assertSessionHasErrors('security')
             ->assertInertiaFlash('toast', ['type' => 'error', 'message' => __('Password could not be updated.')]);
 
         $this->assertSame($originalPassword, $user->fresh()->password);
@@ -559,7 +559,7 @@ class SecurityEventNotificationTest extends TestCase
         User::saving(fn () => false);
 
         $this->changeEmail($user, 'new@example.com', 'password')
-            ->assertSessionHasErrors('email')
+            ->assertSessionHasErrors('profile')
             ->assertInertiaFlash('toast', ['type' => 'error', 'message' => __('Profile could not be updated.')]);
 
         $this->assertSame('old@example.com', $user->fresh()->email);
@@ -622,7 +622,7 @@ class SecurityEventNotificationTest extends TestCase
 
         $this->actingAs($user)
             ->delete(route('profile.destroy'), ['password' => 'password'])
-            ->assertSessionHasErrors('password')
+            ->assertSessionHasErrors('account')
             ->assertInertiaFlash('toast', ['type' => 'error', 'message' => __('Your account could not be deleted.')]);
 
         $this->assertModelExists($user);
