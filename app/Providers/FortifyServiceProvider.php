@@ -3,10 +3,7 @@
 namespace App\Providers;
 
 use App\Actions\Fortify\CreateNewUser;
-/* @chisel-registration */
-
 use App\Actions\Fortify\ResetUserPassword;
-/* @end-chisel-registration */
 use App\Http\Middleware\ThrottlePasswordReset;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -43,6 +40,12 @@ class FortifyServiceProvider extends ServiceProvider
      */
     private function configureActions(): void
     {
+        // ResetUserPassword's import is intentionally never wrapped in
+        // @chisel-registration markers (and must stay that way even if Pint's
+        // import sorting moves it around): password reset has nothing to do
+        // with the registration feature, and Chisel deletes everything
+        // between a tag's markers, imports included, when that feature is
+        // disabled.
         Fortify::resetUserPasswordsUsing(ResetUserPassword::class);
         /* @chisel-registration */
         Fortify::createUsersUsing(CreateNewUser::class);
