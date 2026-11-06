@@ -101,7 +101,7 @@ class RevokeUserSessionsCommand extends Command
         $selector = $this->argument('selector');
 
         try {
-            $user = $users->handle(is_string($selector) ? $selector : '');
+            $user = $users->handle($selector);
         } catch (InvalidArgumentException $exception) {
             $this->error($exception->getMessage());
 
