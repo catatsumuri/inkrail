@@ -6,14 +6,28 @@ use App\Models\User;
 use App\Notifications\GeneralNotification;
 use Illuminate\Support\Facades\Notification;
 use InvalidArgumentException;
+use Throwable;
+
+use function Illuminate\Support\defer;
 
 class SendGeneralNotification
 {
+    /**
+     * Notify a registered user.
+     *
+     * @param  array<int, string>  $channels
+     * @param  bool  $deferred  Send after the response, reporting instead of failing the caller on
+     *                          delivery failure. Use this for channels (like mail) that can fail or
+     *                          block mid-request; the default stays synchronous for callers that
+     *                          need the notification to exist immediately after this call returns.
+     */
     public function handle(
         User $user,
         string $title,
         string $body,
         ?string $actionUrl = null,
+        array $channels = ['database'],
+        bool $deferred = false,
     ): void {
         if (! $this->isValidActionUrl($actionUrl)) {
             throw new InvalidArgumentException(
@@ -21,7 +35,28 @@ class SendGeneralNotification
             );
         }
 
-        $user->notify(new GeneralNotification($title, $body, $actionUrl));
+        $send = fn () => $user->notify(new GeneralNotification($title, $body, $actionUrl, $channels));
+
+        $deferred ? $this->deliver($send) : $send();
+    }
+
+    /**
+     * Notify a bare email address, after the response is sent, without ever failing the caller.
+     *
+     * For recipients with no user account to notify through, such as an email change's
+     * previous address or a deleted account's last known address.
+     */
+    public function toEmailAddress(string $email, string $title, string $body, ?string $actionUrl = null): void
+    {
+        if (! $this->isValidActionUrl($actionUrl)) {
+            throw new InvalidArgumentException(
+                'The URL must be an application-relative path or a valid HTTPS URL.',
+            );
+        }
+
+        $this->deliver(fn () => Notification::route('mail', $email)->notify(
+            new GeneralNotification($title, $body, $actionUrl, ['mail']),
+        ));
     }
 
     /**
@@ -58,6 +93,20 @@ class SendGeneralNotification
         $notifiable->notify(new GeneralNotification($title, $body, $actionUrl, $deliverable));
 
         return $deliverable;
+    }
+
+    /**
+     * Run the delivery after the response, reporting instead of throwing on failure.
+     */
+    private function deliver(callable $send): void
+    {
+        defer(function () use ($send): void {
+            try {
+                $send();
+            } catch (Throwable $e) {
+                report($e);
+            }
+        });
     }
 
     protected function isValidActionUrl(?string $actionUrl): bool

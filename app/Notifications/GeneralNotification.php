@@ -44,9 +44,11 @@ class GeneralNotification extends Notification
 
     public function toMail(object $notifiable): MailMessage
     {
-        $message = (new MailMessage)
-            ->subject($this->title)
-            ->line($this->body);
+        $message = (new MailMessage)->subject($this->title);
+
+        foreach (explode("\n\n", $this->body) as $paragraph) {
+            $message->line($paragraph);
+        }
 
         if ($this->actionUrl !== null) {
             $message->action(__('View details'), url($this->actionUrl));

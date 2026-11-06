@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers\Settings;
 
+use App\Actions\Notifications\SendGeneralNotification;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ProfileDeleteRequest;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
+use App\Support\SecurityEvent;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -28,15 +30,33 @@ class ProfileController extends Controller
     /**
      * Update the user's profile information.
      */
-    public function update(ProfileUpdateRequest $request): RedirectResponse
+    public function update(ProfileUpdateRequest $request, SendGeneralNotification $sendGeneralNotification): RedirectResponse
     {
-        $request->user()->fill($request->validated());
+        $previousEmail = $request->user()->email;
 
-        if ($request->user()->isDirty('email')) {
+        $request->user()->fill($request->profileData());
+
+        $isEmailChanged = $request->user()->isDirty('email');
+
+        if ($isEmailChanged) {
             $request->user()->email_verified_at = null;
         }
 
-        $request->user()->save();
+        $saved = $request->user()->save();
+
+        if (! $saved) {
+            Inertia::flash('toast', ['type' => 'error', 'message' => __('Profile could not be updated.')]);
+
+            return to_route('profile.edit');
+        }
+
+        if ($isEmailChanged) {
+            $sendGeneralNotification->toEmailAddress(
+                $previousEmail,
+                SecurityEvent::EmailChanged->subject(),
+                SecurityEvent::EmailChanged->mailBody(),
+            );
+        }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Profile updated.')]);
 
@@ -46,16 +66,30 @@ class ProfileController extends Controller
     /**
      * Delete the user's profile.
      */
-    public function destroy(ProfileDeleteRequest $request): RedirectResponse
+    public function destroy(ProfileDeleteRequest $request, SendGeneralNotification $sendGeneralNotification): RedirectResponse
     {
         $user = $request->user();
+        $email = $user->email;
 
+        if (! $user->delete()) {
+            Inertia::flash('toast', ['type' => 'error', 'message' => __('Your account could not be deleted.')]);
+
+            return back();
+        }
+
+        // Logging out would otherwise cycle and save() a remember token onto
+        // this now-deleted (exists: false) model, re-inserting the row.
+        $user->setRememberToken(null);
         Auth::logout();
-
-        $user->delete();
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
+        $sendGeneralNotification->toEmailAddress(
+            $email,
+            SecurityEvent::AccountDeleted->subject(),
+            SecurityEvent::AccountDeleted->mailBody(),
+        );
 
         return redirect('/');
     }
