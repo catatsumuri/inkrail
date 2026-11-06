@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\SecurityEventController;
 use App\Http\Controllers\DeleteNotificationController;
 use App\Http\Controllers\MarkNotificationAsReadController;
 use Illuminate\Support\Facades\Route;
@@ -16,6 +17,10 @@ Route::delete('notifications/{notification}', DeleteNotificationController::clas
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::inertia('dashboard', 'dashboard')->name('dashboard');
+
+    Route::get('admin/security-events', SecurityEventController::class)
+        ->middleware('can:view-security-events')
+        ->name('admin.security-events.index');
 });
 
 require __DIR__.'/settings.php';
