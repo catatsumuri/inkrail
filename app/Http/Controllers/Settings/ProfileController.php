@@ -42,9 +42,9 @@ class ProfileController extends Controller
             $request->user()->email_verified_at = null;
         }
 
-        $request->user()->save();
+        $saved = $request->user()->save();
 
-        if ($isEmailChanged) {
+        if ($isEmailChanged && $saved) {
             $sendGeneralNotification->toEmailAddress(
                 $previousEmail,
                 SecurityEvent::EmailChanged->subject(),
@@ -65,9 +65,14 @@ class ProfileController extends Controller
         $user = $request->user();
         $email = $user->email;
 
-        Auth::logout();
+        if (! $user->delete()) {
+            return back();
+        }
 
-        $user->delete();
+        // Logging out would otherwise cycle and save() a remember token onto
+        // this now-deleted (exists: false) model, re-inserting the row.
+        $user->setRememberToken(null);
+        Auth::logout();
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();

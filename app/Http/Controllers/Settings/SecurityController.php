@@ -63,17 +63,19 @@ class SecurityController extends Controller
      */
     public function update(PasswordUpdateRequest $request, SendGeneralNotification $sendGeneralNotification): RedirectResponse
     {
-        $request->user()->update([
+        $updated = $request->user()->update([
             'password' => $request->password,
         ]);
 
-        $sendGeneralNotification->handle(
-            $request->user(),
-            SecurityEvent::PasswordChanged->subject(),
-            SecurityEvent::PasswordChanged->mailBody(),
-            channels: ['mail'],
-            deferred: true,
-        );
+        if ($updated) {
+            $sendGeneralNotification->handle(
+                $request->user(),
+                SecurityEvent::PasswordChanged->subject(),
+                SecurityEvent::PasswordChanged->mailBody(),
+                channels: ['mail'],
+                deferred: true,
+            );
+        }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Password updated.')]);
 

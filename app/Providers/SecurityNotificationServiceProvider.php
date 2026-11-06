@@ -16,6 +16,7 @@ use Laravel\Fortify\Events\TwoFactorAuthenticationEvent;
 use Laravel\Fortify\Features;
 use Laravel\Passkeys\Events\PasskeyDeleted;
 use Laravel\Passkeys\Events\PasskeyRegistered;
+use WeakMap;
 
 /**
  * Notifies users by email when sensitive security events succeed.
@@ -28,28 +29,68 @@ class SecurityNotificationServiceProvider extends ServiceProvider
     private SendGeneralNotification $sendGeneralNotification;
 
     /**
+     * Whether each user had two-factor authentication confirmed immediately
+     * before their current save, captured from the pre-save model state. Used
+     * to tell a real enable/disable transition apart from a redundant
+     * re-confirm or the cancellation of a setup that was never confirmed,
+     * both of which leave the post-save state looking the same.
+     *
+     * @var WeakMap<User, bool>
+     */
+    private WeakMap $wasTwoFactorConfirmedBeforeSave;
+
+    /**
      * Bootstrap any application services.
      */
     public function boot(SendGeneralNotification $sendGeneralNotification): void
     {
         $this->sendGeneralNotification = $sendGeneralNotification;
+        $this->wasTwoFactorConfirmedBeforeSave = new WeakMap;
+
+        User::updating(function (User $user): void {
+            $this->wasTwoFactorConfirmedBeforeSave[$user] = $user->getOriginal('two_factor_confirmed_at') !== null;
+        });
 
         $this->listenFor(PasswordReset::class, SecurityEvent::PasswordReset);
         $this->listenFor(RecoveryCodesGenerated::class, SecurityEvent::RecoveryCodesRegenerated);
 
         // Fortify and the passkeys package fire these events even when the
         // underlying save was cancelled, so confirm the persisted state first.
+        // Re-confirming an already-confirmed account, or cancelling a setup
+        // that was never confirmed, dispatch the same events, so the pre-save
+        // state is checked too, not just the post-save state. A resubmit that
+        // doesn't actually change the timestamp (same second) skips Eloquent's
+        // "updating" event entirely, so the map is also kept up to date here,
+        // from the outcome of this check, not only from "updating".
         $this->listenFor(
             TwoFactorAuthenticationConfirmed::class,
             SecurityEvent::TwoFactorEnabled,
-            fn (object $event): bool => $event instanceof TwoFactorAuthenticationConfirmed
-                && $this->freshUser($event)?->two_factor_confirmed_at !== null,
+            function (object $event): bool {
+                if (! $event instanceof TwoFactorAuthenticationConfirmed
+                    || $this->freshUser($event)?->two_factor_confirmed_at === null
+                    || ($this->wasTwoFactorConfirmedBeforeSave[$event->user] ?? false)) {
+                    return false;
+                }
+
+                $this->wasTwoFactorConfirmedBeforeSave[$event->user] = true;
+
+                return true;
+            },
         );
         $this->listenFor(
             TwoFactorAuthenticationDisabled::class,
             SecurityEvent::TwoFactorDisabled,
-            fn (object $event): bool => $event instanceof TwoFactorAuthenticationDisabled
-                && $this->freshUser($event)?->two_factor_secret === null,
+            function (object $event): bool {
+                if (! $event instanceof TwoFactorAuthenticationDisabled
+                    || $this->freshUser($event)?->two_factor_secret !== null
+                    || ! ($this->wasTwoFactorConfirmedBeforeSave[$event->user] ?? false)) {
+                    return false;
+                }
+
+                $this->wasTwoFactorConfirmedBeforeSave[$event->user] = false;
+
+                return true;
+            },
         );
         $this->listenFor(
             PasskeyRegistered::class,

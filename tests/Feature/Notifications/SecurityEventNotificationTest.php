@@ -9,6 +9,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Notifications\Events\NotificationSending;
 use Illuminate\Support\Defer\DeferredCallbackCollection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Notification;
@@ -64,6 +65,19 @@ class SecurityEventNotificationTest extends TestCase
 
         $this->assertDeliveryFailedWithoutAffectingOperation($attempts);
         $this->assertTrue(password_verify('new-password', $user->fresh()->password));
+    }
+
+    public function test_password_change_with_cancelled_save_does_not_notify(): void
+    {
+        Notification::fake();
+        $user = User::factory()->create();
+        $originalPassword = $user->password;
+        User::saving(fn () => false);
+
+        $this->updatePassword($user, 'password')->assertSessionHasNoErrors();
+
+        $this->assertSame($originalPassword, $user->fresh()->password);
+        Notification::assertNothingSent();
     }
 
     // Password reset
@@ -205,6 +219,56 @@ class SecurityEventNotificationTest extends TestCase
             ->delete(route('two-factor.disable'));
 
         Notification::assertNothingSent();
+    }
+
+    public function test_disabling_an_unconfirmed_two_factor_setup_does_not_notify(): void
+    {
+        $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
+        Features::twoFactorAuthentication(['confirm' => true, 'confirmPassword' => true]);
+        Notification::fake();
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->withSession($this->passwordConfirmed())
+            ->post(route('two-factor.enable'));
+
+        $this->assertNotNull($user->fresh()->two_factor_secret);
+        $this->assertNull($user->fresh()->two_factor_confirmed_at);
+        Notification::assertNothingSent();
+
+        $this->actingAs($user)->withSession($this->passwordConfirmed())
+            ->delete(route('two-factor.disable'))
+            ->assertSessionHasNoErrors();
+
+        $this->assertNull($user->fresh()->two_factor_secret);
+        Notification::assertNothingSent();
+    }
+
+    public function test_reconfirming_two_factor_does_not_notify_again(): void
+    {
+        $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
+        Features::twoFactorAuthentication(['confirm' => true, 'confirmPassword' => true]);
+        Notification::fake();
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->withSession($this->passwordConfirmed())
+            ->post(route('two-factor.enable'));
+
+        $this->actingAs($user)->withSession($this->passwordConfirmed())
+            ->post(route('two-factor.confirm'), ['code' => $this->currentTwoFactorCode($user)])
+            ->assertSessionHasNoErrors();
+
+        $this->assertNotifiedOnce($user, SecurityEvent::TwoFactorEnabled);
+
+        // A still-valid code resubmitted against the already-confirmed account
+        // must not notify a second time. Clear the replay-protection cache
+        // entry so this isn't just the same code rejected as reused.
+        Cache::flush();
+
+        $this->actingAs($user)->withSession($this->passwordConfirmed())
+            ->post(route('two-factor.confirm'), ['code' => $this->currentTwoFactorCode($user)])
+            ->assertSessionHasNoErrors();
+
+        Notification::assertCount(1);
     }
 
     public function test_regenerating_recovery_codes_notifies_the_user_once(): void
@@ -370,6 +434,18 @@ class SecurityEventNotificationTest extends TestCase
         $this->assertSame('new@example.com', $user->fresh()->email);
     }
 
+    public function test_email_change_with_cancelled_save_does_not_notify(): void
+    {
+        Notification::fake();
+        $user = User::factory()->create(['email' => 'old@example.com']);
+        User::saving(fn () => false);
+
+        $this->changeEmail($user, 'new@example.com', 'password')->assertSessionHasNoErrors();
+
+        $this->assertSame('old@example.com', $user->fresh()->email);
+        Notification::assertNothingSent();
+    }
+
     // Account deletion
 
     public function test_account_deletion_notifies_the_deleted_address_once(): void
@@ -416,6 +492,19 @@ class SecurityEventNotificationTest extends TestCase
 
         $this->assertDeliveryFailedWithoutAffectingOperation($attempts);
         $this->assertModelMissing($user);
+    }
+
+    public function test_account_deletion_with_cancelled_delete_does_not_notify(): void
+    {
+        Notification::fake();
+        $user = User::factory()->create();
+        User::deleting(fn () => false);
+
+        $this->actingAs($user)
+            ->delete(route('profile.destroy'), ['password' => 'password']);
+
+        $this->assertModelExists($user);
+        Notification::assertNothingSent();
     }
 
     // Mail content
