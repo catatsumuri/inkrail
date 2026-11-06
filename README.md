@@ -20,7 +20,7 @@ The demo database is seeded and then locked read-only (`chmod 444`), so sign-up,
 
 ## Requirements
 
-- PHP 8.3+
+- PHP 8.4+
 - Node 20+
 - A database supported by Laravel (SQLite works for local dev)
 

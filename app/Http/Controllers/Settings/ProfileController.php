@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Settings;
 
+use App\Actions\LogSecurityEvent;
 use App\Actions\Notifications\SendGeneralNotification;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ProfileDeleteRequest;
@@ -30,8 +31,11 @@ class ProfileController extends Controller
     /**
      * Update the user's profile information.
      */
-    public function update(ProfileUpdateRequest $request, SendGeneralNotification $sendGeneralNotification): RedirectResponse
-    {
+    public function update(
+        ProfileUpdateRequest $request,
+        SendGeneralNotification $sendGeneralNotification,
+        LogSecurityEvent $logSecurityEvent,
+    ): RedirectResponse {
         $previousEmail = $request->user()->email;
 
         $request->user()->fill($request->profileData());
@@ -62,6 +66,7 @@ class ProfileController extends Controller
                 SecurityEvent::EmailChanged->subject(),
                 SecurityEvent::EmailChanged->mailBody(),
             );
+            $logSecurityEvent('email.changed', $request->user());
         }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Profile updated.')]);
@@ -72,16 +77,22 @@ class ProfileController extends Controller
     /**
      * Delete the user's profile.
      */
-    public function destroy(ProfileDeleteRequest $request, SendGeneralNotification $sendGeneralNotification): RedirectResponse
-    {
+    public function destroy(
+        ProfileDeleteRequest $request,
+        SendGeneralNotification $sendGeneralNotification,
+        LogSecurityEvent $logSecurityEvent,
+    ): RedirectResponse {
         $user = $request->user();
         $email = $user->email;
+        $userId = $user->getKey();
 
         if (! $user->delete()) {
             Inertia::flash('toast', ['type' => 'error', 'message' => __('Your account could not be deleted.')]);
 
             return back()->withErrors(['account' => __('Your account could not be deleted.')]);
         }
+
+        $logSecurityEvent('account.deleted', properties: ['user_id' => $userId], causer: $user);
 
         // Logging out would otherwise cycle and save() a remember token onto
         // this now-deleted (exists: false) model, re-inserting the row.
