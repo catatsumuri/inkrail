@@ -246,15 +246,30 @@ class SecurityEventNotificationTest extends TestCase
         Notification::fake();
         $user = User::factory()->create();
 
-        // Confirm 2FA through the real flow rather than factory-seeding
-        // two_factor_confirmed_at directly, so this provider's own record of
-        // "2FA is active" is populated the same way it would be in
-        // production, instead of starting from an unknown state.
         $this->actingAs($user)->withSession($this->passwordConfirmed())
             ->post(route('two-factor.enable'));
         $this->actingAs($user)->withSession($this->passwordConfirmed())
             ->post(route('two-factor.confirm'), ['code' => $this->currentTwoFactorCode($user)]);
         Notification::fake();
+
+        $this->actingAs($user)->withSession($this->passwordConfirmed())
+            ->delete(route('two-factor.disable'));
+
+        $this->assertNull($user->fresh()->two_factor_secret);
+        $this->assertNotifiedOnce($user, SecurityEvent::TwoFactorDisabled);
+    }
+
+    public function test_disabling_two_factor_that_was_never_observed_being_enabled_still_notifies(): void
+    {
+        $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
+        Features::twoFactorAuthentication(['confirm' => true, 'confirmPassword' => true]);
+        Notification::fake();
+        // Seeded directly, as if this account had 2FA before this provider's
+        // transition tracking existed, or its record of that transition was
+        // lost. Unlike tracking kept outside the row itself, reading
+        // two_factor_confirmed_at's own before/after state needs no prior
+        // observation of the enable to get the disable right.
+        $user = User::factory()->withTwoFactor()->create();
 
         $this->actingAs($user)->withSession($this->passwordConfirmed())
             ->delete(route('two-factor.disable'));
