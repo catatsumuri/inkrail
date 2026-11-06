@@ -70,7 +70,7 @@ class SecurityController extends Controller
         if (! $updated) {
             Inertia::flash('toast', ['type' => 'error', 'message' => __('Password could not be updated.')]);
 
-            return back();
+            return back()->withErrors(['security' => __('Password could not be updated.')]);
         }
 
         $sendGeneralNotification->handle(
