@@ -44,7 +44,13 @@ class ProfileController extends Controller
 
         $saved = $request->user()->save();
 
-        if ($isEmailChanged && $saved) {
+        if (! $saved) {
+            Inertia::flash('toast', ['type' => 'error', 'message' => __('Profile could not be updated.')]);
+
+            return to_route('profile.edit');
+        }
+
+        if ($isEmailChanged) {
             $sendGeneralNotification->toEmailAddress(
                 $previousEmail,
                 SecurityEvent::EmailChanged->subject(),
@@ -66,6 +72,8 @@ class ProfileController extends Controller
         $email = $user->email;
 
         if (! $user->delete()) {
+            Inertia::flash('toast', ['type' => 'error', 'message' => __('Your account could not be deleted.')]);
+
             return back();
         }
 

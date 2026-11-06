@@ -67,15 +67,19 @@ class SecurityController extends Controller
             'password' => $request->password,
         ]);
 
-        if ($updated) {
-            $sendGeneralNotification->handle(
-                $request->user(),
-                SecurityEvent::PasswordChanged->subject(),
-                SecurityEvent::PasswordChanged->mailBody(),
-                channels: ['mail'],
-                deferred: true,
-            );
+        if (! $updated) {
+            Inertia::flash('toast', ['type' => 'error', 'message' => __('Password could not be updated.')]);
+
+            return back();
         }
+
+        $sendGeneralNotification->handle(
+            $request->user(),
+            SecurityEvent::PasswordChanged->subject(),
+            SecurityEvent::PasswordChanged->mailBody(),
+            channels: ['mail'],
+            deferred: true,
+        );
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Password updated.')]);
 

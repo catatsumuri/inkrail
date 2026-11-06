@@ -74,7 +74,9 @@ class SecurityEventNotificationTest extends TestCase
         $originalPassword = $user->password;
         User::saving(fn () => false);
 
-        $this->updatePassword($user, 'password')->assertSessionHasNoErrors();
+        $this->updatePassword($user, 'password')
+            ->assertSessionHasNoErrors()
+            ->assertInertiaFlash('toast', ['type' => 'error', 'message' => __('Password could not be updated.')]);
 
         $this->assertSame($originalPassword, $user->fresh()->password);
         Notification::assertNothingSent();
@@ -116,6 +118,20 @@ class SecurityEventNotificationTest extends TestCase
             'password_confirmation' => 'different-password',
         ])->assertSessionHasErrors('password');
 
+        Notification::assertNothingSent();
+    }
+
+    public function test_password_reset_with_cancelled_save_does_not_notify(): void
+    {
+        Notification::fake();
+        $user = User::factory()->create();
+        $originalPassword = $user->password;
+        $token = Password::createToken($user);
+        User::saving(fn () => false);
+
+        $this->resetPassword($user, $token);
+
+        $this->assertSame($originalPassword, $user->fresh()->password);
         Notification::assertNothingSent();
     }
 
@@ -194,6 +210,33 @@ class SecurityEventNotificationTest extends TestCase
 
         $this->assertNotNull($user->fresh()->two_factor_secret);
         $this->assertNotifiedOnce($user, SecurityEvent::TwoFactorEnabled);
+    }
+
+    public function test_disabling_two_factor_enabled_without_confirmation_notifies_the_user_once(): void
+    {
+        $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
+        Features::twoFactorAuthentication(['confirm' => false, 'confirmPassword' => true]);
+        Notification::fake();
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->withSession($this->passwordConfirmed())
+            ->post(route('two-factor.enable'));
+
+        $this->assertNotifiedOnce($user, SecurityEvent::TwoFactorEnabled);
+
+        $this->actingAs($user)->withSession($this->passwordConfirmed())
+            ->delete(route('two-factor.disable'))
+            ->assertSessionHasNoErrors();
+
+        $this->assertNull($user->fresh()->two_factor_secret);
+        Notification::assertCount(2);
+        Notification::assertSentTo(
+            $user,
+            GeneralNotification::class,
+            fn (GeneralNotification $notification, array $channels) => $notification->title === SecurityEvent::TwoFactorDisabled->subject()
+                && $notification->body === SecurityEvent::TwoFactorDisabled->mailBody()
+                && $channels === ['mail'],
+        );
     }
 
     public function test_disabling_two_factor_notifies_the_user_once(): void
@@ -283,6 +326,21 @@ class SecurityEventNotificationTest extends TestCase
 
         $this->assertNotSame($previousCodes, $user->fresh()->two_factor_recovery_codes);
         $this->assertNotifiedOnce($user, SecurityEvent::RecoveryCodesRegenerated);
+    }
+
+    public function test_regenerating_recovery_codes_with_cancelled_save_does_not_notify(): void
+    {
+        $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
+        Notification::fake();
+        $user = User::factory()->withTwoFactor()->create();
+        $previousCodes = $user->two_factor_recovery_codes;
+        User::saving(fn () => false);
+
+        $this->actingAs($user)->withSession($this->passwordConfirmed())
+            ->post(route('two-factor.regenerate-recovery-codes'));
+
+        $this->assertSame($previousCodes, $user->fresh()->two_factor_recovery_codes);
+        Notification::assertNothingSent();
     }
 
     // Passkeys
@@ -440,7 +498,9 @@ class SecurityEventNotificationTest extends TestCase
         $user = User::factory()->create(['email' => 'old@example.com']);
         User::saving(fn () => false);
 
-        $this->changeEmail($user, 'new@example.com', 'password')->assertSessionHasNoErrors();
+        $this->changeEmail($user, 'new@example.com', 'password')
+            ->assertSessionHasNoErrors()
+            ->assertInertiaFlash('toast', ['type' => 'error', 'message' => __('Profile could not be updated.')]);
 
         $this->assertSame('old@example.com', $user->fresh()->email);
         Notification::assertNothingSent();
@@ -501,7 +561,8 @@ class SecurityEventNotificationTest extends TestCase
         User::deleting(fn () => false);
 
         $this->actingAs($user)
-            ->delete(route('profile.destroy'), ['password' => 'password']);
+            ->delete(route('profile.destroy'), ['password' => 'password'])
+            ->assertInertiaFlash('toast', ['type' => 'error', 'message' => __('Your account could not be deleted.')]);
 
         $this->assertModelExists($user);
         Notification::assertNothingSent();

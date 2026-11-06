@@ -29,15 +29,18 @@ class SecurityNotificationServiceProvider extends ServiceProvider
     private SendGeneralNotification $sendGeneralNotification;
 
     /**
-     * Whether each user had two-factor authentication confirmed immediately
-     * before their current save, captured from the pre-save model state. Used
-     * to tell a real enable/disable transition apart from a redundant
-     * re-confirm or the cancellation of a setup that was never confirmed,
-     * both of which leave the post-save state looking the same.
+     * Whether two-factor authentication was already active for each user
+     * immediately before their current save, captured from the pre-save
+     * model state. "Active" means confirmed when confirmation is required,
+     * or just having a secret when it isn't (that mode never sets
+     * two_factor_confirmed_at at all). Used to tell a real enable/disable
+     * transition apart from a redundant re-confirm or the cancellation of a
+     * setup that was never confirmed, both of which leave the post-save
+     * state looking the same.
      *
      * @var WeakMap<User, bool>
      */
-    private WeakMap $wasTwoFactorConfirmedBeforeSave;
+    private WeakMap $wasTwoFactorActiveBeforeSave;
 
     /**
      * Bootstrap any application services.
@@ -45,14 +48,33 @@ class SecurityNotificationServiceProvider extends ServiceProvider
     public function boot(SendGeneralNotification $sendGeneralNotification): void
     {
         $this->sendGeneralNotification = $sendGeneralNotification;
-        $this->wasTwoFactorConfirmedBeforeSave = new WeakMap;
+        $this->wasTwoFactorActiveBeforeSave = new WeakMap;
 
         User::updating(function (User $user): void {
-            $this->wasTwoFactorConfirmedBeforeSave[$user] = $user->getOriginal('two_factor_confirmed_at') !== null;
+            $this->wasTwoFactorActiveBeforeSave[$user] = Features::optionEnabled(Features::twoFactorAuthentication(), 'confirm')
+                ? $user->getOriginal('two_factor_confirmed_at') !== null
+                : $user->getOriginal('two_factor_secret') !== null;
         });
 
-        $this->listenFor(PasswordReset::class, SecurityEvent::PasswordReset);
-        $this->listenFor(RecoveryCodesGenerated::class, SecurityEvent::RecoveryCodesRegenerated);
+        $this->listenFor(
+            PasswordReset::class,
+            SecurityEvent::PasswordReset,
+            // Fortify's CompletePasswordReset dispatches this unconditionally,
+            // even if the password save (a separate, earlier action) was
+            // cancelled, so check that the hash it set is what's persisted.
+            fn (object $event): bool => $event instanceof PasswordReset
+                && ($user = $this->eventUser($event)) !== null
+                && $user->password === $this->freshUser($event)?->password,
+        );
+        $this->listenFor(
+            RecoveryCodesGenerated::class,
+            SecurityEvent::RecoveryCodesRegenerated,
+            // Fortify dispatches this without checking that the save
+            // succeeded either.
+            fn (object $event): bool => $event instanceof RecoveryCodesGenerated
+                && $event->user->two_factor_recovery_codes !== null
+                && $event->user->two_factor_recovery_codes === $this->freshUser($event)?->two_factor_recovery_codes,
+        );
 
         // Fortify and the passkeys package fire these events even when the
         // underlying save was cancelled, so confirm the persisted state first.
@@ -68,11 +90,11 @@ class SecurityNotificationServiceProvider extends ServiceProvider
             function (object $event): bool {
                 if (! $event instanceof TwoFactorAuthenticationConfirmed
                     || $this->freshUser($event)?->two_factor_confirmed_at === null
-                    || ($this->wasTwoFactorConfirmedBeforeSave[$event->user] ?? false)) {
+                    || ($this->wasTwoFactorActiveBeforeSave[$event->user] ?? false)) {
                     return false;
                 }
 
-                $this->wasTwoFactorConfirmedBeforeSave[$event->user] = true;
+                $this->wasTwoFactorActiveBeforeSave[$event->user] = true;
 
                 return true;
             },
@@ -83,11 +105,11 @@ class SecurityNotificationServiceProvider extends ServiceProvider
             function (object $event): bool {
                 if (! $event instanceof TwoFactorAuthenticationDisabled
                     || $this->freshUser($event)?->two_factor_secret !== null
-                    || ! ($this->wasTwoFactorConfirmedBeforeSave[$event->user] ?? false)) {
+                    || ! ($this->wasTwoFactorActiveBeforeSave[$event->user] ?? false)) {
                     return false;
                 }
 
-                $this->wasTwoFactorConfirmedBeforeSave[$event->user] = false;
+                $this->wasTwoFactorActiveBeforeSave[$event->user] = false;
 
                 return true;
             },
@@ -109,9 +131,17 @@ class SecurityNotificationServiceProvider extends ServiceProvider
         $this->listenFor(
             TwoFactorAuthenticationEnabled::class,
             SecurityEvent::TwoFactorEnabled,
-            fn (object $event): bool => $event instanceof TwoFactorAuthenticationEnabled
-                && ! Features::optionEnabled(Features::twoFactorAuthentication(), 'confirm')
-                && $this->freshUser($event)?->two_factor_secret !== null,
+            function (object $event): bool {
+                if (! $event instanceof TwoFactorAuthenticationEnabled
+                    || Features::optionEnabled(Features::twoFactorAuthentication(), 'confirm')
+                    || $this->freshUser($event)?->two_factor_secret === null) {
+                    return false;
+                }
+
+                $this->wasTwoFactorActiveBeforeSave[$event->user] = true;
+
+                return true;
+            },
         );
     }
 
