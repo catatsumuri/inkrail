@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use Laravel\Fortify\Actions\ConfirmTwoFactorAuthentication;
 use Laravel\Fortify\Actions\DisableTwoFactorAuthentication;
 use Laravel\Fortify\Actions\EnableTwoFactorAuthentication;
 use Laravel\Fortify\Actions\GenerateNewRecoveryCodes;
@@ -132,6 +133,26 @@ class MfaSecurityEventLoggingTest extends TestCase
         $this->actingAsPasswordConfirmed($user)->post('/user/confirmed-two-factor-authentication', ['code' => $code]);
 
         $this->assertSame(0, Activity::inLog('security')->count());
+    }
+
+    public function test_reconfirming_two_factor_on_the_same_instance_at_the_same_instant_is_not_recorded_again(): void
+    {
+        $user = User::factory()->create();
+        app(EnableTwoFactorAuthentication::class)($user);
+
+        $this->travelTo(now());
+        $otp = app(Google2FA::class)->getCurrentOtp(decrypt($user->two_factor_secret));
+        app(ConfirmTwoFactorAuthentication::class)($user, $otp);
+
+        $this->assertSame(1, Activity::inLog('security')->where('description', 'mfa.enabled')->count());
+
+        // Same instance, same frozen instant, same (now unused-again) code:
+        // the forceFill() sets the exact value already stored, so this save
+        // persists no real change.
+        Cache::flush();
+        app(ConfirmTwoFactorAuthentication::class)($user, $otp);
+
+        $this->assertSame(1, Activity::inLog('security')->where('description', 'mfa.enabled')->count());
     }
 
     public function test_a_cancelled_save_after_a_successful_one_on_the_same_instance_is_not_recorded(): void

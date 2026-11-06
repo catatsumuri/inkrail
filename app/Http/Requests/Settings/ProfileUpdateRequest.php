@@ -2,9 +2,11 @@
 
 namespace App\Http\Requests\Settings;
 
+use App\Actions\LogSecurityEvent;
 use App\Concerns\PasswordValidationRules;
 use App\Concerns\ProfileValidationRules;
 use Illuminate\Contracts\Validation\ValidationRule;
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Arr;
 
@@ -26,6 +28,18 @@ class ProfileUpdateRequest extends FormRequest
                 ? ['bail', ...$this->currentPasswordRules()]
                 : ['nullable'],
         ];
+    }
+
+    /**
+     * Record a rejected email change before the validation error is returned.
+     */
+    protected function failedValidation(Validator $validator): void
+    {
+        if ($this->isChangingEmail() && $validator->errors()->has('current_password')) {
+            app(LogSecurityEvent::class)->failure('email.change_failed', $this->user());
+        }
+
+        parent::failedValidation($validator);
     }
 
     /**

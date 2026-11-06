@@ -193,6 +193,26 @@ class SecurityEventLoggingTest extends TestCase
         $this->assertNull($user->fresh()->email_verified_at);
     }
 
+    public function test_a_wrong_current_password_records_a_failed_email_change(): void
+    {
+        $user = User::factory()->create(['email' => 'old@example.com']);
+
+        $this->actingAs($user)->patch(route('profile.update'), [
+            'name' => $user->name,
+            'email' => 'new@example.com',
+            'current_password' => 'wrong-password',
+        ])->assertSessionHasErrors('current_password');
+
+        $event = Activity::inLog('security')->sole();
+
+        $this->assertSame('email.change_failed', $event->description);
+        $this->assertSame('failure', $event->getProperty('result'));
+        $this->assertTrue($event->subject->is($user));
+        $this->assertSame('old@example.com', $user->fresh()->email);
+        $this->assertStringNotContainsString('example.com', json_encode($event->properties));
+        $this->assertStringNotContainsString('wrong-password', json_encode($event->properties));
+    }
+
     public function test_updating_only_the_name_does_not_record_an_email_change(): void
     {
         $user = User::factory()->create();

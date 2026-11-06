@@ -22,7 +22,6 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 use Laravel\Fortify\Contracts\FailedPasswordResetResponse as FailedPasswordResetResponseContract;
 use Laravel\Fortify\Events\RecoveryCodesGenerated;
-use Laravel\Fortify\Events\TwoFactorAuthenticationConfirmed;
 use Laravel\Fortify\Events\TwoFactorAuthenticationDisabled;
 use Laravel\Fortify\Events\TwoFactorAuthenticationEnabled;
 use Laravel\Fortify\Events\TwoFactorAuthenticationFailed;
@@ -93,7 +92,6 @@ class AppServiceProvider extends ServiceProvider
             $user = match (true) {
                 $event instanceof PasswordReset,
                 $event instanceof TwoFactorAuthenticationEnabled,
-                $event instanceof TwoFactorAuthenticationConfirmed,
                 $event instanceof TwoFactorAuthenticationDisabled,
                 $event instanceof RecoveryCodesGenerated,
                 $event instanceof PasskeyRegistered,
@@ -123,10 +121,29 @@ class AppServiceProvider extends ServiceProvider
             }
         });
 
-        Event::listen(TwoFactorAuthenticationConfirmed::class, fn (TwoFactorAuthenticationConfirmed $event) => $record(
-            $event, 'mfa.enabled',
-            fn ($event) => $saved($event->user, 'two_factor_confirmed_at') && $event->user->getPrevious()['two_factor_confirmed_at'] === null,
-        ));
+        /*
+         * Unlike the listeners above, this one is not driven by Fortify's own
+         * TwoFactorAuthenticationConfirmed event: that event dispatches
+         * unconditionally even when the save changed nothing, and checking
+         * its own save history (getPrevious()) is unreliable here, because
+         * that history is only refreshed by a save that actually persisted a
+         * change. A same-instance re-confirm that persists no change (e.g.
+         * confirmed twice at the same instant) would keep replaying the
+         * first confirmation's history and get recorded again. Eloquent's
+         * "updated" event only fires once a save actually persisted a real
+         * change, and getOriginal() at that point still holds the pre-save
+         * value (syncOriginal() runs after, not before), so this is driven
+         * from there instead.
+         */
+        User::updated(function (User $user): void {
+            if (! Fortify::confirmsTwoFactorAuthentication()
+                || ! $user->wasChanged('two_factor_confirmed_at')
+                || $user->getOriginal('two_factor_confirmed_at') !== null) {
+                return;
+            }
+
+            app(LogSecurityEvent::class)('mfa.enabled', $user);
+        });
 
         Event::listen(TwoFactorAuthenticationDisabled::class, function (TwoFactorAuthenticationDisabled $event) use ($record, $saved): void {
             $wasActive = ! Fortify::confirmsTwoFactorAuthentication()
