@@ -242,8 +242,19 @@ class SecurityEventNotificationTest extends TestCase
     public function test_disabling_two_factor_notifies_the_user_once(): void
     {
         $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
+        Features::twoFactorAuthentication(['confirm' => true, 'confirmPassword' => true]);
         Notification::fake();
-        $user = User::factory()->withTwoFactor()->create();
+        $user = User::factory()->create();
+
+        // Confirm 2FA through the real flow rather than factory-seeding
+        // two_factor_confirmed_at directly, so this provider's own record of
+        // "2FA is active" is populated the same way it would be in
+        // production, instead of starting from an unknown state.
+        $this->actingAs($user)->withSession($this->passwordConfirmed())
+            ->post(route('two-factor.enable'));
+        $this->actingAs($user)->withSession($this->passwordConfirmed())
+            ->post(route('two-factor.confirm'), ['code' => $this->currentTwoFactorCode($user)]);
+        Notification::fake();
 
         $this->actingAs($user)->withSession($this->passwordConfirmed())
             ->delete(route('two-factor.disable'));
@@ -302,13 +313,47 @@ class SecurityEventNotificationTest extends TestCase
 
         $this->assertNotifiedOnce($user, SecurityEvent::TwoFactorEnabled);
 
-        // A still-valid code resubmitted against the already-confirmed account
-        // must not notify a second time. Clear the replay-protection cache
-        // entry so this isn't just the same code rejected as reused.
-        Cache::flush();
+        // A still-valid code resubmitted against the already-confirmed
+        // account must not notify a second time. Only the replay-protection
+        // entry for this one code is cleared (not the whole cache store),
+        // since this provider's own active/inactive record also lives in the
+        // cache and must survive for this assertion to mean anything.
+        $code = $this->currentTwoFactorCode($user);
+        Cache::forget('fortify.2fa_codes.'.md5($code));
 
         $this->actingAs($user)->withSession($this->passwordConfirmed())
+            ->post(route('two-factor.confirm'), ['code' => $code])
+            ->assertSessionHasNoErrors();
+
+        Notification::assertCount(1);
+    }
+
+    public function test_reconfirming_two_factor_from_a_separate_request_does_not_notify_again(): void
+    {
+        $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
+        Features::twoFactorAuthentication(['confirm' => true, 'confirmPassword' => true]);
+        Notification::fake();
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->withSession($this->passwordConfirmed())
+            ->post(route('two-factor.enable'));
+        $this->actingAs($user)->withSession($this->passwordConfirmed())
             ->post(route('two-factor.confirm'), ['code' => $this->currentTwoFactorCode($user)])
+            ->assertSessionHasNoErrors();
+
+        $this->assertNotifiedOnce($user, SecurityEvent::TwoFactorEnabled);
+
+        // A fresh User instance (as a separate HTTP request would resolve,
+        // unlike $user above, which this test keeps reusing) resubmitting a
+        // still-valid code must not notify again either, even if Eloquent's
+        // "updating" event wouldn't fire for this particular resubmit.
+        $freshUser = $user->fresh();
+        $this->assertNotNull($freshUser);
+        $code = $this->currentTwoFactorCode($freshUser);
+        Cache::forget('fortify.2fa_codes.'.md5($code));
+
+        $this->actingAs($freshUser)->withSession($this->passwordConfirmed())
+            ->post(route('two-factor.confirm'), ['code' => $code])
             ->assertSessionHasNoErrors();
 
         Notification::assertCount(1);

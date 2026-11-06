@@ -6,6 +6,7 @@ use App\Actions\Notifications\SendGeneralNotification;
 use App\Models\User;
 use App\Support\SecurityEvent;
 use Illuminate\Auth\Events\PasswordReset;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Fortify\Events\RecoveryCodesGenerated;
@@ -16,7 +17,6 @@ use Laravel\Fortify\Events\TwoFactorAuthenticationEvent;
 use Laravel\Fortify\Features;
 use Laravel\Passkeys\Events\PasskeyDeleted;
 use Laravel\Passkeys\Events\PasskeyRegistered;
-use WeakMap;
 
 /**
  * Notifies users by email when sensitive security events succeed.
@@ -29,32 +29,11 @@ class SecurityNotificationServiceProvider extends ServiceProvider
     private SendGeneralNotification $sendGeneralNotification;
 
     /**
-     * Whether two-factor authentication was already active for each user
-     * immediately before their current save, captured from the pre-save
-     * model state. "Active" means confirmed when confirmation is required,
-     * or just having a secret when it isn't (that mode never sets
-     * two_factor_confirmed_at at all). Used to tell a real enable/disable
-     * transition apart from a redundant re-confirm or the cancellation of a
-     * setup that was never confirmed, both of which leave the post-save
-     * state looking the same.
-     *
-     * @var WeakMap<User, bool>
-     */
-    private WeakMap $wasTwoFactorActiveBeforeSave;
-
-    /**
      * Bootstrap any application services.
      */
     public function boot(SendGeneralNotification $sendGeneralNotification): void
     {
         $this->sendGeneralNotification = $sendGeneralNotification;
-        $this->wasTwoFactorActiveBeforeSave = new WeakMap;
-
-        User::updating(function (User $user): void {
-            $this->wasTwoFactorActiveBeforeSave[$user] = Features::optionEnabled(Features::twoFactorAuthentication(), 'confirm')
-                ? $user->getOriginal('two_factor_confirmed_at') !== null
-                : $user->getOriginal('two_factor_secret') !== null;
-        });
 
         $this->listenFor(
             PasswordReset::class,
@@ -77,26 +56,31 @@ class SecurityNotificationServiceProvider extends ServiceProvider
         );
 
         // Fortify and the passkeys package fire these events even when the
-        // underlying save was cancelled, so confirm the persisted state first.
-        // Re-confirming an already-confirmed account, or cancelling a setup
-        // that was never confirmed, dispatch the same events, so the pre-save
-        // state is checked too, not just the post-save state. A resubmit that
-        // doesn't actually change the timestamp (same second) skips Eloquent's
-        // "updating" event entirely, so the map is also kept up to date here,
-        // from the outcome of this check, not only from "updating".
+        // underlying save was cancelled or changed nothing, so confirm the
+        // persisted state first. Re-confirming an already-confirmed account,
+        // or cancelling a setup that was never confirmed, dispatch the same
+        // events, so whether 2FA was already active is checked too, not just
+        // the post-save state. That "was already active" fact is tracked in
+        // the cache (see wasTwoFactorActiveBefore()), not from the model or
+        // its save: two separate requests resolve two separate User
+        // instances, and Eloquent skips the "updating" event entirely for a
+        // same-second resubmit that re-sets an already-current value, so
+        // nothing in-process can be trusted to still be there, or to have
+        // fired, on the next request.
         $this->listenFor(
             TwoFactorAuthenticationConfirmed::class,
             SecurityEvent::TwoFactorEnabled,
             function (object $event): bool {
                 if (! $event instanceof TwoFactorAuthenticationConfirmed
-                    || $this->freshUser($event)?->two_factor_confirmed_at === null
-                    || ($this->wasTwoFactorActiveBeforeSave[$event->user] ?? false)) {
+                    || ($user = $this->freshUser($event)) === null
+                    || $user->two_factor_confirmed_at === null) {
                     return false;
                 }
 
-                $this->wasTwoFactorActiveBeforeSave[$event->user] = true;
+                $wasActive = $this->wasTwoFactorActiveBefore($user);
+                $this->rememberTwoFactorActive($user, true);
 
-                return true;
+                return ! $wasActive;
             },
         );
         $this->listenFor(
@@ -104,14 +88,15 @@ class SecurityNotificationServiceProvider extends ServiceProvider
             SecurityEvent::TwoFactorDisabled,
             function (object $event): bool {
                 if (! $event instanceof TwoFactorAuthenticationDisabled
-                    || $this->freshUser($event)?->two_factor_secret !== null
-                    || ! ($this->wasTwoFactorActiveBeforeSave[$event->user] ?? false)) {
+                    || ($user = $this->freshUser($event)) === null
+                    || $user->two_factor_secret !== null) {
                     return false;
                 }
 
-                $this->wasTwoFactorActiveBeforeSave[$event->user] = false;
+                $wasActive = $this->wasTwoFactorActiveBefore($user);
+                $this->rememberTwoFactorActive($user, false);
 
-                return true;
+                return $wasActive;
             },
         );
         $this->listenFor(
@@ -134,15 +119,42 @@ class SecurityNotificationServiceProvider extends ServiceProvider
             function (object $event): bool {
                 if (! $event instanceof TwoFactorAuthenticationEnabled
                     || Features::optionEnabled(Features::twoFactorAuthentication(), 'confirm')
-                    || $this->freshUser($event)?->two_factor_secret === null) {
+                    || ($user = $this->freshUser($event)) === null
+                    || $user->two_factor_secret === null) {
                     return false;
                 }
 
-                $this->wasTwoFactorActiveBeforeSave[$event->user] = true;
+                $wasActive = $this->wasTwoFactorActiveBefore($user);
+                $this->rememberTwoFactorActive($user, true);
 
-                return true;
+                return ! $wasActive;
             },
         );
+    }
+
+    /**
+     * Whether two-factor authentication was active the last time this
+     * provider checked, per the durable record kept in the cache (not
+     * per-request state, which a fresh User instance on the next request
+     * would not have).
+     *
+     * A user never checked before (most likely: 2FA was already active
+     * before this record-keeping existed) reads as inactive, so their first
+     * disable after that goes unnotified; see the PR for that trade-off.
+     */
+    private function wasTwoFactorActiveBefore(User $user): bool
+    {
+        return (bool) Cache::get($this->twoFactorActiveCacheKey($user));
+    }
+
+    private function rememberTwoFactorActive(User $user, bool $active): void
+    {
+        Cache::put($this->twoFactorActiveCacheKey($user), $active, now()->addYear());
+    }
+
+    private function twoFactorActiveCacheKey(User $user): string
+    {
+        return 'security-notifications:two-factor-active:'.$user->getKey();
     }
 
     /**
