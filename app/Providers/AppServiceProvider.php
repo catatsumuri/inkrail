@@ -90,7 +90,16 @@ class AppServiceProvider extends ServiceProvider
         $saved = fn (User $user, string $key): bool => array_key_exists($key, $user->getPrevious()) && ! $user->isDirty($key);
 
         $record = function (object $event, string $name, ?Closure $stored = null, array $properties = []): void {
-            $user = $event->user;
+            $user = match (true) {
+                $event instanceof PasswordReset,
+                $event instanceof TwoFactorAuthenticationEnabled,
+                $event instanceof TwoFactorAuthenticationConfirmed,
+                $event instanceof TwoFactorAuthenticationDisabled,
+                $event instanceof RecoveryCodesGenerated,
+                $event instanceof PasskeyRegistered,
+                $event instanceof PasskeyDeleted => $event->user,
+                default => null,
+            };
 
             if (! $user instanceof User || ($stored !== null && ! $stored($event))) {
                 return;
@@ -146,7 +155,7 @@ class AppServiceProvider extends ServiceProvider
 
         Event::listen(TwoFactorAuthenticationFailed::class, fn (TwoFactorAuthenticationFailed $event) => app(LogSecurityEvent::class)->failure(
             'mfa.failed',
-            $event->user instanceof User ? $event->user : null,
+            $event->user,
             ['method' => request()->filled('recovery_code') ? 'recovery_code' : 'totp'],
         ));
 

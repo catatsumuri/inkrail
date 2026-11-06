@@ -61,7 +61,7 @@ class SecurityEventLoggingTest extends TestCase
                 'current_password' => 'password',
                 'password' => 'new-secret-value',
                 'password_confirmation' => 'new-secret-value',
-            ])->assertStatus(500);
+            ])->assertSessionHasErrors('security');
         } finally {
             User::flushEventListeners();
         }
@@ -181,6 +181,7 @@ class SecurityEventLoggingTest extends TestCase
         $this->actingAs($user)->patch(route('profile.update'), [
             'name' => $user->name,
             'email' => 'new@example.com',
+            'current_password' => 'password',
         ]);
 
         $event = Activity::inLog('security')->sole();
@@ -214,7 +215,8 @@ class SecurityEventLoggingTest extends TestCase
             $this->actingAs($user)->patch(route('profile.update'), [
                 'name' => $user->name,
                 'email' => 'new@example.com',
-            ])->assertStatus(500);
+                'current_password' => 'password',
+            ])->assertSessionHasErrors('profile');
         } finally {
             User::flushEventListeners();
         }
@@ -259,7 +261,7 @@ class SecurityEventLoggingTest extends TestCase
         User::deleting(fn () => false);
 
         try {
-            $this->actingAs($user)->delete(route('profile.destroy'), ['password' => 'password'])->assertStatus(500);
+            $this->actingAs($user)->delete(route('profile.destroy'), ['password' => 'password'])->assertSessionHasErrors('account');
         } finally {
             User::flushEventListeners();
         }
