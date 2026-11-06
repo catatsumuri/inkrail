@@ -10,6 +10,7 @@ use Illuminate\Database\ConnectionInterface;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use RuntimeException;
 use stdClass;
 use Throwable;
 
@@ -127,10 +128,17 @@ class ManageDatabaseSessions
     /**
      * Rotate the remember token so existing "remember me" cookies stop
      * authenticating, even though they do not depend on a stored session.
+     *
+     * @throws RuntimeException when the save is cancelled (a saving/updating
+     *                          listener returning false), since a silently
+     *                          unrotated token would leave existing
+     *                          "remember me" cookies able to sign back in.
      */
     public function resetRememberToken(User $user): void
     {
-        $user->forceFill(['remember_token' => Str::random(60)])->save();
+        if (! $user->forceFill(['remember_token' => Str::random(60)])->save()) {
+            throw new RuntimeException('The remember me token could not be saved.');
+        }
     }
 
     public function activeSessionCount(User $user): int

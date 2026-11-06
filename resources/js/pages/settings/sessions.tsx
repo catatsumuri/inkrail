@@ -1,5 +1,6 @@
 import { Form, Head, Link, setLayoutProps } from '@inertiajs/react';
 import { Clock3, Laptop, MapPin, Trash2 } from 'lucide-react';
+import { useState } from 'react';
 import { lang } from '@erag/lang-sync-inertia/react';
 import SessionController from '@/actions/App/Http/Controllers/Settings/SessionController';
 import Heading from '@/components/heading';
@@ -142,6 +143,7 @@ export default function Sessions({
     otherSessions,
 }: Props) {
     const { __ } = lang();
+    const [isRevokeOthersOpen, setIsRevokeOthersOpen] = useState(false);
 
     setLayoutProps({
         breadcrumbs: [
@@ -279,7 +281,10 @@ export default function Sessions({
                     />
 
                     <div className="flex flex-wrap gap-3">
-                        <Dialog>
+                        <Dialog
+                            open={isRevokeOthersOpen}
+                            onOpenChange={setIsRevokeOthersOpen}
+                        >
                             <DialogTrigger asChild>
                                 <Button variant="outline">
                                     {__('Revoke other sessions')}
@@ -297,6 +302,9 @@ export default function Sessions({
                                 <Form
                                     {...SessionController.destroyOthers.form()}
                                     options={{ preserveScroll: true }}
+                                    onSuccess={() =>
+                                        setIsRevokeOthersOpen(false)
+                                    }
                                 >
                                     {({ processing }) => (
                                         <DialogFooter className="gap-2">

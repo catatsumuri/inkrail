@@ -731,6 +731,23 @@ class SessionManagementTest extends TestCase
         $this->assertSame($originalToken, $user->fresh()->remember_token);
     }
 
+    public function test_a_declined_token_update_rolls_back_the_deleted_session_when_revoking_one(): void
+    {
+        [$user, $current, $attacker] = $this->userWithRememberedSecondSession();
+        $originalToken = $user->fresh()->remember_token;
+
+        User::updating(fn (): bool => false);
+
+        $this->asClient($current['cookie'])
+            ->delete(route('sessions.destroy', app(ManageDatabaseSessions::class)->fingerprint($user, $attacker['id'])))
+            ->assertRedirect()
+            ->assertSessionHas('inertia.flash_data.toast.type', 'error')
+            ->assertSessionHas('inertia.flash_data.toast.message', __('Sessions are temporarily unavailable. Please try again.'));
+
+        $this->assertDatabaseHas('sessions', ['id' => $attacker['id'], 'user_id' => $user->id]);
+        $this->assertSame($originalToken, $user->fresh()->remember_token);
+    }
+
     public function test_a_session_that_vanishes_before_deletion_does_not_reset_the_remember_token(): void
     {
         [$user, $current, $attacker] = $this->userWithRememberedSecondSession();
@@ -920,6 +937,27 @@ class SessionManagementTest extends TestCase
             User::updating(function (): bool {
                 throw new RuntimeException('Users unavailable');
             });
+
+            $this->asClient($current['cookie'])
+                ->delete(route($route))
+                ->assertRedirect()
+                ->assertSessionHas('inertia.flash_data.toast.type', 'error');
+
+            $this->assertDatabaseHas('sessions', ['id' => $attacker['id'], 'user_id' => $user->id]);
+            $this->assertDatabaseHas('sessions', ['id' => $current['id'], 'user_id' => $user->id]);
+            $this->assertSame($originalToken, $user->fresh()->remember_token);
+
+            User::flushEventListeners();
+        }
+    }
+
+    public function test_a_declined_token_update_rolls_back_the_deleted_sessions_when_revoking_others_and_all(): void
+    {
+        foreach (['sessions.destroy-others', 'sessions.destroy-all'] as $route) {
+            [$user, $current, $attacker] = $this->userWithRememberedSecondSession();
+            $originalToken = $user->fresh()->remember_token;
+
+            User::updating(fn (): bool => false);
 
             $this->asClient($current['cookie'])
                 ->delete(route($route))

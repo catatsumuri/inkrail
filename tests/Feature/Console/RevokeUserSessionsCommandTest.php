@@ -342,6 +342,39 @@ class RevokeUserSessionsCommandTest extends TestCase
         $this->assertSame($originalToken, $user->fresh()->remember_token);
     }
 
+    public function test_a_declined_token_update_is_reported_as_a_failure(): void
+    {
+        $user = User::factory()->create();
+        $this->storeSession('session-one', $user);
+
+        $originalToken = $user->fresh()->remember_token;
+
+        User::updating(fn (): bool => false);
+
+        $this->artisan('security:revoke-sessions', ['selector' => 'id:'.$user->getKey(), '--force' => true])
+            ->expectsOutputToContain('Remember me logins could not be reset. No sessions were revoked.')
+            ->doesntExpectOutputToContain('Revoked')
+            ->assertFailed();
+
+        $this->assertDatabaseHas('sessions', ['id' => 'session-one']);
+        $this->assertSame($originalToken, $user->fresh()->remember_token);
+    }
+
+    public function test_a_declined_token_update_is_reported_as_a_failure_with_no_stored_sessions(): void
+    {
+        $user = User::factory()->create();
+        $originalToken = $user->fresh()->remember_token;
+
+        User::updating(fn (): bool => false);
+
+        $this->artisan('security:revoke-sessions', ['selector' => 'id:'.$user->getKey(), '--force' => true])
+            ->expectsOutputToContain('Remember me logins could not be reset. No sessions were revoked.')
+            ->doesntExpectOutputToContain('No sessions are stored for')
+            ->assertFailed();
+
+        $this->assertSame($originalToken, $user->fresh()->remember_token);
+    }
+
     public function test_a_failure_to_delete_sessions_reports_that_remember_me_logins_were_already_reset(): void
     {
         $user = User::factory()->create();

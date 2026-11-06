@@ -112,13 +112,16 @@ class SessionController extends Controller
     {
         $partial = $exception instanceof SessionRevocationException && $exception->rememberMeReset;
 
-        Inertia::flash('toast', [
-            'type' => 'error',
-            'message' => $partial
-                ? __('Remember me sign-ins were ended, but sessions could not be removed. Please try again.')
-                : __('Sessions are temporarily unavailable. Please try again.'),
-        ]);
+        $message = $partial
+            ? __('Remember me sign-ins were ended, but sessions could not be removed. Please try again.')
+            : __('Sessions are temporarily unavailable. Please try again.');
 
-        return back();
+        Inertia::flash('toast', ['type' => 'error', 'message' => $message]);
+
+        // withErrors (not a plain redirect), so Inertia's <Form> treats this
+        // as a failed submission: onSuccess must not fire and close a
+        // confirmation dialog as if the revocation it was guarding went
+        // through. The "sessions" key isn't bound to any field's InputError.
+        return back()->withErrors(['sessions' => $message]);
     }
 }
