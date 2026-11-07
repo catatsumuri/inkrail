@@ -1,122 +1,14 @@
-# Laravel + React Starter Kit — i18n Edition
+# Laravel React Secure Starter Kit
 
-English | [日本語](README.ja.md)
+A Laravel + React starter kit with additional controls for account security, session management, and security event logging. Based on the [security-hardening branch of react-starter-kit-i18n](https://github.com/catatsumuri/react-starter-kit-i18n/tree/feature/security-hardening), it extends the existing authentication flows with tools for users to spot account changes and end unwanted sessions, and for operators to investigate security events.
 
-A fork of the official [Laravel React starter kit](https://laravel.com/docs/starter-kits) with internationalization (i18n) built in.
+Compared with that project's `main` branch, it adds:
 
-## Live demo
+- **Account change notifications** — email notices for password changes and resets, two-factor authentication changes, recovery code regeneration, passkey additions and removals, and account deletion. Email changes require the current password and notify the previous address.
+- **Session management** — a settings page showing devices, IP addresses, and recent activity, with options to revoke one other session, all other sessions, or every session. Revocation also invalidates existing remember-me logins. Requires the database session driver; the settings page requires recent password confirmation.
+- **Operator session revocation** — an Artisan command to revoke a user's database sessions and reset remember-me logins by user ID or email.
+- **Security event logging** — records of sensitive account changes and rejected authentication attempts, with a read-only JSON endpoint restricted to explicitly configured users with verified email addresses. Security records reject updates and deletes through the application's activity model, and scheduled cleanup uses configurable retention periods.
+- **Rate limits for sensitive actions** — additional throttling for profile updates, password reset submissions, and session revocation.
+- **Notifications and operational alerts** — an in-app notification menu, shared delivery support for database, email, and optional Slack notifications, and throttled email alerts for reported exceptions and failed queue jobs.
 
-https://react-starter-kit-i18n-production-sbhkku.laravel.cloud
-
-The demo database is seeded and then locked read-only (`chmod 444`), so sign-up, login, and other writes will fail with a database-is-readonly error. It resets on every redeploy.
-
-## What's different from the official kit
-
-- **Japanese pre-configured** — `ja` locale ships ready to use alongside `en`
-- **Translation pipeline** — `lang/vendor-patches/` controls which locales are generated; add a JSON file, run `lang:update`, done
-- **Translations in React** — `__()` helper available in all React components via Inertia shared props
-- **Session-based locale persistence** — active locale survives page reloads via `LocalizationBySession` middleware
-- **AI agent rules** — `.ai/rules/` (not present upstream) documents this fork's conventions — translating React UI, treating `lang/` as generated output, patching starter-kit translations — for coding agents working in this repo
-
-## Requirements
-
-- PHP 8.4+
-- Node 20+
-- A database supported by Laravel (SQLite works for local dev)
-
-## Adding a locale
-
-Strings that only exist in this fork's React UI (login/2FA/profile screens, etc.) aren't part of the upstream `laravel-lang/starter-kits` package, so they're layered on top of it via `lang/vendor-patches/`:
-
-- `lang/vendor-patches/source/react.json` — the English source strings this fork adds on top of the upstream `react.json`.
-- `lang/vendor-patches/locales/{locale}.json` — translations of those strings for one locale. See `lang/vendor-patches/locales/ja.json` for a complete example.
-
-To add a new locale (e.g. `ko`):
-
-1. If your components use custom strings not already listed in `lang/vendor-patches/source/react.json`, add them there first (English key/value pairs).
-2. Create `lang/vendor-patches/locales/ko.json` and translate every key from `source/react.json`, following the same structure as `lang/vendor-patches/locales/ja.json`. A key can be left out only if upstream already ships a translation for it in that locale (`ja.json` skips `"Warning"` for this reason) — when in doubt, translate it anyway; the patch just overrides the upstream value.
-3. Merge the patches into the vendor package and regenerate the translation files:
-    ```bash
-    composer patch-vendor
-    php artisan lang:update
-    ```
-
-`composer patch-vendor` (`scripts/patch-vendor.php`) merges everything under `lang/vendor-patches/source/` and `lang/vendor-patches/locales/` into the matching files inside `vendor/laravel-lang/starter-kits/`, taking your patch values over the upstream ones. `lang:update` then regenerates `lang/{locale}.json` and `lang/{locale}/*.php` for every locale it finds. `patch-vendor` also runs automatically after `composer install`/`composer update`, and `lang:update` runs automatically after `composer update` — but for a newly added locale, run both explicitly so the new locale is generated immediately.
-
-## Installation
-
-```bash
-composer create-project catatsumuri/react-starter-kit-i18n my-app
-cd my-app
-composer setup
-```
-
-`composer setup` does the following in one shot:
-
-```
-composer install
-cp .env.example .env
-php artisan key:generate
-php artisan migrate
-npm install
-npm run build
-```
-
-## Development
-
-```bash
-composer dev
-```
-
-Starts four processes concurrently:
-
-| Process         | Command                    |
-| --------------- | -------------------------- |
-| HTTP server     | `php artisan serve`        |
-| Queue worker    | `php artisan queue:listen` |
-| Log viewer      | `php artisan pail`         |
-| Vite dev server | `npm run dev`              |
-
-## Architecture
-
-### Backend packages
-
-| Package                          | Role                                                         |
-| -------------------------------- | ------------------------------------------------------------ |
-| `laravel-lang/common`            | Core translation pipeline (`lang:update` command)            |
-| `laravel-lang/routes`            | `LocalizationBySession` middleware                           |
-| `erag/laravel-lang-sync-inertia` | Syncs `lang/{locale}.json` to Inertia shared props as `lang` |
-| `laravel/wayfinder`              | Type-safe route references on the frontend                   |
-
-### Frontend
-
-- React 19 + TypeScript + Vite
-- [shadcn/ui](https://ui.shadcn.com) + [Radix UI](https://www.radix-ui.com) components
-- Tailwind CSS
-- `@erag/lang-sync-inertia` — `lang()` / `__()` hook for translations in React components
-
-### How translations reach the frontend
-
-```
-lang/ja.json
-    ↓  HandleInertiaRequests::share()
-Inertia shared prop: { lang: { "Log in": "ログイン", ... } }
-    ↓  @erag/lang-sync-inertia
-const { __ } = lang()
-    ↓
-__('Log in')  →  "ログイン"
-```
-
-## Code quality
-
-```bash
-composer lint          # PHP (Pint)
-npm run check          # JS/TS lint & format checks
-npm run types:check    # TypeScript
-composer test          # PHPUnit
-composer ci:check      # all of the above
-```
-
-## License
-
-MIT
+Regression tests cover account changes, security notifications and logs, access restrictions, session revocation, and failure handling.
