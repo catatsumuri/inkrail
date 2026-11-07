@@ -1,17 +1,23 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "catatsumuri/react-starter-kit-i18n",
+    "name": "catatsumuri/laravel-react-secure-starter-kit",
     "type": "project",
-    "description": "A fork of the official Laravel + React starter kit with built-in internationalization (i18n) support.",
+    "description": "A Laravel + React starter kit with account security notifications, database session management, and security event logging.",
     "keywords": [
         "laravel",
         "framework",
         "react",
         "inertia",
-        "i18n",
-        "localization"
+        "security",
+        "session-management",
+        "audit-log"
     ],
+    "homepage": "https://github.com/catatsumuri/laravel-react-secure-starter-kit",
     "license": "MIT",
+    "support": {
+        "issues": "https://github.com/catatsumuri/laravel-react-secure-starter-kit/issues",
+        "source": "https://github.com/catatsumuri/laravel-react-secure-starter-kit"
+    },
     "replace": {
         "laravel/react-starter-kit": "*"
     },
