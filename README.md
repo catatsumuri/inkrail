@@ -14,3 +14,8 @@ Compared with that project's `main` branch, it adds:
 Regression tests cover account changes, security notifications and logs, access restrictions, session revocation, and failure handling.
 
 For localization setup and adding locales, see the [upstream localization guide](https://github.com/catatsumuri/react-starter-kit-i18n#adding-a-locale).
+
+## Documentation
+
+The Astro Starlight documentation scaffold lives in [`docs/`](docs/README.md).
+It is configured for [GitHub Pages](https://catatsumuri.github.io/laravel-react-secure-starter-kit/).
