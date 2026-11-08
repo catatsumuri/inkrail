@@ -3,15 +3,16 @@
 namespace Tests\Feature;
 
 use App\Models\User;
-use Illuminate\Foundation\Auth\User as AuthUser;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Gate;
 use Laravel\Fortify\Features;
+use Tests\Concerns\SecurityEventAccessHelpers;
 use Tests\TestCase;
 
 class SecurityEventAccessTest extends TestCase
 {
     use RefreshDatabase;
+    use SecurityEventAccessHelpers;
 
     public function test_guests_are_redirected_to_the_login_page(): void
     {
@@ -138,30 +139,5 @@ class SecurityEventAccessTest extends TestCase
         $user = $this->userWithoutEmailVerification('viewer@example.com');
 
         $this->assertTrue(Gate::forUser($user)->denies('view-security-events'));
-    }
-
-    private function verifiedViewer(string $listedAs = 'viewer@example.com'): User
-    {
-        $this->skipUnlessFortifyHas(Features::emailVerification());
-        config(['audit.security_viewers' => [$listedAs]]);
-
-        return User::factory()->create(['email' => 'viewer@example.com']);
-    }
-
-    /**
-     * A user as it exists when Chisel removes email verification: the model
-     * no longer implements MustVerifyEmail, so the verified middleware passes.
-     */
-    private function userWithoutEmailVerification(string $email): AuthUser
-    {
-        $user = new class extends AuthUser {};
-        $user->forceFill(['id' => 1, 'email' => $email]);
-
-        return $user;
-    }
-
-    private function recordEvent(string $logName, string $event, string $result): void
-    {
-        activity($logName)->event($event)->withProperties(['result' => $result])->log($event);
     }
 }

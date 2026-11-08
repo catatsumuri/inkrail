@@ -11,10 +11,12 @@ use Laravel\Fortify\Actions\EnableTwoFactorAuthentication;
 use Laravel\Fortify\Actions\GenerateNewRecoveryCodes;
 use PragmaRX\Google2FA\Google2FA;
 use Spatie\Activitylog\Models\Activity;
+use Tests\Concerns\MfaSecurityEventLoggingHelpers;
 use Tests\TestCase;
 
 class MfaSecurityEventLoggingTest extends TestCase
 {
+    use MfaSecurityEventLoggingHelpers;
     use RefreshDatabase;
 
     public function test_starting_two_factor_setup_is_not_recorded_until_it_is_confirmed(): void
@@ -173,25 +175,5 @@ class MfaSecurityEventLoggingTest extends TestCase
         }
 
         $this->assertSame($recorded, Activity::inLog('security')->count());
-    }
-
-    private function actingAsPasswordConfirmed(?User $user = null): static
-    {
-        return $this->actingAs($user ?? User::factory()->create())
-            ->withSession(['auth.password_confirmed_at' => time()]);
-    }
-
-    private function enableAndConfirmTwoFactor(): User
-    {
-        $user = User::factory()->create();
-
-        $this->actingAsPasswordConfirmed($user)->post('/user/two-factor-authentication');
-
-        $secret = decrypt($user->fresh()->two_factor_secret);
-        $code = app(Google2FA::class)->getCurrentOtp($secret);
-
-        $this->actingAsPasswordConfirmed($user)->post('/user/confirmed-two-factor-authentication', ['code' => $code]);
-
-        return $user->fresh();
     }
 }

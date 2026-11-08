@@ -2,14 +2,11 @@
 
 namespace Tests\Unit;
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Chisel\Filesystem\File;
-use Tests\TestCase;
+use PHPUnit\Framework\TestCase;
 
 class FortifyServiceProviderChiselTest extends TestCase
 {
-    use RefreshDatabase;
-
     /**
      * Password reset has nothing to do with the registration feature, but
      * Chisel deletes everything between a tag's markers verbatim, imports
@@ -25,7 +22,7 @@ class FortifyServiceProviderChiselTest extends TestCase
 
         try {
             copy(
-                base_path('app/Providers/FortifyServiceProvider.php'),
+                dirname(__DIR__, 2).'/app/Providers/FortifyServiceProvider.php',
                 $directory.'/FortifyServiceProvider.php',
             );
 

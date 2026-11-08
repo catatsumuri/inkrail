@@ -5,10 +5,12 @@ namespace Tests\Feature\Auth;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Activitylog\Models\Activity;
+use Tests\Concerns\PasswordResetThrottleHelpers;
 use Tests\TestCase;
 
 class PasswordResetThrottleTest extends TestCase
 {
+    use PasswordResetThrottleHelpers;
     use RefreshDatabase;
 
     public function test_failed_resets_within_the_limit_are_all_recorded(): void
@@ -69,15 +71,5 @@ class PasswordResetThrottleTest extends TestCase
         }
 
         $this->post(route('password.email'), ['email' => $user->email])->assertSessionHasNoErrors();
-    }
-
-    private function attemptReset(string $email)
-    {
-        return $this->post(route('password.update'), [
-            'token' => 'invalid-token',
-            'email' => $email,
-            'password' => 'new-secret-value',
-            'password_confirmation' => 'new-secret-value',
-        ]);
     }
 }

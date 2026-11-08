@@ -7,10 +7,12 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Passkeys\Events\PasskeyRegistered;
 use Laravel\Passkeys\Passkey;
 use Spatie\Activitylog\Models\Activity;
+use Tests\Concerns\PasskeySecurityEventLoggingHelpers;
 use Tests\TestCase;
 
 class PasskeySecurityEventLoggingTest extends TestCase
 {
+    use PasskeySecurityEventLoggingHelpers;
     use RefreshDatabase;
 
     public function test_a_created_passkey_is_recorded_without_its_name(): void
@@ -86,19 +88,5 @@ class PasskeySecurityEventLoggingTest extends TestCase
 
         $this->assertModelExists($passkey);
         $this->assertSame(0, Activity::inLog('security')->count());
-    }
-
-    private function actingAsPasswordConfirmed(User $user): static
-    {
-        return $this->actingAs($user)->withSession(['auth.password_confirmed_at' => time()]);
-    }
-
-    private function createPasskey(User $user, string $name = 'Laptop'): Passkey
-    {
-        return $user->passkeys()->create([
-            'name' => $name,
-            'credential_id' => fake()->unique()->uuid(),
-            'credential' => ['id' => 'x'],
-        ]);
     }
 }
