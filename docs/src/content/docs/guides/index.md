@@ -1,20 +1,20 @@
 ---
-title: 開発・カスタマイズ
-description: 開発・カスタマイズに関する設定・手順・制約。
+title: Development and customization
+description: Configuration, procedures, and constraints for development and customization.
 ---
 
-:::note[執筆予定]
-この章は骨組みです。以下の項目について、手順と制約を順次記載します。
+:::note[Planned content]
+This chapter is an outline. Procedures and constraints will be documented under the topics below.
 :::
 
-## ディレクトリ構成と拡張箇所
+## Structure and extension points
 
-<!-- 本文を追加する。 -->
+<!-- Add documentation here. -->
 
-## 翻訳の追加
+## Adding translations
 
-<!-- 本文を追加する。 -->
+<!-- Add documentation here. -->
 
-## テストと静的解析
+## Tests and static analysis
 
-<!-- 本文を追加する。 -->
+<!-- Add documentation here. -->

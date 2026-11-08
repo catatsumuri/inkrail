@@ -9,8 +9,8 @@ export default defineConfig({
       title: 'Laravel React Secure Starter Kit',
       customCss: ['./src/styles/custom.css'],
       locales: {
-        root: { label: '日本語', lang: 'ja' },
-        en: { label: 'English', lang: 'en' },
+        root: { label: 'English', lang: 'en' },
+        ja: { label: '日本語', lang: 'ja' },
       },
       social: [
         {
@@ -20,17 +20,17 @@ export default defineConfig({
         },
       ],
       sidebar: [
-        { label: 'はじめに', translations: { en: 'Start here' }, items: [
+        { label: 'Start here', translations: { ja: 'はじめに' }, items: [
           { slug: 'about' },
           { autogenerate: { directory: 'getting-started' } },
         ] },
-        { label: '機能', translations: { en: 'Features' }, items: [
+        { label: 'Features', translations: { ja: '機能' }, items: [
           { autogenerate: { directory: 'security' } },
           { autogenerate: { directory: 'sessions' } },
           { autogenerate: { directory: 'events' } },
           { autogenerate: { directory: 'notifications' } },
         ] },
-        { label: '開発・運用', translations: { en: 'Build & operate' }, items: [
+        { label: 'Build & operate', translations: { ja: '開発・運用' }, items: [
           { autogenerate: { directory: 'guides' } },
           { autogenerate: { directory: 'operations' } },
         ] },

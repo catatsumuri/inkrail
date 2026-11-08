@@ -1,20 +1,20 @@
 ---
-title: アカウント保護
-description: アカウント保護に関する設定・手順・制約。
+title: Account protection
+description: Configuration, procedures, and constraints for account protection.
 ---
 
-:::note[執筆予定]
-この章は骨組みです。以下の項目について、手順と制約を順次記載します。
+:::note[Planned content]
+This chapter is an outline. Procedures and constraints will be documented under the topics below.
 :::
 
-## アカウント変更通知
+## Account change notifications
 
-<!-- 本文を追加する。 -->
+<!-- Add documentation here. -->
 
-## メール変更時の本人確認
+## Password confirmation for email changes
 
-<!-- 本文を追加する。 -->
+<!-- Add documentation here. -->
 
-## レート制限
+## Rate limits
 
-<!-- 本文を追加する。 -->
+<!-- Add documentation here. -->

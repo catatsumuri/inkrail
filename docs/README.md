@@ -15,16 +15,18 @@ npm run dev
 
 表示先: `http://localhost:4321/laravel-react-secure-starter-kit/`
 
+デフォルトは英語です。日本語版は `/laravel-react-secure-starter-kit/ja/` で表示します。
+
 ## ページの追加
 
-日本語は `src/content/docs/`、英語は `src/content/docs/en/` 以下に
+英語は `src/content/docs/`、日本語は `src/content/docs/ja/` 以下に
 同じ相対パスの Markdown または MDX ファイルを追加します。
-例: `sessions/index.md` と `en/sessions/index.md` が対応する翻訳です。
+例: `sessions/index.md` と `ja/sessions/index.md` が対応する翻訳です。
 ヘッダーの言語メニューから、同じページの日本語・英語を切り替えられます。
 各ファイルの先頭には `title` と `description` を指定してください。
 既存の章のフォルダーに追加したページはサイドバーに自動表示されます。
 章を増やす場合は `astro.config.mjs` の `sidebar` も更新します。
-グループ名には `translations.en` で英語のラベルを指定します。
+グループ名は英語で記載し、`translations.ja` で日本語のラベルを指定します。
 
 ## デザイン
 
@@ -49,9 +51,9 @@ GitHub リポジトリの **Settings → Pages → Build and deployment → Sour
 `main` へのドキュメント変更の push で `.github/workflows/docs.yml` がビルド・デプロイします。
 Pull Request ではビルドのみ実行します。Actions から手動実行もできます。
 
-公開先: <https://catatsumuri.github.io/laravel-react-secure-starter-kit/>
+公開先（英語・デフォルト）: <https://catatsumuri.github.io/laravel-react-secure-starter-kit/>
 
-英語版: <https://catatsumuri.github.io/laravel-react-secure-starter-kit/en/>
+日本語版: <https://catatsumuri.github.io/laravel-react-secure-starter-kit/ja/>
 
 リポジトリ名や公開先を変更する場合は `astro.config.mjs` の `site` と `base` を更新してください。
 

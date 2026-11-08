@@ -1,20 +1,20 @@
 ---
-title: セキュリティイベント
-description: セキュリティイベントに関する設定・手順・制約。
+title: Security events
+description: Configuration, procedures, and constraints for security events.
 ---
 
-:::note[執筆予定]
-この章は骨組みです。以下の項目について、手順と制約を順次記載します。
+:::note[Planned content]
+This chapter is an outline. Procedures and constraints will be documented under the topics below.
 :::
 
-## 記録対象のイベント
+## Recorded events
 
-<!-- 本文を追加する。 -->
+<!-- Add documentation here. -->
 
-## 閲覧権限と JSON エンドポイント
+## Access controls and JSON endpoint
 
-<!-- 本文を追加する。 -->
+<!-- Add documentation here. -->
 
-## 保持期間と削除
+## Retention and cleanup
 
-<!-- 本文を追加する。 -->
+<!-- Add documentation here. -->

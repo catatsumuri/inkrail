@@ -1,20 +1,20 @@
 ---
-title: 導入
-description: 導入に関する設定・手順・制約。
+title: Getting started
+description: Configuration, procedures, and constraints for getting started.
 ---
 
-:::note[執筆予定]
-この章は骨組みです。以下の項目について、手順と制約を順次記載します。
+:::note[Planned content]
+This chapter is an outline. Procedures and constraints will be documented under the topics below.
 :::
 
-## 動作要件
+## Requirements
 
-<!-- 本文を追加する。 -->
+<!-- Add documentation here. -->
 
-## セットアップ
+## Installation
 
-<!-- 本文を追加する。 -->
+<!-- Add documentation here. -->
 
-## 必須設定と制約
+## Required configuration and constraints
 
-<!-- 本文を追加する。 -->
+<!-- Add documentation here. -->

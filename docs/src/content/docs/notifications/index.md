@@ -1,20 +1,20 @@
 ---
-title: 通知と運用アラート
-description: 通知と運用アラートに関する設定・手順・制約。
+title: Notifications and alerts
+description: Configuration, procedures, and constraints for notifications and alerts.
 ---
 
-:::note[執筆予定]
-この章は骨組みです。以下の項目について、手順と制約を順次記載します。
+:::note[Planned content]
+This chapter is an outline. Procedures and constraints will be documented under the topics below.
 :::
 
-## アプリ内・メール・Slack の配信
+## In-app, email, and Slack delivery
 
-<!-- 本文を追加する。 -->
+<!-- Add documentation here. -->
 
-## 通知の送信と拡張
+## Sending and extending notifications
 
-<!-- 本文を追加する。 -->
+<!-- Add documentation here. -->
 
-## 例外・ジョブ失敗のアラート
+## Exception and failed-job alerts
 
-<!-- 本文を追加する。 -->
+<!-- Add documentation here. -->

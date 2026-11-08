@@ -1,22 +1,22 @@
 ---
-title: セッション管理
-description: セッション管理に関する設定・手順・制約。
+title: Session management
+description: Configuration, procedures, and constraints for session management.
 ---
 
-:::note[執筆予定]
-この章は骨組みです。以下の項目について、手順と制約を順次記載します。
+:::note[Planned content]
+This chapter is an outline. Procedures and constraints will be documented under the topics below.
 :::
 
-セッション管理には `SESSION_DRIVER=database` が必須です。Redis・file などのドライバーには対応していません。
+Session management requires `SESSION_DRIVER=database`. Redis, file, and other drivers are not supported.
 
-## database ドライバーの要件
+## Database session driver requirement
 
-<!-- 本文を追加する。 -->
+<!-- Add documentation here. -->
 
-## 設定画面での一覧と失効
+## Listing and revoking sessions in settings
 
-<!-- 本文を追加する。 -->
+<!-- Add documentation here. -->
 
-## 運用者の失効コマンド
+## Operator revocation command
 
-<!-- 本文を追加する。 -->
+<!-- Add documentation here. -->

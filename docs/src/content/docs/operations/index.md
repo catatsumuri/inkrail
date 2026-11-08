@@ -1,20 +1,20 @@
 ---
-title: 運用ガイド
-description: 運用ガイドに関する設定・手順・制約。
+title: Operations
+description: Configuration, procedures, and constraints for operations.
 ---
 
-:::note[執筆予定]
-この章は骨組みです。以下の項目について、手順と制約を順次記載します。
+:::note[Planned content]
+This chapter is an outline. Procedures and constraints will be documented under the topics below.
 :::
 
-## 本番環境の設定
+## Production configuration
 
-<!-- 本文を追加する。 -->
+<!-- Add documentation here. -->
 
-## キューとスケジューラー
+## Queues and scheduler
 
-<!-- 本文を追加する。 -->
+<!-- Add documentation here. -->
 
-## 運用時の確認項目
+## Operational checks
 
-<!-- 本文を追加する。 -->
+<!-- Add documentation here. -->

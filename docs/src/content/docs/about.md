@@ -1,25 +1,25 @@
 ---
-title: このプロジェクトについて
-description: 派生元と、このスターターキットで追加した機能。
+title: About this project
+description: Where this kit comes from and what it adds.
 ---
 
-このプロジェクトは [react-starter-kit-i18n](https://github.com/catatsumuri/react-starter-kit-i18n) の main を基盤に、セキュリティ関連の拡張を独立したリポジトリに分離した派生版です。
+This project is a derivative of the main branch of [react-starter-kit-i18n](https://github.com/catatsumuri/react-starter-kit-i18n). Its security-related extensions have been separated into an independent repository.
 
-## 派生元との関係
+## Relationship to the original
 
-Laravel + React の構成と、多言語対応の仕組みを引き継いでいます。共通する翻訳基盤の説明は、派生元のドキュメントを参照してください。
+It retains the Laravel + React foundation and internationalization pipeline. Refer to the original project’s documentation for the shared translation setup.
 
-## この版で追加した機能
+## What this edition adds
 
-| 領域 | 追加内容 |
+| Area | Additions |
 | --- | --- |
-| アカウント保護 | 変更通知、メール変更時の本人確認、機微な操作のレート制限 |
-| セッション管理 | 設定画面での一覧・失効操作、運用者の失効コマンド |
-| セキュリティイベント | 機微な変更・認証失敗の記録、閲覧権限、保持期間 |
-| 通知と運用アラート | アプリ内・メール・任意の Slack 通知、例外・ジョブ失敗の通知 |
+| Account protection | Change notifications, password confirmation for email changes, and rate limits for sensitive actions |
+| Session management | Session listing and revocation in account settings, plus an operator revocation command |
+| Security events | Records of sensitive changes and failed authentication attempts, access controls, and retention periods |
+| Notifications and alerts | In-app, email, and optional Slack delivery, plus alerts for exceptions and failed jobs |
 
-## 利用上の前提
+## Requirements to keep in mind
 
-セッション管理は `SESSION_DRIVER=database` が必須です。Redis・file など、ほかのセッションドライバーには対応していません。
+Session management requires `SESSION_DRIVER=database`. Redis, file, and other session drivers are not supported.
 
-このドキュメントでは追加機能の使い方と制約を中心に説明します。詳細な手順は各章に順次追加します。
+These docs focus on the additions and their constraints. Detailed procedures will be added to each chapter over time.
