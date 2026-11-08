@@ -34,6 +34,9 @@ npm run dev
 機能カードは `src/components/FeatureGrid.astro` で管理します。
 ライト・ダークテーマとモバイル表示に対応しています。
 
+導入手順のスクリーンショットは `src/assets/installation/` に保存します。
+内容が分かるファイル名を付け、日英のページから同じ画像を参照します。
+
 ## ビルドの確認
 
 ```sh

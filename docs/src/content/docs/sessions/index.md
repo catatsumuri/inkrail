@@ -7,7 +7,7 @@ description: Configuration, procedures, and constraints for session management.
 This chapter is an outline. Procedures and constraints will be documented under the topics below.
 :::
 
-Session management requires `SESSION_DRIVER=database`. Redis, file, and other drivers are not supported.
+Session revocation requires `SESSION_DRIVER=database`. The application can use other drivers, such as Redis or file, but this kit's revocation feature is unavailable with them.
 
 ## Database session driver requirement
 

@@ -31,7 +31,7 @@ Login, password resets, two-factor authentication, and passkeys already exist in
 Keep these three points in mind. The getting started chapter will explain the setup steps.
 
 - **PHP 8.4 or later is required.** This raises the parent project's PHP requirement.
-- **Session controls use database sessions.** They require `SESSION_DRIVER=database`.
+- **Session revocation requires `SESSION_DRIVER=database`.** The application can use other drivers, but this kit's revocation feature is unavailable with them.
 - **Email notices need a configured mail transport.** The initial configuration writes email content to the log.
 
 ## What to read next

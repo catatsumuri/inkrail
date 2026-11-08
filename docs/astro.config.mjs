@@ -22,6 +22,8 @@ export default defineConfig({
       sidebar: [
         { label: 'Start here', translations: { ja: 'はじめに' }, items: [
           { slug: 'about' },
+        ] },
+        { label: 'Installation', translations: { ja: '導入' }, items: [
           { autogenerate: { directory: 'getting-started' } },
         ] },
         { label: 'Features', translations: { ja: '機能' }, items: [

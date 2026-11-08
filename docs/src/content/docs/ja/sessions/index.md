@@ -7,7 +7,7 @@ description: セッション管理に関する設定・手順・制約。
 この章は骨組みです。以下の項目について、手順と制約を順次記載します。
 :::
 
-セッション管理には `SESSION_DRIVER=database` が必須です。Redis・file などのドライバーには対応していません。
+セッションの失効（revoke）には `SESSION_DRIVER=database` が必要です。Redis や file などでもアプリは利用できますが、このキットの失効機能は使えません。
 
 ## database ドライバーの要件
 
