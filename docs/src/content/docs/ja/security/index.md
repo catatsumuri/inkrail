@@ -33,16 +33,16 @@ description: アカウント保護に関する設定・手順・制約。
 
 ### アカウント削除時の通知を確認する
 
-プロフィール設定（`/settings/profile`）を開き、画面下部の「Delete account」ボタンを確認します。
+プロフィール設定（`/settings/profile`）を開き、画面下部の「`Delete account`」ボタンを確認します。
 
 <figure>
 
-![プロフィール設定画面。「Delete account」ボタンを赤い矢印で示している](../../../../assets/security/delete-account-profile.png)
+![プロフィール設定画面。Delete accountボタンを赤い矢印で示している](../../../../assets/security/delete-account-profile.png)
 
-<figcaption>プロフィール設定画面。「Delete account」ボタンを赤い矢印で示している</figcaption>
+<figcaption>プロフィール設定画面。「<code>Delete account</code>」ボタンを赤い矢印で示している</figcaption>
 </figure>
 
-「Delete account」を押すと確認ダイアログが開きます。現在のパスワードを入力します。
+「`Delete account`」を押すと確認ダイアログが開きます。現在のパスワードを入力します。
 
 <figure>
 
@@ -51,22 +51,22 @@ description: アカウント保護に関する設定・手順・制約。
 <figcaption>アカウント削除の確認ダイアログ。現在のパスワードを入力した状態</figcaption>
 </figure>
 
-確認ダイアログの「Delete account」を押して削除を確定します。削除が完了するとログアウトし、トップページへ戻ります。
+確認ダイアログの「`Delete account`」を押して削除を確定します。削除が完了するとログアウトし、トップページへ戻ります。
 
-Mailpit（<http://localhost:8025>）を開き、削除時点のメールアドレス宛てに「Your account was deleted」が届いていることを確認します。
+Mailpit（<http://localhost:8025>）を開き、削除時点のメールアドレス宛てに「`Your account was deleted`」が届いていることを確認します。
 
 <figure>
 
 ![Mailpitの受信箱。test@example.com宛てのアカウント削除通知が届いている](../../../../assets/security/delete-account-mailpit-inbox.png)
 
-<figcaption>Mailpitの受信箱に届いたアカウント削除通知「Your account was deleted」</figcaption>
+<figcaption>Mailpitの受信箱に届いたアカウント削除通知「<code>Your account was deleted</code>」</figcaption>
 </figure>
 
 メールを開き、本文にアカウントが削除されたことが記載されていることを確認します。
 
 <figure>
 
-![Mailpitで開いたアカウント削除通知。本文に「Your account was deleted.」と表示されている](../../../../assets/security/delete-account-mailpit-message.png)
+![Mailpitで開いたアカウント削除通知。本文にYour account was deleted.と表示されている](../../../../assets/security/delete-account-mailpit-message.png)
 
 <figcaption>アカウント削除通知の本文</figcaption>
 </figure>
@@ -81,16 +81,16 @@ Mailpit（<http://localhost:8025>）を開き、削除時点のメールアド�
 変更時に現在のパスワードを再入力させることで、ログイン状態だけを手に入れた第三者によるメールアドレス変更を防ぎます。
 :::
 
-プロフィール設定（`/settings/profile`）を開き、「Email address」を変更します。変更すると「Current password」欄と、メールアドレス変更の確認のために現在のパスワードを入力する案内が表示されます。
+プロフィール設定（`/settings/profile`）を開き、「`Email address`」を変更します。変更すると「`Current password`」欄と、メールアドレス変更の確認のために現在のパスワードを入力する案内が表示されます。
 
 <figure>
 
-![メールアドレス編集時のプロフィール設定。本人確認用の「Current password」欄を赤い枠と矢印で強調している](../../../../assets/security/email-change-password-confirmation.png)
+![メールアドレス編集時のプロフィール設定。本人確認用のCurrent password欄を赤い枠と矢印で強調している](../../../../assets/security/email-change-password-confirmation.png)
 
-<figcaption>メールアドレスを変更すると表示される、本人確認用の「Current password」欄</figcaption>
+<figcaption>メールアドレスを変更すると表示される、本人確認用の「<code>Current password</code>」欄</figcaption>
 </figure>
 
-現在のパスワードを入力して「Save」を押します。サーバー側でもパスワードを検証し、入力がない場合や一致しない場合はメールアドレスを変更しません。
+現在のパスワードを入力して「`Save`」を押します。サーバー側でもパスワードを検証し、入力がない場合や一致しない場合はメールアドレスを変更しません。
 
 ## レート制限
 
@@ -114,13 +114,13 @@ Mailpit（<http://localhost:8025>）を開き、削除時点のメールアド�
 
 上限を超えると、そのリクエストは処理されず、HTTP `429 Too Many Requests` が返ります。制限が解除されるまで待ってから再操作してください。連打や自動再試行を続けても、その間の操作は受け付けられません。
 
-プロフィール設定で、入力内容を変えずに「Save」を短時間に繰り返し押すと、制限に達した時点で次の画面が表示されます。
+プロフィール設定で、入力内容を変えずに「`Save`」を短時間に繰り返し押すと、制限に達した時点で次の画面が表示されます。
 
 <figure>
 
 ![プロフィールの保存を繰り返し、429 Too Many Requests が表示された画面](../../../../assets/security/profile-rate-limit.png)
 
-<figcaption>プロフィール保存のレート制限に達したときの「429 Too Many Requests」画面</figcaption>
+<figcaption>プロフィール保存のレート制限に達したときの「<code>429 Too Many Requests</code>」画面</figcaption>
 </figure>
 
 ### 設定を変更する場合
