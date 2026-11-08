@@ -78,7 +78,7 @@ Press Space to toggle a feature and Enter to confirm. For an initial tour of the
 | Passkeys | Enable passkey authentication |
 | Password confirmation | Ask for the password again before sensitive actions |
 
-Chisel removes code and configuration for the features you deselect. **Removing Password confirmation also removes the browser-based session management page.**
+[Chisel](https://github.com/laravel/chisel) removes code and configuration for the features you deselect. **Removing Password confirmation also removes the browser-based session management page.**
 
 The Installer then generates Wayfinder resources, runs database migrations, sets up the test environment, installs npm packages, and builds assets. Pest was configured in the verified run.
 
@@ -93,7 +93,12 @@ composer run dev
 
 This starts the development server, queue worker, log viewer, and Vite together. Switch between their tabs in the terminal to inspect each process.
 
+<figure>
+
 ![composer run dev terminal with server, queue, logs, and vite tabs; the PHP server is listening on 127.0.0.1:8000](../../../assets/installation/laravel-dev-terminal.png)
+
+<figcaption>composer run dev terminal with server, queue, logs, and vite tabs; the PHP server is listening on 127.0.0.1:8000</figcaption>
+</figure>
 
 The command **keeps the terminal occupied while running**. Open another terminal to run other commands without stopping the services. For SSH, open another connection. Stop the development command with `Ctrl+C`.
 
@@ -101,7 +106,12 @@ The command **keeps the terminal occupied while running**. Open another terminal
 
 Open <http://localhost:8000>. The Welcome page with **Log in / Register** in the upper-right corner confirms that the application starts and its initial page renders.
 
+<figure>
+
 ![Laravel Welcome page at localhost:8000 with Log in and Register buttons](../../../assets/installation/laravel-welcome-page.png)
+
+<figcaption>Laravel Welcome page at localhost:8000 with Log in and Register buttons</figcaption>
+</figure>
 
 This verifies startup and welcome-page rendering. Registration, login, and the individual security features still need their own checks.
 
@@ -136,7 +146,12 @@ Follow the `boost:install` prompts to select the AI agents you use. The command 
 
 `npm WARN exec` and `npm WARN deprecated` alone do not establish a fetch failure. Inspect the subsequent output.
 
+<figure>
+
 ![Terminal showing tiged fetching the kit from GitHub, followed by Composer processing](../../../assets/installation/laravel-installer-download.png)
+
+<figcaption>Terminal showing tiged fetching the kit from GitHub, followed by Composer processing</figcaption>
+</figure>
 
 If you see `cloned ... to .../my-app`, the files have been fetched. Check the following Composer step:
 

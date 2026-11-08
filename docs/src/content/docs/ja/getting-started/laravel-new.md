@@ -78,7 +78,7 @@ Which authentication features would you like to enable?
 | Passkeys | パスキー認証 |
 | Password confirmation | 重要な操作の前のパスワード再確認 |
 
-この選択に応じて、Chisel が不要な機能のコードや設定を取り除きます。**Password confirmation を外すと、ブラウザー用のセッション管理画面も除去されます。**
+この選択に応じて、[Chisel](https://github.com/laravel/chisel) が不要な機能のコードや設定を取り除きます。**Password confirmation を外すと、ブラウザー用のセッション管理画面も除去されます。**
 
 選択後は、Wayfinder の生成、データベースのマイグレーション、テスト環境の設定、npm パッケージの導入とアセットのビルドが進みます。今回の実行では Pest が設定されました。
 
@@ -93,7 +93,12 @@ composer run dev
 
 開発サーバー、キューワーカー、ログ表示、Vite をまとめて起動します。ターミナルでは、それぞれのタブを切り替えて状態を確認できます。
 
+<figure>
+
 ![composer run dev のターミナル。server・queue・logs・vite のタブと、127.0.0.1:8000 で起動した PHP サーバー](../../../../assets/installation/laravel-dev-terminal.png)
+
+<figcaption>composer run dev のターミナル。server・queue・logs・vite のタブと、127.0.0.1:8000 で起動した PHP サーバー</figcaption>
+</figure>
 
 このコマンドは**実行中のターミナルを使い続けます**。起動したまま別のコマンドを実行したいときは、別のターミナルを開いてください。SSH 接続なら、もう1本接続を開きます。終了は `Ctrl+C` です。
 
@@ -101,7 +106,12 @@ composer run dev
 
 ブラウザーで <http://localhost:8000> を開きます。Welcome ページと、右上の **Log in / Register** が表示されれば、起動と初期画面の表示を確認できています。
 
+<figure>
+
 ![localhost:8000 で表示された Laravel の Welcome ページ。Log in と Register ボタンがある](../../../../assets/installation/laravel-welcome-page.png)
+
+<figcaption>localhost:8000 で表示された Laravel の Welcome ページ。Log in と Register ボタンがある</figcaption>
+</figure>
 
 ここまでで確認しているのは、アプリの起動と初期画面の表示です。登録・ログインや各セキュリティ機能の動作確認は、続けて行います。
 
@@ -136,7 +146,12 @@ php artisan boost:install
 
 `npm WARN exec` や `npm WARN deprecated` の表示だけで、取得に失敗したとは限りません。続くログを確認してください。
 
+<figure>
+
 ![tiged による GitHub からの取得と、続く Composer の処理が表示されたターミナル](../../../../assets/installation/laravel-installer-download.png)
+
+<figcaption>tiged による GitHub からの取得と、続く Composer の処理が表示されたターミナル</figcaption>
+</figure>
 
 `cloned ... to .../my-app` と出ていれば、取得は済んでいます。その後の Composer の処理を確認します。
 

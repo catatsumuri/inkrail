@@ -38,6 +38,14 @@ body { -webkit-font-smoothing: antialiased; }
 h1, h2, h3 { letter-spacing: -0.035em; }
 .sl-markdown-content h2 { margin-top: 2.8rem; }
 .sl-markdown-content p { color: var(--sl-color-gray-2); }
+.sl-markdown-content figure { margin-inline: 0; }
+.sl-markdown-content figure img { display: block; margin-inline: auto; }
+.sl-markdown-content figure figcaption {
+  margin-top: 0.6rem;
+  color: var(--kit-muted);
+  font-size: 0.85rem;
+  text-align: center;
+}
 .sidebar-content { font-size: 0.9rem; }
 .sidebar-content a[aria-current='page'] { border-radius: 0.4rem; }
 .pagination-links a { border: 1px solid var(--kit-border); border-radius: 0.75rem; box-shadow: none; }

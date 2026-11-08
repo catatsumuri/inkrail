@@ -31,7 +31,7 @@ composer install --ignore-platform-reqs
 
 `--ignore-platform-reqs` は、Sail の準備のためにホスト側の PHP バージョン・拡張のチェックを省略する指定です。コンテナ内での互換性を保証するものではなく、後でコンテナ側の要件を確認します。また、Composer のスクリプトはホストで実行されるため、その処理に必要なツールや拡張は必要です。
 
-途中で Chisel による認証機能の選択が表示されます。スペースキーで選択を切り替え、Enter で確定します。初回の確認では、すべて有効にしたまま進められます。
+途中で [Chisel](https://github.com/laravel/chisel) による認証機能の選択が表示されます。スペースキーで選択を切り替え、Enter で確定します。初回の確認では、すべて有効にしたまま進められます。
 
 ```text
 Which authentication features would you like to enable?
@@ -125,7 +125,12 @@ APP_URL=http://localhost:8000
 
 アプリで Welcome ページと **Log in / Register** が表示されることを確認します。
 
+<figure>
+
 ![Sail で起動し、localhost:8000 に表示された Laravel の Welcome ページ](../../../../assets/installation/sail-welcome-page.png)
+
+<figcaption>Sail で起動し、localhost:8000 に表示された Laravel の Welcome ページ</figcaption>
+</figure>
 
 Mailpit を選ぶと、Sail が `.env` のメール設定を次のように変更します。
 
@@ -137,7 +142,12 @@ MAIL_PORT=1025
 
 8025 はブラウザーで受信箱を見るためのポートです。アプリからのメール送信先は、コンテナ間で接続する `mailpit:1025` です。
 
+<figure>
+
 ![localhost:8025 に表示された Mailpit の受信箱。メールはまだ0件](../../../../assets/installation/sail-mailpit-inbox.png)
+
+<figcaption>localhost:8025 に表示された Mailpit の受信箱。メールはまだ0件</figcaption>
+</figure>
 
 初期状態の受信箱は空です。ここまでで確認できているのは Mailpit の画面表示までで、メール受信そのものは、メール確認やパスワードリセットなどを実行して別途確認します。
 

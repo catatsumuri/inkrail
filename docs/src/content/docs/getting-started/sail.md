@@ -31,7 +31,7 @@ composer install --ignore-platform-reqs
 
 `--ignore-platform-reqs` skips host PHP version and extension checks while obtaining the files needed to prepare Sail. It does not guarantee compatibility inside the container; check that later. Composer scripts still execute on the host and need the tools and extensions required by those scripts.
 
-Chisel prompts you to select authentication features. Press Space to toggle selections and Enter to confirm. For an initial check, you can leave all features enabled.
+[Chisel](https://github.com/laravel/chisel) prompts you to select authentication features. Press Space to toggle selections and Enter to confirm. For an initial check, you can leave all features enabled.
 
 ```text
 Which authentication features would you like to enable?
@@ -125,7 +125,12 @@ Vite+ runs using Node.js inside the container. `Inertia SSR dev endpoint: /__ine
 
 Check that the application displays the Welcome page with **Log in / Register**.
 
+<figure>
+
 ![Laravel Welcome page served through Sail at localhost:8000](../../../assets/installation/sail-welcome-page.png)
+
+<figcaption>Laravel Welcome page served through Sail at localhost:8000</figcaption>
+</figure>
 
 Selecting Mailpit makes Sail update the email settings in `.env`:
 
@@ -137,7 +142,12 @@ MAIL_PORT=1025
 
 Port 8025 is the browser inbox interface. Application email is sent between containers to `mailpit:1025`.
 
+<figure>
+
 ![Mailpit inbox at localhost:8025 with zero messages](../../../assets/installation/sail-mailpit-inbox.png)
+
+<figcaption>Mailpit inbox at localhost:8025 with zero messages</figcaption>
+</figure>
 
 The inbox starts empty. Verification so far covers the Mailpit interface, not email receipt. Test receipt separately by triggering an action such as email verification or a password reset.
 
