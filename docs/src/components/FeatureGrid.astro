@@ -1,0 +1,27 @@
+---
+const { lang = 'ja' } = Astro.props;
+const en = lang === 'en';
+const base = import.meta.env.BASE_URL.replace(/\/$/, '') + (en ? '/en' : '');
+const features = en ? [
+  ['01', 'Account protection', 'Notify users about sensitive account changes, and add checks and rate limits to sensitive actions.', 'security', 'ACCOUNT'],
+  ['02', 'Session control', 'Review active sessions and revoke access from account settings or an operator command.', 'sessions', 'SESSIONS'],
+  ['03', 'Security events', 'Record sensitive changes and rejected authentication attempts for authorized operators to inspect.', 'events', 'AUDIT'],
+  ['04', 'Notifications & alerts', 'Deliver in-app and email notifications, with operational alerts and optional Slack delivery.', 'notifications', 'DELIVERY'],
+] : [
+  ['01', 'アカウント保護', '重要なアカウント変更を通知。本人確認と追加のレート制限で、機微な操作を保護します。', 'security', 'ACCOUNT'],
+  ['02', 'セッション管理', '利用中のセッションを確認し、設定画面や管理コマンドから不要なアクセスを終了できます。', 'sessions', 'SESSIONS'],
+  ['03', 'セキュリティイベント', '機微な変更や認証の失敗を記録。権限を持つ運用者が、調査のために参照できます。', 'events', 'AUDIT'],
+  ['04', '通知と運用アラート', 'アプリ内・メールの通知基盤に、運用アラートと任意の Slack 配信を備えています。', 'notifications', 'DELIVERY'],
+];
+---
+
+<div class="feature-grid">
+  {features.map(([number, title, description, slug, label]) => (
+    <a class="feature-card" href={`${base}/${slug}/`}>
+      <div class="feature-meta"><span>{number}</span><span>{label}</span><span aria-hidden="true">↗</span></div>
+      <h3>{title}</h3>
+      <p>{description}</p>
+      <span class="feature-link">{en ? 'Explore the guide' : 'ガイドを読む'} <span aria-hidden="true">→</span></span>
+    </a>
+  ))}
+</div>

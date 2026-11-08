@@ -7,8 +7,10 @@ export default defineConfig({
   integrations: [
     starlight({
       title: 'Laravel React Secure Starter Kit',
+      customCss: ['./src/styles/custom.css'],
       locales: {
         root: { label: '日本語', lang: 'ja' },
+        en: { label: 'English', lang: 'en' },
       },
       social: [
         {
@@ -18,10 +20,20 @@ export default defineConfig({
         },
       ],
       sidebar: [
-        { label: 'はじめに', items: [{ autogenerate: { directory: 'getting-started' } }] },
-        { label: '開発ガイド', items: [{ autogenerate: { directory: 'guides' } }] },
-        { label: 'セキュリティ', items: [{ autogenerate: { directory: 'security' } }] },
-        { label: '運用', items: [{ autogenerate: { directory: 'operations' } }] },
+        { label: 'はじめに', translations: { en: 'Start here' }, items: [
+          { slug: 'about' },
+          { autogenerate: { directory: 'getting-started' } },
+        ] },
+        { label: '機能', translations: { en: 'Features' }, items: [
+          { autogenerate: { directory: 'security' } },
+          { autogenerate: { directory: 'sessions' } },
+          { autogenerate: { directory: 'events' } },
+          { autogenerate: { directory: 'notifications' } },
+        ] },
+        { label: '開発・運用', translations: { en: 'Build & operate' }, items: [
+          { autogenerate: { directory: 'guides' } },
+          { autogenerate: { directory: 'operations' } },
+        ] },
       ],
     }),
   ],
