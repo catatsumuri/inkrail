@@ -45,4 +45,4 @@ If you are setting up the kit for the first time, start with [Getting started](.
 - [Security events](../events/) — Recording actions and inspecting them as an operator
 - [Notifications and alerts](../notifications/) — Delivering updates and reporting failures
 
-Detailed configuration and constraints will be added to each chapter over time.
+See each chapter for detailed configuration and constraints. Also see [Development and customization](../guides/), [Operations](../operations/), and the [test inventory](../guides/tests/).

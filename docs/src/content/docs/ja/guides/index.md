@@ -123,6 +123,7 @@ CIと同じ入口です。フロントエンドのコード検査とTypeScript�
 | `composer test` | 設定キャッシュのクリア、PHPの整形確認・静的解析、テスト |
 | `php artisan test --filter=NotificationTest` | 指定した名前に一致するテストの実行 |
 | `npm run build` | フロントエンドの本番用ビルド |
+| `node scripts/check-test-inventory.mjs` | Git管理下のテストメソッドと日英のテスト項目一覧を照合 |
 
 整形などの修正を適用する場合は `composer lint`、フロントエンドでは `npm run check:fix` を使います。これらはファイルを書き換えるため、実行後に差分を確認してください。
 

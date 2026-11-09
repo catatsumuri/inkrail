@@ -11,6 +11,8 @@ description: コミット済みの240テストメソッドと日本語の確認�
 
 実行方法は[テストと静的解析](../#テストと静的解析)を参照してください。
 
+CIでは `node scripts/check-test-inventory.mjs` により、Git管理下のテストメソッドと日英の一覧を照合します。
+
 ## ログイン・ログアウト
 
 [Feature/Auth/AuthenticationTest.php](https://github.com/catatsumuri/laravel-react-secure-starter-kit/blob/main/tests/Feature/Auth/AuthenticationTest.php) — 6項目

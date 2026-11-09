@@ -5,10 +5,14 @@ on:
     branches: [main]
     paths:
       - 'docs/**'
+      - 'tests/**'
+      - 'scripts/check-test-inventory.mjs'
       - '.github/workflows/docs.yml'
   pull_request:
     paths:
       - 'docs/**'
+      - 'tests/**'
+      - 'scripts/check-test-inventory.mjs'
       - '.github/workflows/docs.yml'
   workflow_dispatch:
 
@@ -35,6 +39,8 @@ jobs:
           cache: npm
           cache-dependency-path: docs/package-lock.json
       - run: npm ci
+      - name: Check test inventory
+        run: node ../scripts/check-test-inventory.mjs
       - run: npm run build
       - uses: actions/upload-pages-artifact@v4
         if: github.event_name != 'pull_request'

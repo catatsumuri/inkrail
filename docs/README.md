@@ -47,6 +47,8 @@ npm run preview
 
 静的ファイルは `dist/` に出力されます。
 
+テスト項目一覧を変更した場合は、リポジトリのルートから `node scripts/check-test-inventory.mjs` を実行します。Git管理下のテストメソッドと日英の一覧を照合し、ファイル・キー・件数の抜けや重複、日本語説明の空欄を検出します。ドキュメントのCIでも実行します。テストを追加・改名・削除した場合は、一覧も併せて更新してください。
+
 ## GitHub Pages
 
 GitHub リポジトリの **Settings → Pages → Build and deployment → Source** を

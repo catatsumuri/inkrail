@@ -42,7 +42,7 @@ export default defineConfig({
         ] },
         { label: 'Appendix', translations: { ja: '付録' }, items: [
           { slug: 'guides/tests' },
-          { label: 'Access blocking checklist', translations: { ja: 'アクセス遮断チェックリスト' }, link: '/guides/access-blocking-checklist/' },
+          { slug: 'guides/access-blocking-checklist' },
         ] },
       ],
     }),
