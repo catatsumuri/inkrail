@@ -19,4 +19,4 @@ For localization setup and adding locales, see the [upstream localization guide]
 
 Documentation is published on GitHub Pages in [English](https://catatsumuri.github.io/laravel-react-secure-starter-kit/about/) and [Japanese](https://catatsumuri.github.io/laravel-react-secure-starter-kit/ja/about/). Each language's root page redirects to its project overview.
 
-The Astro Starlight sources and editing instructions live in [`docs/`](docs/README.md).
+The Astro Starlight sources, editing instructions, and documentation publishing workflow live on the separate [`docs` branch](https://github.com/catatsumuri/laravel-react-secure-starter-kit/tree/docs). They are not included in the application starter kit.
