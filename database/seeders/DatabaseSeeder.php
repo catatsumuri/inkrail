@@ -15,11 +15,25 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
-        User::factory()->create([
+        $user = User::where('email', 'test@example.com')->first() ?? User::factory()->create([
             'name' => 'Test User',
             'email' => 'test@example.com',
         ]);
+
+        foreach ([
+            [
+                'title' => 'InkRailへようこそ',
+                'content' => "InkRailは、考えやアイデアを書き留めるための場所です。\n\nまずは新しい記事を作成して、今日の気づきを残してみましょう。",
+            ],
+            [
+                'title' => '記事の編集と管理',
+                'content' => "作成した記事は、詳細画面から編集できます。\n\n不要になった記事は削除できます。確認ダイアログで内容を確認してから削除してください。",
+            ],
+        ] as $article) {
+            $user->articles()->firstOrCreate(
+                ['title' => $article['title']],
+                ['content' => $article['content']],
+            );
+        }
     }
 }

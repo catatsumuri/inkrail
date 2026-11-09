@@ -1,5 +1,6 @@
 import { Link } from '@inertiajs/react';
 import { BookOpen, FolderGit2, LayoutGrid } from 'lucide-react';
+import { index as articlesIndex } from '@/actions/App/Http/Controllers/ArticleController';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
@@ -17,6 +18,7 @@ import { dashboard } from '@/routes';
 import type { NavItem } from '@/types';
 
 const mainNavItems: NavItem[] = [
+    { title: '記事', href: articlesIndex(), icon: BookOpen },
     {
         title: 'Dashboard',
         href: dashboard(),
