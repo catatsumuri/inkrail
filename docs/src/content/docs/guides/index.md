@@ -17,4 +17,4 @@ This chapter is an outline. Procedures and constraints will be documented under 
 
 ## Tests and static analysis
 
-<!-- Add documentation here. -->
+See the [test inventory](./tests/) for all 240 committed test methods, grouped by test file and listed under their exact English keys.

@@ -47,6 +47,20 @@ h1, h2, h3 { letter-spacing: -0.035em; }
   text-align: center;
 }
 .sidebar-content { font-size: 0.9rem; }
+.sl-markdown-content .test-inventory table {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+}
+.sl-markdown-content .test-inventory th,
+.sl-markdown-content .test-inventory td {
+  overflow-wrap: anywhere;
+  vertical-align: top;
+}
+.sl-markdown-content .test-inventory td code {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
 .sidebar-content a[aria-current='page'] { border-radius: 0.4rem; }
 .pagination-links a { border: 1px solid var(--kit-border); border-radius: 0.75rem; box-shadow: none; }
 starlight-theme-select select, starlight-lang-select select { font-size: 0.85rem; }

@@ -33,8 +33,12 @@ export default defineConfig({
           { autogenerate: { directory: 'notifications' } },
         ] },
         { label: 'Build & operate', translations: { ja: '開発・運用' }, items: [
-          { autogenerate: { directory: 'guides' } },
+          { slug: 'guides' },
           { autogenerate: { directory: 'operations' } },
+        ] },
+        { label: 'Appendix', translations: { ja: '付録' }, items: [
+          { slug: 'guides/tests' },
+          { label: 'Access blocking checklist', translations: { ja: 'アクセス遮断チェックリスト' }, link: '/guides/access-blocking-checklist/' },
         ] },
       ],
     }),
