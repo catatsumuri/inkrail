@@ -1,3 +1,4 @@
+import { lang } from '@erag/lang-sync-inertia/react';
 import { Head, Link, setLayoutProps } from '@inertiajs/react';
 import {
     create,
@@ -5,15 +6,17 @@ import {
     show,
 } from '@/actions/App/Http/Controllers/ArticleController';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import type { Article } from '@/types/article';
 
 type Articles = {
-    data: Pick<Article, 'id' | 'title'>[];
+    data: Pick<Article, 'id' | 'title' | 'slug' | 'is_published'>[];
     prev_page_url: string | null;
     next_page_url: string | null;
 };
 
 export default function Index({ articles }: { articles: Articles }) {
+    const { __ } = lang();
     setLayoutProps({ breadcrumbs: [{ title: '記事', href: index() }] });
     return (
         <>
@@ -37,6 +40,24 @@ export default function Index({ articles }: { articles: Articles }) {
                                 >
                                     {article.title}
                                 </Link>
+                                <div className="mt-2 flex items-center gap-2">
+                                    <Badge
+                                        variant={
+                                            article.is_published
+                                                ? 'default'
+                                                : 'secondary'
+                                        }
+                                    >
+                                        {__(
+                                            article.is_published
+                                                ? 'Published'
+                                                : 'Draft',
+                                        )}
+                                    </Badge>
+                                    <span className="text-sm break-all text-muted-foreground">
+                                        {article.slug}
+                                    </span>
+                                </div>
                             </li>
                         ))}
                     </ul>

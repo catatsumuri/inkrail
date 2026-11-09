@@ -66,3 +66,110 @@ test('title is required and content must be text', function () {
         ->assertSessionHasErrors(['title', 'content']);
     expect($user->articles()->count())->toBe(0);
 });
+
+test('new articles receive a unique slug and are drafts by default', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $this->post(route('articles.store'), ['title' => '同じタイトル'])->assertRedirect();
+    $this->post(route('articles.store'), ['title' => '同じタイトル', 'slug' => ''])->assertRedirect();
+
+    $articles = $user->articles()->get();
+    expect($articles)->toHaveCount(2);
+    expect($articles->pluck('slug')->unique())->toHaveCount(2);
+    foreach ($articles as $article) {
+        expect($article->slug)->toMatch('/\A[a-z0-9]+(?:-[a-z0-9]+)*\z/');
+        expect($article->is_published)->toBeFalse();
+    }
+});
+
+test('owners can set a slug publish and return an article to draft', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user)->post(route('articles.store'), [
+        'title' => '公開する記事', 'slug' => 'first-article', 'is_published' => '1',
+    ])->assertRedirect();
+
+    $article = $user->articles()->sole();
+    expect($article->slug)->toBe('first-article');
+    expect($article->is_published)->toBeTrue();
+    $this->get(route('articles.edit', $article))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('article.slug', 'first-article')->where('article.is_published', true));
+    $this->get(route('articles.index'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('articles.data.0.slug', 'first-article')->where('articles.data.0.is_published', true));
+
+    $this->patch(route('articles.update', $article), ['title' => '本文だけの更新'])->assertRedirect();
+    expect($article->fresh())->slug->toBe('first-article')->is_published->toBeTrue();
+
+    $this->patch(route('articles.update', $article), [
+        'title' => '編集した記事', 'slug' => 'first-article', 'is_published' => '0',
+    ])->assertRedirect();
+    expect($article->fresh()->is_published)->toBeFalse();
+
+    $this->patch(route('articles.update', $article), [
+        'title' => '更新', 'slug' => '',
+    ])->assertRedirect();
+    expect($article->fresh()->slug)->toBe('first-article');
+
+    $this->patch(route('articles.update', $article), [
+        'title' => '更新', 'slug' => 'renamed-article',
+    ])->assertRedirect();
+    expect($article->fresh()->slug)->toBe('renamed-article');
+});
+
+test('article slugs are unique across owners and rejected updates preserve existing data', function () {
+    $other = User::factory()->create()->articles()->create([
+        'title' => 'Other', 'slug' => 'taken-slug', 'content' => '',
+    ]);
+    $user = User::factory()->create();
+    $article = $user->articles()->create(['title' => 'Mine', 'slug' => 'my-slug', 'content' => '']);
+    $this->actingAs($user)->post(route('articles.store'), [
+        'title' => 'Duplicate', 'slug' => $other->slug,
+    ])->assertSessionHasErrors('slug');
+    $this->patch(route('articles.update', $article), [
+        'title' => 'Duplicate', 'slug' => $other->slug, 'is_published' => true,
+    ])->assertSessionHasErrors('slug');
+    expect($article->fresh())->slug->toBe('my-slug')->is_published->toBeFalse();
+    expect($user->articles()->count())->toBe(1);
+});
+
+test('invalid slug formats are rejected', function (string $slug) {
+    $this->actingAs(User::factory()->create())->post(route('articles.store'), [
+        'title' => 'Article', 'slug' => $slug,
+    ])->assertSessionHasErrors('slug');
+    expect(Article::count())->toBe(0);
+})->with(['UPPERCASE', 'has space', '日本語', 'has/slash', 'has_underscore', '-leading', 'trailing-', 'two--hyphens', str_repeat('a', 256)]);
+
+test('invalid publication flags are rejected', function () {
+    $this->actingAs(User::factory()->create())->post(route('articles.store'), [
+        'title' => 'Article', 'is_published' => 'yes',
+    ])->assertSessionHasErrors('is_published');
+    expect(Article::count())->toBe(0);
+});
+
+test('publication metadata does not allow other users to read or modify articles', function () {
+    $article = User::factory()->create()->articles()->create([
+        'title' => 'Owner only', 'content' => '', 'slug' => 'owner-only', 'is_published' => true,
+    ]);
+    $this->get(route('articles.show', $article))->assertRedirect(route('login'));
+    $this->actingAs(User::factory()->create())->get(route('articles.show', $article))->assertForbidden();
+    $this->patch(route('articles.update', $article), [
+        'title' => 'Changed', 'slug' => 'changed', 'is_published' => false,
+    ])->assertForbidden();
+    expect($article->fresh())->slug->toBe('owner-only')->is_published->toBeTrue();
+});
+
+test('article samples can be seeded repeatedly with valid publication metadata', function () {
+    $this->seed();
+    $this->seed();
+
+    $articles = User::where('email', 'test@example.com')->sole()->articles()->get();
+    expect($articles)->toHaveCount(2);
+    expect($articles->pluck('slug')->unique())->toHaveCount(2);
+    expect($articles->firstWhere('title', 'InkRailへようこそ')->is_published)->toBeTrue();
+    expect($articles->firstWhere('title', '記事の編集と管理')->is_published)->toBeFalse();
+    foreach ($articles as $article) {
+        expect($article->slug)->not->toBeEmpty();
+    }
+});

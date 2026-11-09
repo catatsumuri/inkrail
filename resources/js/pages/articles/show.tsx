@@ -7,6 +7,7 @@ import {
     show,
 } from '@/actions/App/Http/Controllers/ArticleController';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
     Dialog,
     DialogClose,
@@ -77,6 +78,16 @@ export default function Show({ article }: { article: Article }) {
                 <h1 className="text-xl font-semibold break-all">
                     {article.title}
                 </h1>
+                <div className="flex items-center gap-2">
+                    <Badge
+                        variant={article.is_published ? 'default' : 'secondary'}
+                    >
+                        {__(article.is_published ? 'Published' : 'Draft')}
+                    </Badge>
+                    <span className="text-sm break-all text-muted-foreground">
+                        {article.slug}
+                    </span>
+                </div>
                 <div className="max-w-3xl break-words whitespace-pre-wrap">
                     {article.content}
                 </div>
