@@ -30,8 +30,9 @@ npm run dev
 
 ## デザイン
 
-共通スタイルは `src/styles/custom.css`、トップページは各言語の `index.mdx`、
-機能カードは `src/components/FeatureGrid.astro` で管理します。
+共通スタイルは `src/styles/custom.css` で管理します。
+英語・日本語のトップページは、それぞれ同じ言語の `about` へ転送します。
+転送設定は `astro.config.mjs` の `redirects`、概要の本文は各言語の `about.md` で管理します。
 ライト・ダークテーマとモバイル表示に対応しています。
 
 導入手順のスクリーンショットは `src/assets/installation/` に保存します。

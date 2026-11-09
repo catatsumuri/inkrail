@@ -4,6 +4,10 @@ import starlight from '@astrojs/starlight';
 export default defineConfig({
   site: 'https://catatsumuri.github.io',
   base: '/laravel-react-secure-starter-kit',
+  redirects: {
+    '/': '/laravel-react-secure-starter-kit/about/',
+    '/ja/': '/laravel-react-secure-starter-kit/ja/about/',
+  },
   integrations: [
     starlight({
       title: 'Laravel React Secure Starter Kit',

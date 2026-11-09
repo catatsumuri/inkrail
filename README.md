@@ -1,6 +1,6 @@
 # Laravel React Secure Starter Kit
 
-A Laravel + React starter kit with additional controls for account security, session management, and security event logging. Based on the [security-hardening branch of react-starter-kit-i18n](https://github.com/catatsumuri/react-starter-kit-i18n/tree/feature/security-hardening), it extends the existing authentication flows with tools for users to spot account changes and end unwanted sessions, and for operators to investigate security events.
+A Laravel + React starter kit with additional controls for account security, session management, and security event logging. Based on the multilingual [react-starter-kit-i18n](https://github.com/catatsumuri/react-starter-kit-i18n) project's `main` branch, which derives from Laravel's official [react-starter-kit](https://github.com/laravel/react-starter-kit), it extends the existing authentication flows with tools for users to spot account changes and end unwanted sessions, and for operators to investigate security events.
 
 Compared with that project's `main` branch, it adds:
 
@@ -17,5 +17,6 @@ For localization setup and adding locales, see the [upstream localization guide]
 
 ## Documentation
 
-The Astro Starlight documentation scaffold lives in [`docs/`](docs/README.md).
-It is configured for [GitHub Pages](https://catatsumuri.github.io/laravel-react-secure-starter-kit/).
+Documentation is published on GitHub Pages in [English](https://catatsumuri.github.io/laravel-react-secure-starter-kit/about/) and [Japanese](https://catatsumuri.github.io/laravel-react-secure-starter-kit/ja/about/). Each language's root page redirects to its project overview.
+
+The Astro Starlight sources and editing instructions live in [`docs/`](docs/README.md).
