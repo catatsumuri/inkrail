@@ -1,4 +1,9 @@
 {
+    "Public URL copied.": "公開URLをコピーしました。",
+    "Could not copy the URL. Open the public page and copy its address.": "URLをコピーできませんでした。公開ページを開いてアドレスをコピーしてください。",
+    "View public page": "公開ページを見る",
+    "Copy public URL": "公開URLをコピー",
+    "This draft is only visible to you. Publish it to share its URL.": "この下書きは自分だけが閲覧できます。公開するとURLを共有できます。",
     ":browser on :platform": ":platform 上の :browser",
     "A new passkey was added to your account.": "アカウントに新しいパスキーが追加されました。",
     "A passkey was added to your account": "アカウントにパスキーが追加されました",

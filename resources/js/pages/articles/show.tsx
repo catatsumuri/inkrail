@@ -1,5 +1,7 @@
 import { lang } from '@erag/lang-sync-inertia/react';
 import { Form, Head, Link, setLayoutProps } from '@inertiajs/react';
+import { toast } from 'sonner';
+import { show as publicShow } from '@/actions/App/Http/Controllers/PublicArticleController';
 import {
     destroy,
     edit,
@@ -18,9 +20,27 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import type { Article } from '@/types/article';
+import { useClipboard } from '@/hooks/use-clipboard';
 
 export default function Show({ article }: { article: Article }) {
     const { __ } = lang();
+    const [, copy] = useClipboard();
+
+    async function copyPublicUrl() {
+        const url = new URL(
+            publicShow.url(article.slug),
+            window.location.origin,
+        );
+        if (await copy(url.href)) {
+            toast.success(__('Public URL copied.'));
+        } else {
+            toast.error(
+                __(
+                    'Could not copy the URL. Open the public page and copy its address.',
+                ),
+            );
+        }
+    }
     setLayoutProps({
         breadcrumbs: [
             { title: '記事', href: index() },
@@ -88,6 +108,32 @@ export default function Show({ article }: { article: Article }) {
                         {article.slug}
                     </span>
                 </div>
+                {article.is_published ? (
+                    <div className="flex flex-wrap gap-3">
+                        <Button asChild variant="outline">
+                            <Link
+                                href={publicShow(article.slug)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
+                                {__('View public page')}
+                            </Link>
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => void copyPublicUrl()}
+                        >
+                            {__('Copy public URL')}
+                        </Button>
+                    </div>
+                ) : (
+                    <p className="text-sm text-muted-foreground">
+                        {__(
+                            'This draft is only visible to you. Publish it to share its URL.',
+                        )}
+                    </p>
+                )}
                 <div className="max-w-3xl break-words whitespace-pre-wrap">
                     {article.content}
                 </div>

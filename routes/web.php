@@ -4,9 +4,13 @@ use App\Http\Controllers\Admin\SecurityEventController;
 use App\Http\Controllers\ArticleController;
 use App\Http\Controllers\DeleteNotificationController;
 use App\Http\Controllers\MarkNotificationAsReadController;
+use App\Http\Controllers\PublicArticleController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'welcome')->name('home');
+
+Route::get('p/{article:slug}', [PublicArticleController::class, 'show'])
+    ->name('public.articles.show');
 
 Route::patch('notifications/{notification}/read', MarkNotificationAsReadController::class)
     ->middleware('auth')

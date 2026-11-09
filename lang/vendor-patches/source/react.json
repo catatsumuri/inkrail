@@ -1,4 +1,9 @@
 {
+    "Public URL copied.": "Public URL copied.",
+    "Could not copy the URL. Open the public page and copy its address.": "Could not copy the URL. Open the public page and copy its address.",
+    "View public page": "View public page",
+    "Copy public URL": "Copy public URL",
+    "This draft is only visible to you. Publish it to share its URL.": "This draft is only visible to you. Publish it to share its URL.",
     ":browser on :platform": ":browser on :platform",
     "A new passkey was added to your account.": "A new passkey was added to your account.",
     "A passkey was added to your account": "A passkey was added to your account",
