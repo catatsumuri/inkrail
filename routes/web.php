@@ -6,8 +6,14 @@ use App\Http\Controllers\DeleteNotificationController;
 use App\Http\Controllers\MarkNotificationAsReadController;
 use App\Http\Controllers\PublicArticleController;
 use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
 
-Route::inertia('/', 'welcome')->name('home');
+Route::get('/', fn () => Inertia::render('welcome', [
+    'publicIndexEnabled' => (bool) config('articles.public_index_enabled'),
+]))->name('home');
+
+Route::get('p', [PublicArticleController::class, 'index'])
+    ->name('public.articles.index');
 
 Route::get('p/{article:slug}', [PublicArticleController::class, 'show'])
     ->name('public.articles.show');

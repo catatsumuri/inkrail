@@ -1,23 +1,24 @@
-import { Head, Link } from '@inertiajs/react';
-import { home } from '@/routes';
+import { Head } from '@inertiajs/react';
+import PublicArticleHeader from '@/components/public-article-header';
 import type { Article } from '@/types/article';
 
 export default function PublicShow({
     article,
+    editableArticleId,
+    publicIndexEnabled,
 }: {
     article: Pick<Article, 'title' | 'content' | 'slug'>;
+    editableArticleId: number | null;
+    publicIndexEnabled: boolean;
 }) {
     return (
         <>
             <Head title={article.title} />
             <div className="min-h-screen bg-background text-foreground">
-                <header className="border-b">
-                    <div className="mx-auto max-w-3xl px-6 py-4">
-                        <Link href={home()} className="font-semibold">
-                            InkRail
-                        </Link>
-                    </div>
-                </header>
+                <PublicArticleHeader
+                    publicIndexEnabled={publicIndexEnabled}
+                    editableArticleId={editableArticleId}
+                />
                 <main className="mx-auto max-w-3xl px-6 py-10">
                     <article className="space-y-8">
                         <h1 className="text-3xl font-semibold break-words">
