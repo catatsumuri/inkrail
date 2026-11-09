@@ -1,7 +1,5 @@
 <?php
 
-namespace Tests\Feature;
-
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
@@ -12,168 +10,154 @@ use Laravel\Fortify\Actions\GenerateNewRecoveryCodes;
 use PragmaRX\Google2FA\Google2FA;
 use Spatie\Activitylog\Models\Activity;
 use Tests\Concerns\MfaSecurityEventLoggingHelpers;
-use Tests\TestCase;
 
-class MfaSecurityEventLoggingTest extends TestCase
-{
-    use MfaSecurityEventLoggingHelpers;
-    use RefreshDatabase;
+uses(MfaSecurityEventLoggingHelpers::class);
 
-    public function test_starting_two_factor_setup_is_not_recorded_until_it_is_confirmed(): void
-    {
-        $this->actingAsPasswordConfirmed()->post('/user/two-factor-authentication');
+uses(RefreshDatabase::class);
 
-        $this->assertSame(0, Activity::inLog('security')->count());
-    }
+test('starting two factor setup is not recorded until it is confirmed', function () {
+    $this->actingAsPasswordConfirmed()->post('/user/two-factor-authentication');
 
-    public function test_confirming_two_factor_records_mfa_enabled(): void
-    {
-        $user = $this->enableAndConfirmTwoFactor();
+    expect(Activity::inLog('security')->count())->toBe(0);
+});
 
-        $event = Activity::inLog('security')->sole();
+test('confirming two factor records mfa enabled', function () {
+    $user = $this->enableAndConfirmTwoFactor();
 
-        $this->assertSame('mfa.enabled', $event->description);
-        $this->assertTrue($event->subject->is($user));
-        $this->assertTrue($event->causer->is($user));
-    }
+    $event = Activity::inLog('security')->sole();
 
-    public function test_disabling_confirmed_two_factor_records_mfa_disabled_as_active(): void
-    {
-        $user = $this->enableAndConfirmTwoFactor();
-        Activity::inLog('security')->delete();
+    expect($event->description)->toBe('mfa.enabled');
+    expect($event->subject->is($user))->toBeTrue();
+    expect($event->causer->is($user))->toBeTrue();
+});
 
-        $this->actingAsPasswordConfirmed($user)->delete('/user/two-factor-authentication');
+test('disabling confirmed two factor records mfa disabled as active', function () {
+    $user = $this->enableAndConfirmTwoFactor();
+    Activity::inLog('security')->delete();
 
-        $event = Activity::inLog('security')->sole();
+    $this->actingAsPasswordConfirmed($user)->delete('/user/two-factor-authentication');
 
-        $this->assertSame('mfa.disabled', $event->description);
-        $this->assertTrue($event->getProperty('was_active'));
-    }
+    $event = Activity::inLog('security')->sole();
 
-    public function test_cancelling_an_unconfirmed_setup_is_recorded_as_not_active(): void
-    {
-        $user = User::factory()->create();
-        $this->actingAsPasswordConfirmed($user)->post('/user/two-factor-authentication');
-        $this->actingAsPasswordConfirmed($user)->delete('/user/two-factor-authentication');
+    expect($event->description)->toBe('mfa.disabled');
+    expect($event->getProperty('was_active'))->toBeTrue();
+});
 
-        $event = Activity::inLog('security')->sole();
+test('cancelling an unconfirmed setup is recorded as not active', function () {
+    $user = User::factory()->create();
+    $this->actingAsPasswordConfirmed($user)->post('/user/two-factor-authentication');
+    $this->actingAsPasswordConfirmed($user)->delete('/user/two-factor-authentication');
 
-        $this->assertSame('mfa.disabled', $event->description);
-        $this->assertFalse($event->getProperty('was_active'));
-    }
+    $event = Activity::inLog('security')->sole();
 
-    public function test_regenerating_recovery_codes_is_recorded_without_the_codes(): void
-    {
-        $user = $this->enableAndConfirmTwoFactor();
-        Activity::inLog('security')->delete();
+    expect($event->description)->toBe('mfa.disabled');
+    expect($event->getProperty('was_active'))->toBeFalse();
+});
 
+test('regenerating recovery codes is recorded without the codes', function () {
+    $user = $this->enableAndConfirmTwoFactor();
+    Activity::inLog('security')->delete();
+
+    $this->actingAsPasswordConfirmed($user)->post('/user/two-factor-recovery-codes');
+
+    $event = Activity::inLog('security')->sole();
+
+    expect($event->description)->toBe('mfa.recovery_codes.regenerated');
+    $this->assertStringNotContainsString($user->fresh()->recoveryCodes()[0], json_encode($event->properties));
+});
+
+test('a wrong confirmation code does not record mfa enabled', function () {
+    $user = User::factory()->create();
+    $this->actingAsPasswordConfirmed($user)->post('/user/two-factor-authentication');
+
+    $this->actingAsPasswordConfirmed($user)->post('/user/confirmed-two-factor-authentication', ['code' => '000000']);
+
+    expect(Activity::inLog('security')->count())->toBe(0);
+});
+
+test('cancelled user saves do not record mfa events', function () {
+    $user = $this->enableAndConfirmTwoFactor();
+    Activity::inLog('security')->delete();
+    $codesBefore = $user->recoveryCodes();
+
+    User::updating(fn () => false);
+
+    try {
         $this->actingAsPasswordConfirmed($user)->post('/user/two-factor-recovery-codes');
-
-        $event = Activity::inLog('security')->sole();
-
-        $this->assertSame('mfa.recovery_codes.regenerated', $event->description);
-        $this->assertStringNotContainsString($user->fresh()->recoveryCodes()[0], json_encode($event->properties));
+        $this->actingAsPasswordConfirmed($user)->delete('/user/two-factor-authentication');
+    } finally {
+        User::flushEventListeners();
     }
 
-    public function test_a_wrong_confirmation_code_does_not_record_mfa_enabled(): void
-    {
-        $user = User::factory()->create();
-        $this->actingAsPasswordConfirmed($user)->post('/user/two-factor-authentication');
+    $fresh = $user->fresh();
 
-        $this->actingAsPasswordConfirmed($user)->post('/user/confirmed-two-factor-authentication', ['code' => '000000']);
+    expect($fresh->recoveryCodes())->toBe($codesBefore);
+    expect($fresh->two_factor_confirmed_at)->not->toBeNull();
+    expect(Activity::inLog('security')->count())->toBe(0);
+});
 
-        $this->assertSame(0, Activity::inLog('security')->count());
-    }
+test('a cancelled confirmation save does not record mfa enabled', function () {
+    $user = User::factory()->create();
+    $this->actingAsPasswordConfirmed($user)->post('/user/two-factor-authentication');
+    $code = app(Google2FA::class)->getCurrentOtp(decrypt($user->fresh()->two_factor_secret));
 
-    public function test_cancelled_user_saves_do_not_record_mfa_events(): void
-    {
-        $user = $this->enableAndConfirmTwoFactor();
-        Activity::inLog('security')->delete();
-        $codesBefore = $user->recoveryCodes();
+    User::updating(fn () => false);
 
-        User::updating(fn () => false);
-
-        try {
-            $this->actingAsPasswordConfirmed($user)->post('/user/two-factor-recovery-codes');
-            $this->actingAsPasswordConfirmed($user)->delete('/user/two-factor-authentication');
-        } finally {
-            User::flushEventListeners();
-        }
-
-        $fresh = $user->fresh();
-
-        $this->assertSame($codesBefore, $fresh->recoveryCodes());
-        $this->assertNotNull($fresh->two_factor_confirmed_at);
-        $this->assertSame(0, Activity::inLog('security')->count());
-    }
-
-    public function test_a_cancelled_confirmation_save_does_not_record_mfa_enabled(): void
-    {
-        $user = User::factory()->create();
-        $this->actingAsPasswordConfirmed($user)->post('/user/two-factor-authentication');
-        $code = app(Google2FA::class)->getCurrentOtp(decrypt($user->fresh()->two_factor_secret));
-
-        User::updating(fn () => false);
-
-        try {
-            $this->actingAsPasswordConfirmed($user)->post('/user/confirmed-two-factor-authentication', ['code' => $code]);
-        } finally {
-            User::flushEventListeners();
-        }
-
-        $this->assertNull($user->fresh()->two_factor_confirmed_at);
-        $this->assertSame(0, Activity::inLog('security')->count());
-    }
-
-    public function test_confirming_an_already_confirmed_two_factor_is_not_recorded_again(): void
-    {
-        $user = $this->enableAndConfirmTwoFactor();
-        Activity::inLog('security')->delete();
-
-        Cache::flush();
-        $code = app(Google2FA::class)->getCurrentOtp(decrypt($user->two_factor_secret));
+    try {
         $this->actingAsPasswordConfirmed($user)->post('/user/confirmed-two-factor-authentication', ['code' => $code]);
-
-        $this->assertSame(0, Activity::inLog('security')->count());
+    } finally {
+        User::flushEventListeners();
     }
 
-    public function test_reconfirming_two_factor_on_the_same_instance_at_the_same_instant_is_not_recorded_again(): void
-    {
-        $user = User::factory()->create();
-        app(EnableTwoFactorAuthentication::class)($user);
+    expect($user->fresh()->two_factor_confirmed_at)->toBeNull();
+    expect(Activity::inLog('security')->count())->toBe(0);
+});
 
-        $this->travelTo(now());
-        $otp = app(Google2FA::class)->getCurrentOtp(decrypt($user->two_factor_secret));
-        app(ConfirmTwoFactorAuthentication::class)($user, $otp);
+test('confirming an already confirmed two factor is not recorded again', function () {
+    $user = $this->enableAndConfirmTwoFactor();
+    Activity::inLog('security')->delete();
 
-        $this->assertSame(1, Activity::inLog('security')->where('description', 'mfa.enabled')->count());
+    Cache::flush();
+    $code = app(Google2FA::class)->getCurrentOtp(decrypt($user->two_factor_secret));
+    $this->actingAsPasswordConfirmed($user)->post('/user/confirmed-two-factor-authentication', ['code' => $code]);
 
-        // Same instance, same frozen instant, same (now unused-again) code:
-        // the forceFill() sets the exact value already stored, so this save
-        // persists no real change.
-        Cache::flush();
-        app(ConfirmTwoFactorAuthentication::class)($user, $otp);
+    expect(Activity::inLog('security')->count())->toBe(0);
+});
 
-        $this->assertSame(1, Activity::inLog('security')->where('description', 'mfa.enabled')->count());
-    }
+test('reconfirming two factor on the same instance at the same instant is not recorded again', function () {
+    $user = User::factory()->create();
+    app(EnableTwoFactorAuthentication::class)($user);
 
-    public function test_a_cancelled_save_after_a_successful_one_on_the_same_instance_is_not_recorded(): void
-    {
-        $user = User::factory()->create();
+    $this->travelTo(now());
+    $otp = app(Google2FA::class)->getCurrentOtp(decrypt($user->two_factor_secret));
+    app(ConfirmTwoFactorAuthentication::class)($user, $otp);
 
-        app(EnableTwoFactorAuthentication::class)($user);
+    expect(Activity::inLog('security')->where('description', 'mfa.enabled')->count())->toBe(1);
+
+    // Same instance, same frozen instant, same (now unused-again) code:
+    // the forceFill() sets the exact value already stored, so this save
+    // persists no real change.
+    Cache::flush();
+    app(ConfirmTwoFactorAuthentication::class)($user, $otp);
+
+    expect(Activity::inLog('security')->where('description', 'mfa.enabled')->count())->toBe(1);
+});
+
+test('a cancelled save after a successful one on the same instance is not recorded', function () {
+    $user = User::factory()->create();
+
+    app(EnableTwoFactorAuthentication::class)($user);
+    app(GenerateNewRecoveryCodes::class)($user);
+    $recorded = Activity::inLog('security')->count();
+
+    User::updating(fn () => false);
+
+    try {
         app(GenerateNewRecoveryCodes::class)($user);
-        $recorded = Activity::inLog('security')->count();
-
-        User::updating(fn () => false);
-
-        try {
-            app(GenerateNewRecoveryCodes::class)($user);
-            app(DisableTwoFactorAuthentication::class)($user);
-        } finally {
-            User::flushEventListeners();
-        }
-
-        $this->assertSame($recorded, Activity::inLog('security')->count());
+        app(DisableTwoFactorAuthentication::class)($user);
+    } finally {
+        User::flushEventListeners();
     }
-}
+
+    expect(Activity::inLog('security')->count())->toBe($recorded);
+});

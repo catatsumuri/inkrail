@@ -1,307 +1,285 @@
 <?php
 
-namespace Tests\Feature;
-
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Password;
 use Spatie\Activitylog\Models\Activity;
-use Tests\TestCase;
 
-class SecurityEventLoggingTest extends TestCase
-{
-    use RefreshDatabase;
+uses(RefreshDatabase::class);
 
-    public function test_changing_the_password_records_a_security_event(): void
-    {
-        $user = User::factory()->create();
+test('changing the password records a security event', function () {
+    $user = User::factory()->create();
 
+    $this->actingAs($user)->put(route('user-password.update'), [
+        'current_password' => 'password',
+        'password' => 'new-secret-value',
+        'password_confirmation' => 'new-secret-value',
+    ]);
+
+    $event = Activity::inLog('security')->sole();
+
+    expect($event->description)->toBe('password.changed');
+    expect($event->getProperty('result'))->toBe('success');
+    expect($event->causer->is($user))->toBeTrue();
+    expect($event->subject->is($user))->toBeTrue();
+    $this->assertStringNotContainsString('new-secret-value', json_encode($event->properties));
+});
+
+test('a wrong current password records a failed password change', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)->put(route('user-password.update'), [
+        'current_password' => 'wrong-password',
+        'password' => 'new-secret-value',
+        'password_confirmation' => 'new-secret-value',
+    ]);
+
+    $event = Activity::inLog('security')->sole();
+
+    expect($event->description)->toBe('password.change_failed');
+    expect($event->getProperty('result'))->toBe('failure');
+    expect($event->subject->is($user))->toBeTrue();
+    expect(password_verify('password', $user->fresh()->password))->toBeTrue();
+    $this->assertStringNotContainsString('wrong-password', json_encode($event->properties));
+    $this->assertStringNotContainsString('new-secret-value', json_encode($event->properties));
+});
+
+test('a cancelled password update is not recorded as a change', function () {
+    $user = User::factory()->create();
+    User::updating(fn () => false);
+
+    try {
         $this->actingAs($user)->put(route('user-password.update'), [
             'current_password' => 'password',
             'password' => 'new-secret-value',
             'password_confirmation' => 'new-secret-value',
-        ]);
-
-        $event = Activity::inLog('security')->sole();
-
-        $this->assertSame('password.changed', $event->description);
-        $this->assertSame('success', $event->getProperty('result'));
-        $this->assertTrue($event->causer->is($user));
-        $this->assertTrue($event->subject->is($user));
-        $this->assertStringNotContainsString('new-secret-value', json_encode($event->properties));
+        ])->assertSessionHasErrors('security');
+    } finally {
+        User::flushEventListeners();
     }
 
-    public function test_a_wrong_current_password_records_a_failed_password_change(): void
-    {
-        $user = User::factory()->create();
+    expect(Activity::inLog('security')->count())->toBe(0);
+    expect(password_verify('password', $user->fresh()->password))->toBeTrue();
+});
 
-        $this->actingAs($user)->put(route('user-password.update'), [
-            'current_password' => 'wrong-password',
+test('resetting the password records a security event for the user', function () {
+    $user = User::factory()->create();
+
+    $this->post(route('password.update'), [
+        'token' => Password::createToken($user),
+        'email' => $user->email,
+        'password' => 'new-secret-value',
+        'password_confirmation' => 'new-secret-value',
+    ])->assertRedirect(route('login'));
+
+    $event = Activity::inLog('security')->sole();
+
+    expect($event->description)->toBe('password.reset');
+    expect($event->subject->is($user))->toBeTrue();
+    expect($event->causer)->toBeNull();
+    expect(password_verify('new-secret-value', $user->fresh()->password))->toBeTrue();
+});
+
+test('an invalid reset token records a failed password reset', function () {
+    $user = User::factory()->create();
+
+    $this->post(route('password.update'), [
+        'token' => 'invalid-token',
+        'email' => $user->email,
+        'password' => 'new-secret-value',
+        'password_confirmation' => 'new-secret-value',
+    ])->assertSessionHasErrors('email');
+
+    $event = Activity::inLog('security')->sole();
+
+    expect($event->description)->toBe('password.reset_failed');
+    expect($event->getProperty('result'))->toBe('failure');
+    expect($event->getProperty('reason'))->toBe('passwords.token');
+    expect($event->subject->is($user))->toBeTrue();
+    expect(password_verify('password', $user->fresh()->password))->toBeTrue();
+    $this->assertStringNotContainsString('invalid-token', json_encode($event->properties));
+    $this->assertStringNotContainsString('new-secret-value', json_encode($event->properties));
+});
+
+test('a failing account lookup does not change the failed reset response', function () {
+    $user = User::factory()->create();
+    $lookups = 0;
+    User::retrieved(function () use (&$lookups): void {
+        if (++$lookups > 1) {
+            throw new RuntimeException('lookup failed');
+        }
+    });
+
+    try {
+        $this->post(route('password.update'), [
+            'token' => 'invalid-token',
+            'email' => $user->email,
             'password' => 'new-secret-value',
             'password_confirmation' => 'new-secret-value',
-        ]);
-
-        $event = Activity::inLog('security')->sole();
-
-        $this->assertSame('password.change_failed', $event->description);
-        $this->assertSame('failure', $event->getProperty('result'));
-        $this->assertTrue($event->subject->is($user));
-        $this->assertTrue(password_verify('password', $user->fresh()->password));
-        $this->assertStringNotContainsString('wrong-password', json_encode($event->properties));
-        $this->assertStringNotContainsString('new-secret-value', json_encode($event->properties));
+        ])->assertSessionHasErrors('email');
+    } finally {
+        User::flushEventListeners();
     }
 
-    public function test_a_cancelled_password_update_is_not_recorded_as_a_change(): void
-    {
-        $user = User::factory()->create();
-        User::updating(fn () => false);
+    $event = Activity::inLog('security')->sole();
 
-        try {
-            $this->actingAs($user)->put(route('user-password.update'), [
-                'current_password' => 'password',
-                'password' => 'new-secret-value',
-                'password_confirmation' => 'new-secret-value',
-            ])->assertSessionHasErrors('security');
-        } finally {
-            User::flushEventListeners();
-        }
+    expect($event->description)->toBe('password.reset_failed');
+    expect($event->subject_id)->toBeNull();
+});
 
-        $this->assertSame(0, Activity::inLog('security')->count());
-        $this->assertTrue(password_verify('password', $user->fresh()->password));
-    }
+test('a reset for an unknown account records a failure without a subject', function () {
+    $this->post(route('password.update'), [
+        'token' => 'invalid-token',
+        'email' => 'nobody@example.com',
+        'password' => 'new-secret-value',
+        'password_confirmation' => 'new-secret-value',
+    ])->assertSessionHasErrors('email');
 
-    public function test_resetting_the_password_records_a_security_event_for_the_user(): void
-    {
-        $user = User::factory()->create();
+    $event = Activity::inLog('security')->sole();
 
+    expect($event->description)->toBe('password.reset_failed');
+    expect($event->getProperty('reason'))->toBe('passwords.user');
+    expect($event->subject_id)->toBeNull();
+    $this->assertStringNotContainsString('nobody@example.com', json_encode($event->properties));
+});
+
+test('a cancelled password reset is not recorded', function () {
+    $user = User::factory()->create();
+    User::updating(fn () => false);
+
+    try {
         $this->post(route('password.update'), [
             'token' => Password::createToken($user),
             'email' => $user->email,
             'password' => 'new-secret-value',
             'password_confirmation' => 'new-secret-value',
-        ])->assertRedirect(route('login'));
-
-        $event = Activity::inLog('security')->sole();
-
-        $this->assertSame('password.reset', $event->description);
-        $this->assertTrue($event->subject->is($user));
-        $this->assertNull($event->causer);
-        $this->assertTrue(password_verify('new-secret-value', $user->fresh()->password));
+        ])->assertStatus(500);
+    } finally {
+        User::flushEventListeners();
     }
 
-    public function test_an_invalid_reset_token_records_a_failed_password_reset(): void
-    {
-        $user = User::factory()->create();
+    expect(Activity::inLog('security')->count())->toBe(0);
+});
 
-        $this->post(route('password.update'), [
-            'token' => 'invalid-token',
-            'email' => $user->email,
-            'password' => 'new-secret-value',
-            'password_confirmation' => 'new-secret-value',
-        ])->assertSessionHasErrors('email');
+test('changing the email records a security event without email values', function () {
+    $user = User::factory()->create(['email' => 'old@example.com']);
 
-        $event = Activity::inLog('security')->sole();
+    $this->actingAs($user)->patch(route('profile.update'), [
+        'name' => $user->name,
+        'email' => 'new@example.com',
+        'current_password' => 'password',
+    ]);
 
-        $this->assertSame('password.reset_failed', $event->description);
-        $this->assertSame('failure', $event->getProperty('result'));
-        $this->assertSame('passwords.token', $event->getProperty('reason'));
-        $this->assertTrue($event->subject->is($user));
-        $this->assertTrue(password_verify('password', $user->fresh()->password));
-        $this->assertStringNotContainsString('invalid-token', json_encode($event->properties));
-        $this->assertStringNotContainsString('new-secret-value', json_encode($event->properties));
-    }
+    $event = Activity::inLog('security')->sole();
 
-    public function test_a_failing_account_lookup_does_not_change_the_failed_reset_response(): void
-    {
-        $user = User::factory()->create();
-        $lookups = 0;
-        User::retrieved(function () use (&$lookups): void {
-            if (++$lookups > 1) {
-                throw new \RuntimeException('lookup failed');
-            }
-        });
+    expect($event->description)->toBe('email.changed');
+    expect($event->subject->is($user))->toBeTrue();
+    $this->assertStringNotContainsString('example.com', json_encode($event->properties));
+    expect($user->fresh()->email)->toBe('new@example.com');
+    expect($user->fresh()->email_verified_at)->toBeNull();
+});
 
-        try {
-            $this->post(route('password.update'), [
-                'token' => 'invalid-token',
-                'email' => $user->email,
-                'password' => 'new-secret-value',
-                'password_confirmation' => 'new-secret-value',
-            ])->assertSessionHasErrors('email');
-        } finally {
-            User::flushEventListeners();
-        }
+test('a wrong current password records a failed email change', function () {
+    $user = User::factory()->create(['email' => 'old@example.com']);
 
-        $event = Activity::inLog('security')->sole();
+    $this->actingAs($user)->patch(route('profile.update'), [
+        'name' => $user->name,
+        'email' => 'new@example.com',
+        'current_password' => 'wrong-password',
+    ])->assertSessionHasErrors('current_password');
 
-        $this->assertSame('password.reset_failed', $event->description);
-        $this->assertNull($event->subject_id);
-    }
+    $event = Activity::inLog('security')->sole();
 
-    public function test_a_reset_for_an_unknown_account_records_a_failure_without_a_subject(): void
-    {
-        $this->post(route('password.update'), [
-            'token' => 'invalid-token',
-            'email' => 'nobody@example.com',
-            'password' => 'new-secret-value',
-            'password_confirmation' => 'new-secret-value',
-        ])->assertSessionHasErrors('email');
+    expect($event->description)->toBe('email.change_failed');
+    expect($event->getProperty('result'))->toBe('failure');
+    expect($event->subject->is($user))->toBeTrue();
+    expect($user->fresh()->email)->toBe('old@example.com');
+    $this->assertStringNotContainsString('example.com', json_encode($event->properties));
+    $this->assertStringNotContainsString('wrong-password', json_encode($event->properties));
+});
 
-        $event = Activity::inLog('security')->sole();
+test('updating only the name does not record an email change', function () {
+    $user = User::factory()->create();
 
-        $this->assertSame('password.reset_failed', $event->description);
-        $this->assertSame('passwords.user', $event->getProperty('reason'));
-        $this->assertNull($event->subject_id);
-        $this->assertStringNotContainsString('nobody@example.com', json_encode($event->properties));
-    }
+    $this->actingAs($user)->patch(route('profile.update'), [
+        'name' => 'Another Name',
+        'email' => $user->email,
+    ]);
 
-    public function test_a_cancelled_password_reset_is_not_recorded(): void
-    {
-        $user = User::factory()->create();
-        User::updating(fn () => false);
+    expect($user->fresh()->name)->toBe('Another Name');
+    expect(Activity::inLog('security')->count())->toBe(0);
+});
 
-        try {
-            $this->post(route('password.update'), [
-                'token' => Password::createToken($user),
-                'email' => $user->email,
-                'password' => 'new-secret-value',
-                'password_confirmation' => 'new-secret-value',
-            ])->assertStatus(500);
-        } finally {
-            User::flushEventListeners();
-        }
+test('a cancelled profile update is not recorded as an email change', function () {
+    $user = User::factory()->create(['email' => 'old@example.com']);
+    User::updating(fn () => false);
 
-        $this->assertSame(0, Activity::inLog('security')->count());
-    }
-
-    public function test_changing_the_email_records_a_security_event_without_email_values(): void
-    {
-        $user = User::factory()->create(['email' => 'old@example.com']);
-
+    try {
         $this->actingAs($user)->patch(route('profile.update'), [
             'name' => $user->name,
             'email' => 'new@example.com',
             'current_password' => 'password',
-        ]);
-
-        $event = Activity::inLog('security')->sole();
-
-        $this->assertSame('email.changed', $event->description);
-        $this->assertTrue($event->subject->is($user));
-        $this->assertStringNotContainsString('example.com', json_encode($event->properties));
-        $this->assertSame('new@example.com', $user->fresh()->email);
-        $this->assertNull($user->fresh()->email_verified_at);
+        ])->assertSessionHasErrors('profile');
+    } finally {
+        User::flushEventListeners();
     }
 
-    public function test_a_wrong_current_password_records_a_failed_email_change(): void
-    {
-        $user = User::factory()->create(['email' => 'old@example.com']);
+    expect($user->fresh()->email)->toBe('old@example.com');
+    expect(Activity::inLog('security')->count())->toBe(0);
+});
 
-        $this->actingAs($user)->patch(route('profile.update'), [
-            'name' => $user->name,
-            'email' => 'new@example.com',
-            'current_password' => 'wrong-password',
-        ])->assertSessionHasErrors('current_password');
+test('deleting the account records the user id without a subject', function () {
+    $user = User::factory()->create();
 
-        $event = Activity::inLog('security')->sole();
+    $this->actingAs($user)->delete(route('profile.destroy'), ['password' => 'password']);
 
-        $this->assertSame('email.change_failed', $event->description);
-        $this->assertSame('failure', $event->getProperty('result'));
-        $this->assertTrue($event->subject->is($user));
-        $this->assertSame('old@example.com', $user->fresh()->email);
-        $this->assertStringNotContainsString('example.com', json_encode($event->properties));
-        $this->assertStringNotContainsString('wrong-password', json_encode($event->properties));
+    $event = Activity::inLog('security')->sole();
+
+    $this->assertModelMissing($user);
+    expect($event->description)->toBe('account.deleted');
+    expect($event->subject_id)->toBeNull();
+    expect($event->getProperty('user_id'))->toBe($user->id);
+    expect($event->causer_id)->toBe($user->id);
+});
+
+test('a wrong password does not delete the account and records the failure', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)->delete(route('profile.destroy'), ['password' => 'wrong-password']);
+
+    $this->assertModelExists($user);
+
+    $event = Activity::inLog('security')->sole();
+
+    expect($event->description)->toBe('account.delete_failed');
+    expect($event->getProperty('result'))->toBe('failure');
+    expect($event->subject->is($user))->toBeTrue();
+});
+
+test('a cancelled account deletion is not recorded', function () {
+    $user = User::factory()->create();
+    User::deleting(fn () => false);
+
+    try {
+        $this->actingAs($user)->delete(route('profile.destroy'), ['password' => 'password'])->assertSessionHasErrors('account');
+    } finally {
+        User::flushEventListeners();
     }
 
-    public function test_updating_only_the_name_does_not_record_an_email_change(): void
-    {
-        $user = User::factory()->create();
+    $this->assertModelExists($user);
+    $this->assertAuthenticatedAs($user);
+    expect(Activity::inLog('security')->count())->toBe(0);
+});
 
-        $this->actingAs($user)->patch(route('profile.update'), [
-            'name' => 'Another Name',
-            'email' => $user->email,
-        ]);
+test('a logging failure does not undo the password change', function () {
+    $user = User::factory()->create();
+    config(['activitylog.activity_model' => 'App\\Models\\MissingActivity']);
 
-        $this->assertSame('Another Name', $user->fresh()->name);
-        $this->assertSame(0, Activity::inLog('security')->count());
-    }
+    $this->actingAs($user)->put(route('user-password.update'), [
+        'current_password' => 'password',
+        'password' => 'new-secret-value',
+        'password_confirmation' => 'new-secret-value',
+    ])->assertRedirect();
 
-    public function test_a_cancelled_profile_update_is_not_recorded_as_an_email_change(): void
-    {
-        $user = User::factory()->create(['email' => 'old@example.com']);
-        User::updating(fn () => false);
-
-        try {
-            $this->actingAs($user)->patch(route('profile.update'), [
-                'name' => $user->name,
-                'email' => 'new@example.com',
-                'current_password' => 'password',
-            ])->assertSessionHasErrors('profile');
-        } finally {
-            User::flushEventListeners();
-        }
-
-        $this->assertSame('old@example.com', $user->fresh()->email);
-        $this->assertSame(0, Activity::inLog('security')->count());
-    }
-
-    public function test_deleting_the_account_records_the_user_id_without_a_subject(): void
-    {
-        $user = User::factory()->create();
-
-        $this->actingAs($user)->delete(route('profile.destroy'), ['password' => 'password']);
-
-        $event = Activity::inLog('security')->sole();
-
-        $this->assertModelMissing($user);
-        $this->assertSame('account.deleted', $event->description);
-        $this->assertNull($event->subject_id);
-        $this->assertSame($user->id, $event->getProperty('user_id'));
-        $this->assertSame($user->id, $event->causer_id);
-    }
-
-    public function test_a_wrong_password_does_not_delete_the_account_and_records_the_failure(): void
-    {
-        $user = User::factory()->create();
-
-        $this->actingAs($user)->delete(route('profile.destroy'), ['password' => 'wrong-password']);
-
-        $this->assertModelExists($user);
-
-        $event = Activity::inLog('security')->sole();
-
-        $this->assertSame('account.delete_failed', $event->description);
-        $this->assertSame('failure', $event->getProperty('result'));
-        $this->assertTrue($event->subject->is($user));
-    }
-
-    public function test_a_cancelled_account_deletion_is_not_recorded(): void
-    {
-        $user = User::factory()->create();
-        User::deleting(fn () => false);
-
-        try {
-            $this->actingAs($user)->delete(route('profile.destroy'), ['password' => 'password'])->assertSessionHasErrors('account');
-        } finally {
-            User::flushEventListeners();
-        }
-
-        $this->assertModelExists($user);
-        $this->assertAuthenticatedAs($user);
-        $this->assertSame(0, Activity::inLog('security')->count());
-    }
-
-    public function test_a_logging_failure_does_not_undo_the_password_change(): void
-    {
-        $user = User::factory()->create();
-        config(['activitylog.activity_model' => 'App\\Models\\MissingActivity']);
-
-        $this->actingAs($user)->put(route('user-password.update'), [
-            'current_password' => 'password',
-            'password' => 'new-secret-value',
-            'password_confirmation' => 'new-secret-value',
-        ])->assertRedirect();
-
-        $this->assertTrue(password_verify('new-secret-value', $user->fresh()->password));
-    }
-}
+    expect(password_verify('new-secret-value', $user->fresh()->password))->toBeTrue();
+});

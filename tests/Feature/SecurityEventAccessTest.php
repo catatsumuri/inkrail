@@ -1,143 +1,125 @@
 <?php
 
-namespace Tests\Feature;
-
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Gate;
 use Laravel\Fortify\Features;
 use Tests\Concerns\SecurityEventAccessHelpers;
-use Tests\TestCase;
 
-class SecurityEventAccessTest extends TestCase
-{
-    use RefreshDatabase;
-    use SecurityEventAccessHelpers;
+uses(RefreshDatabase::class);
 
-    public function test_guests_are_redirected_to_the_login_page(): void
-    {
-        $this->get(route('admin.security-events.index'))->assertRedirect(route('login'));
-    }
+uses(SecurityEventAccessHelpers::class);
 
-    public function test_a_user_who_is_not_a_viewer_is_forbidden(): void
-    {
-        config(['audit.security_viewers' => ['viewer@example.com']]);
+test('guests are redirected to the login page', function () {
+    $this->get(route('admin.security-events.index'))->assertRedirect(route('login'));
+});
 
-        $this->actingAs(User::factory()->create(['email' => 'other@example.com']))
-            ->getJson(route('admin.security-events.index'))
-            ->assertForbidden();
-    }
+test('a user who is not a viewer is forbidden', function () {
+    config(['audit.security_viewers' => ['viewer@example.com']]);
 
-    public function test_nobody_can_view_when_no_viewers_are_configured(): void
-    {
-        config(['audit.security_viewers' => []]);
+    $this->actingAs(User::factory()->create(['email' => 'other@example.com']))
+        ->getJson(route('admin.security-events.index'))
+        ->assertForbidden();
+});
 
-        $this->actingAs(User::factory()->create(['email' => 'viewer@example.com']))
-            ->getJson(route('admin.security-events.index'))
-            ->assertForbidden();
-    }
+test('nobody can view when no viewers are configured', function () {
+    config(['audit.security_viewers' => []]);
 
-    public function test_a_viewer_sees_only_security_events_newest_first(): void
-    {
-        $viewer = $this->verifiedViewer();
-        $this->recordEvent('security', 'password.changed', 'success');
-        $this->recordEvent('other', 'note', 'success');
-        $this->recordEvent('security', 'login.failed', 'failure');
+    $this->actingAs(User::factory()->create(['email' => 'viewer@example.com']))
+        ->getJson(route('admin.security-events.index'))
+        ->assertForbidden();
+});
 
-        $this->actingAs($viewer)
-            ->getJson(route('admin.security-events.index'))
-            ->assertOk()
-            ->assertJsonCount(2, 'data')
-            ->assertJsonPath('data.0.event', 'login.failed')
-            ->assertJsonPath('data.0.result', 'failure')
-            ->assertJsonPath('data.1.event', 'password.changed');
-    }
+test('a viewer sees only security events newest first', function () {
+    $viewer = $this->verifiedViewer();
+    $this->recordEvent('security', 'password.changed', 'success');
+    $this->recordEvent('other', 'note', 'success');
+    $this->recordEvent('security', 'login.failed', 'failure');
 
-    public function test_the_viewer_email_is_matched_case_insensitively(): void
-    {
-        $viewer = $this->verifiedViewer('Viewer@Example.com');
+    $this->actingAs($viewer)
+        ->getJson(route('admin.security-events.index'))
+        ->assertOk()
+        ->assertJsonCount(2, 'data')
+        ->assertJsonPath('data.0.event', 'login.failed')
+        ->assertJsonPath('data.0.result', 'failure')
+        ->assertJsonPath('data.1.event', 'password.changed');
+});
 
-        $this->actingAs($viewer)
-            ->getJson(route('admin.security-events.index'))
-            ->assertOk();
-    }
+test('the viewer email is matched case insensitively', function () {
+    $viewer = $this->verifiedViewer('Viewer@Example.com');
 
-    public function test_a_viewer_with_an_unverified_email_is_redirected_to_verification(): void
-    {
-        $this->skipUnlessFortifyHas(Features::emailVerification());
-        config(['audit.security_viewers' => ['viewer@example.com']]);
+    $this->actingAs($viewer)
+        ->getJson(route('admin.security-events.index'))
+        ->assertOk();
+});
 
-        $this->actingAs(User::factory()->unverified()->create(['email' => 'viewer@example.com']))
-            ->get(route('admin.security-events.index'))
-            ->assertRedirect(route('verification.notice'));
-    }
+test('a viewer with an unverified email is redirected to verification', function () {
+    $this->skipUnlessFortifyHas(Features::emailVerification());
+    config(['audit.security_viewers' => ['viewer@example.com']]);
 
-    public function test_events_can_be_filtered_by_result(): void
-    {
-        $viewer = $this->verifiedViewer();
-        $this->recordEvent('security', 'password.changed', 'success');
-        $this->recordEvent('security', 'login.failed', 'failure');
+    $this->actingAs(User::factory()->unverified()->create(['email' => 'viewer@example.com']))
+        ->get(route('admin.security-events.index'))
+        ->assertRedirect(route('verification.notice'));
+});
 
-        $this->actingAs($viewer)
-            ->getJson(route('admin.security-events.index', ['result' => 'failure']))
-            ->assertOk()
-            ->assertJsonCount(1, 'data')
-            ->assertJsonPath('data.0.event', 'login.failed');
-    }
+test('events can be filtered by result', function () {
+    $viewer = $this->verifiedViewer();
+    $this->recordEvent('security', 'password.changed', 'success');
+    $this->recordEvent('security', 'login.failed', 'failure');
 
-    public function test_events_can_be_filtered_by_event_name(): void
-    {
-        $viewer = $this->verifiedViewer();
-        $this->recordEvent('security', 'password.changed', 'success');
-        $this->recordEvent('security', 'login.failed', 'failure');
+    $this->actingAs($viewer)
+        ->getJson(route('admin.security-events.index', ['result' => 'failure']))
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.event', 'login.failed');
+});
 
-        $this->actingAs($viewer)
-            ->getJson(route('admin.security-events.index', ['event' => 'password.changed']))
-            ->assertOk()
-            ->assertJsonCount(1, 'data')
-            ->assertJsonPath('data.0.event', 'password.changed');
-    }
+test('events can be filtered by event name', function () {
+    $viewer = $this->verifiedViewer();
+    $this->recordEvent('security', 'password.changed', 'success');
+    $this->recordEvent('security', 'login.failed', 'failure');
 
-    public function test_security_events_cannot_be_changed_over_http(): void
-    {
-        $viewer = $this->verifiedViewer();
+    $this->actingAs($viewer)
+        ->getJson(route('admin.security-events.index', ['event' => 'password.changed']))
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.event', 'password.changed');
+});
 
-        $this->actingAs($viewer)->putJson('/admin/security-events')->assertStatus(405);
-        $this->actingAs($viewer)->deleteJson('/admin/security-events')->assertStatus(405);
-        $this->actingAs($viewer)->postJson('/admin/security-events')->assertStatus(405);
-    }
+test('security events cannot be changed over http', function () {
+    $viewer = $this->verifiedViewer();
 
-    public function test_the_gate_denies_a_listed_email_that_is_not_verified(): void
-    {
-        config(['audit.security_viewers' => ['viewer@example.com']]);
+    $this->actingAs($viewer)->putJson('/admin/security-events')->assertStatus(405);
+    $this->actingAs($viewer)->deleteJson('/admin/security-events')->assertStatus(405);
+    $this->actingAs($viewer)->postJson('/admin/security-events')->assertStatus(405);
+});
 
-        $unverified = User::factory()->unverified()->create(['email' => 'viewer@example.com']);
+test('the gate denies a listed email that is not verified', function () {
+    config(['audit.security_viewers' => ['viewer@example.com']]);
 
-        $this->assertTrue(Gate::forUser($unverified)->denies('view-security-events'));
-    }
+    $unverified = User::factory()->unverified()->create(['email' => 'viewer@example.com']);
 
-    public function test_the_gate_allows_a_listed_email_that_is_verified(): void
-    {
-        $viewer = $this->verifiedViewer();
+    expect(Gate::forUser($unverified)->denies('view-security-events'))->toBeTrue();
+});
 
-        $this->assertTrue(Gate::forUser($viewer)->allows('view-security-events'));
-    }
+test('the gate allows a listed email that is verified', function () {
+    $viewer = $this->verifiedViewer();
 
-    public function test_a_listed_email_cannot_view_when_the_user_has_no_email_verification(): void
-    {
-        config(['audit.security_viewers' => ['viewer@example.com']]);
+    expect(Gate::forUser($viewer)->allows('view-security-events'))->toBeTrue();
+});
 
-        $this->actingAs($this->userWithoutEmailVerification('viewer@example.com'))
-            ->getJson(route('admin.security-events.index'))
-            ->assertForbidden();
-    }
+test('a listed email cannot view when the user has no email verification', function () {
+    config(['audit.security_viewers' => ['viewer@example.com']]);
 
-    public function test_the_gate_denies_a_listed_email_when_the_user_has_no_email_verification(): void
-    {
-        config(['audit.security_viewers' => ['viewer@example.com']]);
+    $this->actingAs($this->userWithoutEmailVerification('viewer@example.com'))
+        ->getJson(route('admin.security-events.index'))
+        ->assertForbidden();
+});
 
-        $user = $this->userWithoutEmailVerification('viewer@example.com');
+test('the gate denies a listed email when the user has no email verification', function () {
+    config(['audit.security_viewers' => ['viewer@example.com']]);
 
-        $this->assertTrue(Gate::forUser($user)->denies('view-security-events'));
-    }
-}
+    $user = $this->userWithoutEmailVerification('viewer@example.com');
+
+    expect(Gate::forUser($user)->denies('view-security-events'))->toBeTrue();
+});
