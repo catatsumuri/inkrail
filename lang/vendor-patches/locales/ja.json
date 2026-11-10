@@ -101,5 +101,15 @@
     "Your password was reset": "パスワードがリセットされました",
     "Your recovery codes were regenerated": "リカバリーコードが再生成されました",
     "iOS": "iOS",
-    "macOS": "macOS"
+    "macOS": "macOS",
+    "Inkstream live demo": "Inkstream ライブデモ",
+    "See Markdown come to life.": "Markdownの表現を、実際の描画で。",
+    "InkRail is a live showcase of Inkstream. Explore Markdown, GitHub, Zenn, and Mintlify syntax alongside their rendered results.": "InkRailはInkstreamのライブショーケースです。Markdown、GitHub、Zenn、Mintlifyの記法と、その描画結果を見比べられます。",
+    "Explore the demos": "デモを見る",
+    "Inside the showcase": "ショーケースの内容",
+    "One engine, multiple flavors": "ひとつのエンジン、多彩な記法",
+    "From everyday Markdown to Zenn disclosures and Mintlify components, see how different syntax works together.": "基本のMarkdownからZennの折りたたみやMintlifyのコンポーネントまで、さまざまな記法の組み合わせを確認できます。",
+    "Source and rendering, side by side": "記法と描画結果を見比べる",
+    "Each guide pairs copyable syntax examples with live previews, including diagrams, charts, trees, and quizzes.": "各ガイドにはコピーできる記法の例とプレビューを掲載。図、チャート、ツリー、クイズの表現も試せます。",
+    "View Inkstream on GitHub": "GitHubでInkstreamを見る"
 }

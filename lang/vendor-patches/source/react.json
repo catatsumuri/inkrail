@@ -102,5 +102,15 @@
     "Your password was reset": "Your password was reset",
     "Your recovery codes were regenerated": "Your recovery codes were regenerated",
     "iOS": "iOS",
-    "macOS": "macOS"
+    "macOS": "macOS",
+    "Inkstream live demo": "Inkstream live demo",
+    "See Markdown come to life.": "See Markdown come to life.",
+    "InkRail is a live showcase of Inkstream. Explore Markdown, GitHub, Zenn, and Mintlify syntax alongside their rendered results.": "InkRail is a live showcase of Inkstream. Explore Markdown, GitHub, Zenn, and Mintlify syntax alongside their rendered results.",
+    "Explore the demos": "Explore the demos",
+    "Inside the showcase": "Inside the showcase",
+    "One engine, multiple flavors": "One engine, multiple flavors",
+    "From everyday Markdown to Zenn disclosures and Mintlify components, see how different syntax works together.": "From everyday Markdown to Zenn disclosures and Mintlify components, see how different syntax works together.",
+    "Source and rendering, side by side": "Source and rendering, side by side",
+    "Each guide pairs copyable syntax examples with live previews, including diagrams, charts, trees, and quizzes.": "Each guide pairs copyable syntax examples with live previews, including diagrams, charts, trees, and quizzes.",
+    "View Inkstream on GitHub": "View Inkstream on GitHub"
 }

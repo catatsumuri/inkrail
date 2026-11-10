@@ -1,9 +1,10 @@
 import { lang } from '@erag/lang-sync-inertia/react';
 import { Head, Link, usePage } from '@inertiajs/react';
-import { ArrowRight, BookOpen, FileText, Send } from 'lucide-react';
+import { ArrowRight, BookOpen, Code2, Layers } from 'lucide-react';
 import { index as myArticles } from '@/actions/App/Http/Controllers/ArticleController';
 import { index as publicArticles } from '@/actions/App/Http/Controllers/PublicArticleController';
 import { Button } from '@/components/ui/button';
+import AppLogoIcon from '@/components/app-logo-icon';
 import { login } from '@/routes';
 /* @chisel-registration */
 import { register } from '@/routes';
@@ -19,10 +20,11 @@ export default function Welcome({
 
     return (
         <>
-            <Head title={__('Welcome to InkRail')} />
+            <Head title={__('Inkstream live demo')} />
             <div className="min-h-screen bg-background text-foreground">
                 <header className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4 px-6 py-6">
-                    <span className="text-xl font-semibold tracking-tight">
+                    <span className="inline-flex items-center gap-2.5 text-xl font-semibold tracking-tight">
+                        <AppLogoIcon className="size-8" />
                         InkRail
                     </span>
                     <nav
@@ -61,14 +63,14 @@ export default function Welcome({
                 <main className="mx-auto max-w-5xl px-6 pb-16">
                     <section className="flex max-w-3xl flex-col items-start gap-7 py-16 sm:py-24">
                         <p className="text-sm font-medium tracking-widest text-muted-foreground">
-                            InkRail
+                            Inkstream · Live demo
                         </p>
                         <h1 className="text-4xl leading-tight font-semibold tracking-tight text-balance sm:text-6xl">
-                            {__('Give your ideas a place to grow.')}
+                            {__('See Markdown come to life.')}
                         </h1>
                         <p className="max-w-xl text-lg leading-relaxed text-pretty text-muted-foreground">
                             {__(
-                                'Write at your own pace, keep drafts close, and share articles when they are ready.',
+                                'InkRail is a live showcase of Inkstream. Explore Markdown, GitHub, Zenn, and Mintlify syntax alongside their rendered results.',
                             )}
                         </p>
                         <div className="flex flex-wrap gap-3">
@@ -76,7 +78,7 @@ export default function Welcome({
                                 <Button asChild size="lg">
                                     <Link href={publicArticles()}>
                                         <BookOpen aria-hidden="true" />
-                                        {__('Explore public articles')}
+                                        {__('Explore the demos')}
                                         <ArrowRight aria-hidden="true" />
                                     </Link>
                                 </Button>
@@ -96,51 +98,44 @@ export default function Welcome({
                                     </Link>
                                 </Button>
                             ) : (
-                                <Button
-                                    asChild
-                                    size="lg"
-                                    variant={
-                                        publicIndexEnabled
-                                            ? 'outline'
-                                            : 'default'
-                                    }
-                                >
-                                    <Link href={login()}>
-                                        {__('Start writing')}
-                                    </Link>
+                                <Button asChild size="lg" variant="outline">
+                                    <a href="https://github.com/catatsumuri/inkstream">
+                                        {__('View Inkstream on GitHub')}
+                                        <ArrowRight aria-hidden="true" />
+                                    </a>
                                 </Button>
                             )}
                         </div>
                     </section>
                     <section
-                        aria-label={__('Writing and publishing')}
+                        aria-label={__('Inside the showcase')}
                         className="grid gap-6 border-t pt-8 sm:grid-cols-2"
                     >
                         <div className="space-y-3">
-                            <FileText
+                            <Layers
                                 aria-hidden="true"
                                 className="size-5 text-muted-foreground"
                             />
                             <h2 className="font-semibold">
-                                {__('A space for your drafts')}
+                                {__('One engine, multiple flavors')}
                             </h2>
                             <p className="text-sm leading-relaxed text-muted-foreground">
                                 {__(
-                                    'Save your thoughts and return to edit them whenever you like.',
+                                    'From everyday Markdown to Zenn disclosures and Mintlify components, see how different syntax works together.',
                                 )}
                             </p>
                         </div>
                         <div className="space-y-3">
-                            <Send
+                            <Code2
                                 aria-hidden="true"
                                 className="size-5 text-muted-foreground"
                             />
                             <h2 className="font-semibold">
-                                {__('Share when you are ready')}
+                                {__('Source and rendering, side by side')}
                             </h2>
                             <p className="text-sm leading-relaxed text-muted-foreground">
                                 {__(
-                                    'Publish an article to share its URL, or return it to a private draft at any time.',
+                                    'Each guide pairs copyable syntax examples with live previews, including diagrams, charts, trees, and quizzes.',
                                 )}
                             </p>
                         </div>
