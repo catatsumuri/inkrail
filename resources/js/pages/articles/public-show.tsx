@@ -2,6 +2,7 @@ import { lang } from '@erag/lang-sync-inertia/react';
 import { Head, Link } from '@inertiajs/react';
 import { ArrowLeft } from 'lucide-react';
 import { index } from '@/actions/App/Http/Controllers/PublicArticleController';
+import ArticleContent from '@/components/article-content';
 import PublicArticleHeader from '@/components/public-article-header';
 import type { Article } from '@/types/article';
 
@@ -35,9 +36,14 @@ export default function PublicShow({
                         <h1 className="text-3xl font-semibold break-words">
                             {article.title}
                         </h1>
-                        <div className="break-words whitespace-pre-wrap">
-                            {article.content}
-                        </div>
+                        <ArticleContent
+                            content={article.content}
+                            syntax={
+                                article.slug === 'showcase-zenn'
+                                    ? 'zenn'
+                                    : 'all'
+                            }
+                        />
                     </article>
                 </main>
             </div>

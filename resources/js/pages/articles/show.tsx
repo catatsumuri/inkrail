@@ -1,6 +1,7 @@
 import { lang } from '@erag/lang-sync-inertia/react';
 import { Form, Head, Link, setLayoutProps } from '@inertiajs/react';
 import { toast } from 'sonner';
+import ArticleContent from '@/components/article-content';
 import { show as publicShow } from '@/actions/App/Http/Controllers/PublicArticleController';
 import {
     destroy,
@@ -134,9 +135,10 @@ export default function Show({ article }: { article: Article }) {
                         )}
                     </p>
                 )}
-                <div className="max-w-3xl break-words whitespace-pre-wrap">
-                    {article.content}
-                </div>
+                <ArticleContent
+                    content={article.content}
+                    syntax={article.slug === 'showcase-zenn' ? 'zenn' : 'all'}
+                />
             </main>
         </>
     );

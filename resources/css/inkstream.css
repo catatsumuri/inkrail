@@ -1,0 +1,12 @@
+@import '@catatsumuri/inkstream/styles.css';
+
+.ink-markdown {
+    --ink-border: var(--border);
+    --ink-foreground: var(--foreground);
+    --ink-muted: var(--muted);
+    --ink-muted-foreground: var(--muted-foreground);
+    --ink-primary: var(--primary);
+    --ink-primary-foreground: var(--primary-foreground);
+    --ink-accent: var(--accent);
+    --ink-card: var(--card);
+}
