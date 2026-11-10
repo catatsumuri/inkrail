@@ -3,6 +3,7 @@
 use App\Models\Article;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Inertia\Testing\AssertableInertia as Assert;
 
 uses(RefreshDatabase::class);
@@ -164,7 +165,12 @@ test('article samples can be seeded repeatedly with valid publication metadata',
     $this->seed();
     $this->seed();
 
-    $articles = User::where('email', 'test@example.com')->sole()->articles()->get();
+    $user = User::where('email', 'test@example.com')->sole();
+    expect($user->name)->toBe('Test User');
+    expect($user->hasVerifiedEmail())->toBeTrue();
+    expect(Hash::check('password', $user->password))->toBeTrue();
+
+    $articles = $user->articles()->get();
     expect($articles)->toHaveCount(8);
     expect($articles->pluck('slug')->unique())->toHaveCount(8);
     expect($articles->firstWhere('title', 'Welcome to InkRail')->is_published)->toBeTrue();

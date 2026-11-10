@@ -16,9 +16,10 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        $user = User::where('email', 'test@example.com')->first() ?? User::factory()->create([
+        $user = User::firstOrCreate(['email' => 'test@example.com'], [
             'name' => 'Test User',
-            'email' => 'test@example.com',
+            'email_verified_at' => now(),
+            'password' => 'password',
         ]);
 
         foreach ([
