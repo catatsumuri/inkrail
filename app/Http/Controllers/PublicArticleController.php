@@ -15,7 +15,7 @@ class PublicArticleController extends Controller
 
         return Inertia::render('articles/public-index', [
             'articles' => Article::query()->where('is_published', true)
-                ->select(['title', 'slug'])->latest('id')->paginate(20),
+                ->select(['title', 'slug'])->orderBy('id')->paginate(20),
         ]);
     }
 

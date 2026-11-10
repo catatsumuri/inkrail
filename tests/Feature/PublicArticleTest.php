@@ -6,7 +6,7 @@ use Inertia\Testing\AssertableInertia as Assert;
 
 uses(RefreshDatabase::class);
 
-test('the public index lists only published articles from all owners newest first with pagination', function () {
+test('the public index lists only published articles from all owners in ascending id order with pagination', function () {
     config(['articles.public_index_enabled' => true]);
     $owner = User::factory()->create();
     $other = User::factory()->create();
@@ -20,12 +20,12 @@ test('the public index lists only published articles from all owners newest firs
     $this->get(route('public.articles.index'))->assertOk()
         ->assertInertia(fn (Assert $page) => $page->component('articles/public-index')
             ->has('articles.data', 20)->where('articles.total', 21)
-            ->where('articles.data.0', ['title' => 'Article 21', 'slug' => 'article-21'])
-            ->where('articles.data.19.slug', 'article-2')
+            ->where('articles.data.0', ['title' => 'Article 1', 'slug' => 'article-1'])
+            ->where('articles.data.19.slug', 'article-20')
             ->where('articles.current_page', 1));
     $this->get(route('public.articles.index', ['page' => 2]))->assertOk()
         ->assertInertia(fn (Assert $page) => $page->has('articles.data', 1)
-            ->where('articles.data.0.slug', 'article-1')->where('articles.current_page', 2));
+            ->where('articles.data.0.slug', 'article-21')->where('articles.current_page', 2));
 });
 
 test('the public index supports an empty list', function () {

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="320" viewBox="0 0 800 320" role="img" aria-labelledby="title desc">
+  <title id="title">InkRail — Write, refine, publish</title>
+  <desc id="desc">Three document cards connected by a line, representing writing, refining, and publishing an article.</desc>
+  <rect width="800" height="320" rx="24" fill="#f4f4f5"/>
+  <path d="M180 160h440" fill="none" stroke="#a1a1aa" stroke-width="3" stroke-dasharray="8 8"/>
+  <g fill="#fff" stroke="#d4d4d8" stroke-width="2">
+    <rect x="72" y="72" width="176" height="176" rx="16"/>
+    <rect x="312" y="72" width="176" height="176" rx="16"/>
+    <rect x="552" y="72" width="176" height="176" rx="16"/>
+  </g>
+  <g stroke="#a1a1aa" stroke-width="6" stroke-linecap="round">
+    <path d="M108 114h68m-68 24h104m-104 24h86M348 114h68m-68 24h104m-104 24h86M588 114h68m-68 24h104m-104 24h86"/>
+  </g>
+  <g font-family="system-ui,sans-serif" font-size="18" font-weight="600" fill="#27272a" text-anchor="middle">
+    <text x="160" y="216">Write</text>
+    <text x="400" y="216">Refine</text>
+    <text x="640" y="216">Publish</text>
+  </g>
+  <circle cx="708" cy="88" r="20" fill="#16a34a"/>
+  <path d="m699 88 6 6 12-13" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
