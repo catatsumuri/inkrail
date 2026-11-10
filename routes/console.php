@@ -8,6 +8,13 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
+if (config('app.demo_mode')) {
+    Schedule::command('demo:reset')
+        ->twiceDaily(8, 20)
+        ->timezone('Asia/Tokyo')
+        ->withoutOverlapping(10);
+}
+
 foreach (config('audit.retention_days') as $logName => $days) {
     $validDays = is_int($days) || is_string($days)
         ? filter_var($days, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]])
