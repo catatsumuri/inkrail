@@ -1,17 +1,12 @@
 import { lang } from '@erag/lang-sync-inertia/react';
 import { Link, usePage } from '@inertiajs/react';
 import { edit, index } from '@/actions/App/Http/Controllers/ArticleController';
-import { index as publicIndex } from '@/actions/App/Http/Controllers/PublicArticleController';
 import { Button } from '@/components/ui/button';
 import { home } from '@/routes';
 
 export default function PublicArticleHeader({
-    publicIndexEnabled,
-    isIndexPage = false,
     editableArticleId = null,
 }: {
-    publicIndexEnabled: boolean;
-    isIndexPage?: boolean;
     editableArticleId?: number | null;
 }) {
     const { __ } = lang();
@@ -19,15 +14,8 @@ export default function PublicArticleHeader({
 
     return (
         <header className="border-b">
-            <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-3 px-6 py-4">
-                <Link
-                    href={
-                        publicIndexEnabled && !isIndexPage
-                            ? publicIndex()
-                            : home()
-                    }
-                    className="font-semibold"
-                >
+            <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-6 py-4">
+                <Link href={home()} className="font-semibold">
                     InkRail
                 </Link>
                 {auth.user && (

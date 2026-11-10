@@ -1,4 +1,7 @@
-import { Head } from '@inertiajs/react';
+import { lang } from '@erag/lang-sync-inertia/react';
+import { Head, Link } from '@inertiajs/react';
+import { ArrowLeft } from 'lucide-react';
+import { index } from '@/actions/App/Http/Controllers/PublicArticleController';
 import PublicArticleHeader from '@/components/public-article-header';
 import type { Article } from '@/types/article';
 
@@ -11,15 +14,23 @@ export default function PublicShow({
     editableArticleId: number | null;
     publicIndexEnabled: boolean;
 }) {
+    const { __ } = lang();
+
     return (
         <>
             <Head title={article.title} />
             <div className="min-h-screen bg-background text-foreground">
-                <PublicArticleHeader
-                    publicIndexEnabled={publicIndexEnabled}
-                    editableArticleId={editableArticleId}
-                />
-                <main className="mx-auto max-w-3xl px-6 py-10">
+                <PublicArticleHeader editableArticleId={editableArticleId} />
+                <main className="mx-auto max-w-5xl space-y-6 px-6 py-10">
+                    {publicIndexEnabled && (
+                        <Link
+                            href={index()}
+                            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+                        >
+                            <ArrowLeft aria-hidden="true" className="size-4" />
+                            {__('Public articles')}
+                        </Link>
+                    )}
                     <article className="space-y-8">
                         <h1 className="text-3xl font-semibold break-words">
                             {article.title}
