@@ -16,7 +16,7 @@ class ProtectShowcaseOwner
     public function handle(Request $request, Closure $next): Response
     {
         abort_if(
-            $request->user()?->is_showcase_owner && ! $request->isMethodSafe() && ! $request->routeIs('logout'),
+            $request->user()?->is_showcase_owner && ! $request->isMethodSafe() && ! $request->routeIs('logout', 'locale.update'),
             403,
         );
 

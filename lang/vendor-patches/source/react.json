@@ -118,5 +118,11 @@
     "Start my sandbox": "Start my sandbox",
     "Public examples are read-only. Start a private sandbox to edit your own copies without signing up.": "Public examples are read-only. Start a private sandbox to edit your own copies without signing up.",
     "Edit your own copies freely. Your changes stay private and do not affect the public examples or other visitors.": "Edit your own copies freely. Your changes stay private and do not affect the public examples or other visitors.",
-    "All demo data and sessions reset daily at 08:00 and 20:00 Japan time, and on every deployment. Do not store anything you want to keep.": "All demo data and sessions reset daily at 08:00 and 20:00 Japan time, and on every deployment. Do not store anything you want to keep."
+    "All demo data and sessions reset daily at 08:00 and 20:00 Japan time, and on every deployment. Do not store anything you want to keep.": "All demo data and sessions reset daily at 08:00 and 20:00 Japan time, and on every deployment. Do not store anything you want to keep.",
+    "Article language": "Article language",
+    "Language": "Language",
+    "Discard unsaved changes?": "Discard unsaved changes?",
+    "Changing the display language will discard your unsaved article changes.": "Changing the display language will discard your unsaved article changes.",
+    "Discard and switch": "Discard and switch",
+    "Translation unavailable. Showing:": "Translation unavailable. Showing:"
 }

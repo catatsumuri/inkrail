@@ -34,11 +34,10 @@ class SandboxController extends Controller
             ])->save();
 
             foreach ($showcase->articles()->orderBy('id')->get() as $article) {
-                $user->articles()->create([
-                    'title' => $article->title,
-                    'content' => $article->content,
+                $copy = $user->articles()->create([
                     'is_published' => false,
                 ]);
+                $copy->replaceTranslations($article->translations->mapWithKeys(fn ($translation) => [$translation->locale => ['title' => $translation->title, 'content' => $translation->content]])->all());
             }
 
             return $user->refresh();

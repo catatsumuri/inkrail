@@ -1,3 +1,4 @@
+import LocaleSwitcher from '@/components/locale-switcher';
 import { Link, usePage } from '@inertiajs/react';
 import { lang } from '@erag/lang-sync-inertia/react';
 import { BookOpen, Folder, LayoutGrid, Menu, Search } from 'lucide-react';
@@ -80,6 +81,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
 
     return (
         <>
+            <LocaleSwitcher />
             <div className="border-b border-sidebar-border/80">
                 <div className="mx-auto flex h-16 items-center px-4 md:max-w-7xl">
                     {/* Mobile Menu */}

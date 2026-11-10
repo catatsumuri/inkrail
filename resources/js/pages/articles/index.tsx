@@ -1,3 +1,4 @@
+import ArticleLanguageNotice from '@/components/article-language-notice';
 import { lang } from '@erag/lang-sync-inertia/react';
 import { Head, Link, setLayoutProps } from '@inertiajs/react';
 import {
@@ -10,7 +11,10 @@ import { Badge } from '@/components/ui/badge';
 import type { Article } from '@/types/article';
 
 type Articles = {
-    data: Pick<Article, 'id' | 'title' | 'slug' | 'is_published'>[];
+    data: Pick<
+        Article,
+        'id' | 'title' | 'slug' | 'resolvedLocale' | 'is_published'
+    >[];
     prev_page_url: string | null;
     next_page_url: string | null;
 };
@@ -40,6 +44,9 @@ export default function Index({ articles }: { articles: Articles }) {
                                 >
                                     {article.title}
                                 </Link>
+                                <ArticleLanguageNotice
+                                    resolvedLocale={article.resolvedLocale}
+                                />
                                 <div className="mt-2 flex items-center gap-2">
                                     <Badge
                                         variant={

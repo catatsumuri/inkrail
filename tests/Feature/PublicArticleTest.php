@@ -20,7 +20,7 @@ test('the public index lists only published articles from all owners in ascendin
     $this->get(route('public.articles.index'))->assertOk()
         ->assertInertia(fn (Assert $page) => $page->component('articles/public-index')
             ->has('articles.data', 20)->where('articles.total', 21)
-            ->where('articles.data.0', ['title' => 'Article 1', 'slug' => 'article-1'])
+            ->where('articles.data.0.title', 'Article 1')->where('articles.data.0.slug', 'article-1')
             ->where('articles.data.19.slug', 'article-20')
             ->where('articles.current_page', 1));
     $this->get(route('public.articles.index', ['page' => 2]))->assertOk()
@@ -55,9 +55,7 @@ test('visitors can read a published article by slug with only public article fie
         'slug' => 'public-article', 'is_published' => true,
     ]);
     $assertPublicArticle = fn (Assert $page) => $page->component('articles/public-show')
-        ->where('article', [
-            'title' => 'Public article', 'content' => '<script>alert(1)</script>', 'slug' => 'public-article',
-        ]);
+        ->where('article.title', 'Public article')->where('article.content', '<script>alert(1)</script>')->where('article.slug', 'public-article')->missing('article.user_id')->missing('article.translations');
 
     $this->get(route('public.articles.show', $article->slug))->assertOk()->assertInertia($assertPublicArticle);
     $this->actingAs(User::factory()->unverified()->create())

@@ -1,3 +1,4 @@
+import LocaleSwitcher from '@/components/locale-switcher';
 import { lang } from '@erag/lang-sync-inertia/react';
 import { Link, usePage } from '@inertiajs/react';
 import { edit, index } from '@/actions/App/Http/Controllers/ArticleController';
@@ -24,6 +25,7 @@ export default function PublicArticleHeader({
                     <AppLogoIcon className="size-7" />
                     InkRail
                 </Link>
+                <LocaleSwitcher />
                 {auth.user && (
                     <nav
                         aria-label={__('Article management')}

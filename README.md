@@ -25,7 +25,15 @@ You can edit, create, and delete your own articles. Sandbox articles remain priv
 
 **The live demo is disposable.** All data and login sessions reset daily at **08:00 and 20:00 Japan time (`Asia/Tokyo`)**, and on every deployment. Copy anything you want to keep elsewhere.
 
-## Run locally
+## Article languages
+
+An article can contain English and Japanese versions of its title and Markdown body. Its URL, owner, and publication status are shared. Use the language tabs in the editor to edit both versions and save them together; one language is enough to save or publish an article.
+
+The header language switch changes the UI and article display together. If a translation is missing, InkRail uses the configured fallback language, then another available supported language, and shows which language is being displayed. Missing translations remain empty in the editor. Clear both fields of a translation to remove it; at least one title must remain.
+
+Sandboxes copy all available translations. Existing articles migrate to English without changing their contents or URLs. Migration rollback retains only one version, preferring English; back up the database before rolling back a multilingual installation.
+
+## Local development
 
 The application runs on PHP 8.5 using Laravel Sail. With dependencies installed and Sail running:
 

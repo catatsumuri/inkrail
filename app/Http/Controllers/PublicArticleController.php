@@ -17,7 +17,7 @@ class PublicArticleController extends Controller
         return Inertia::render('articles/public-index', [
             'articles' => Article::query()->where('is_published', true)
                 ->when(config('app.demo_mode'), fn (Builder $query): Builder => $query->whereRelation('user', 'is_showcase_owner', true))
-                ->select(['title', 'slug'])->orderBy('id')->paginate(20),
+                ->select(['id', 'slug'])->orderBy('id')->paginate(20)->through(fn (Article $article): array => [...$article->only(['title', 'slug']), ...$article->languageMetadata()]),
         ]);
     }
 
@@ -26,7 +26,7 @@ class PublicArticleController extends Controller
         abort_unless($article->is_published && (! config('app.demo_mode') || $article->user->is_showcase_owner), 404);
 
         return Inertia::render('articles/public-show', [
-            'article' => $article->only(['title', 'content', 'slug']),
+            'article' => [...$article->only(['title', 'content', 'slug']), ...$article->languageMetadata()],
             'editableArticleId' => $request->user()?->can('update', $article) ? $article->id : null,
             'publicIndexEnabled' => (bool) config('articles.public_index_enabled'),
         ]);

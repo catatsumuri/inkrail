@@ -3,14 +3,11 @@
 namespace Database\Seeders;
 
 use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 
 class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
-
     /**
      * Seed the application's database.
      */
@@ -39,19 +36,21 @@ class DatabaseSeeder extends Seeder
                 'content' => "Open an article to edit its title and content.\n\nYou can delete articles you no longer need. Review the confirmation dialog before deleting.",
             ],
         ] as $article) {
-            $seededArticle = $user->articles()->whereIn('title', [$article['title'], $article['legacy_title']])->first();
+            $seededArticle = $user->articles()->whereHas('translations', fn ($query) => $query->whereIn('title', [$article['title'], $article['legacy_title']]))->first();
             if ($seededArticle !== null) {
-                if ($seededArticle->title === $article['legacy_title'] && $seededArticle->content === $article['legacy_content']) {
-                    $seededArticle->update(['title' => $article['title'], 'content' => $article['content']]);
+                $english = $seededArticle->translations()->where('locale', 'en')->first();
+                if ($english !== null && $english->title === $article['legacy_title'] && $english->content === $article['legacy_content']) {
+                    $english->update(['title' => $article['title'], 'content' => $article['content']]);
                 }
+
+                $seededArticle->translations()->firstOrCreate(['locale' => 'en'], ['title' => $article['title'], 'content' => $article['content']]);
+                $seededArticle->translations()->firstOrCreate(['locale' => 'ja'], ['title' => $article['legacy_title'], 'content' => $article['legacy_content']]);
 
                 continue;
             }
 
-            $user->articles()->firstOrCreate(
-                ['title' => $article['title']],
-                ['content' => $article['content'], 'slug' => Str::lower((string) Str::ulid()), 'is_published' => $article['is_published']],
-            );
+            $created = $user->articles()->create(['slug' => Str::lower((string) Str::ulid()), 'is_published' => $article['is_published']]);
+            $created->replaceTranslations(['en' => ['title' => $article['title'], 'content' => $article['content']], 'ja' => ['title' => $article['legacy_title'], 'content' => $article['legacy_content']]]);
         }
 
         $this->call(ShowcaseSeeder::class);

@@ -117,5 +117,11 @@
     "Start my sandbox": "自分の sandbox を始める",
     "Public examples are read-only. Start a private sandbox to edit your own copies without signing up.": "公開の見本は閲覧専用です。登録不要の sandbox で、自分専用のコピーを編集できます。",
     "Edit your own copies freely. Your changes stay private and do not affect the public examples or other visitors.": "コピーを自由に編集できます。変更は非公開で、公開の見本や他の訪問者には影響しません。",
-    "All demo data and sessions reset daily at 08:00 and 20:00 Japan time, and on every deployment. Do not store anything you want to keep.": "デモの全データとログイン状態は、日本時間の毎日8時・20時とデプロイ時に初期化されます。残したいデータは保存しないでください。"
+    "All demo data and sessions reset daily at 08:00 and 20:00 Japan time, and on every deployment. Do not store anything you want to keep.": "デモの全データとログイン状態は、日本時間の毎日8時・20時とデプロイ時に初期化されます。残したいデータは保存しないでください。",
+    "Article language": "記事の言語",
+    "Language": "言語",
+    "Discard unsaved changes?": "未保存の変更を破棄しますか？",
+    "Changing the display language will discard your unsaved article changes.": "表示言語を変更すると、記事の未保存の変更は破棄されます。",
+    "Discard and switch": "破棄して切り替える",
+    "Translation unavailable. Showing:": "翻訳がないため、次の言語で表示しています："
 }

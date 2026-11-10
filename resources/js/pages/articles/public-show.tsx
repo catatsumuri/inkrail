@@ -1,3 +1,4 @@
+import ArticleLanguageNotice from '@/components/article-language-notice';
 import { lang } from '@erag/lang-sync-inertia/react';
 import { Head, Link } from '@inertiajs/react';
 import { ArrowLeft } from 'lucide-react';
@@ -11,7 +12,7 @@ export default function PublicShow({
     editableArticleId,
     publicIndexEnabled,
 }: {
-    article: Pick<Article, 'title' | 'content' | 'slug'>;
+    article: Pick<Article, 'title' | 'content' | 'slug' | 'resolvedLocale'>;
     editableArticleId: number | null;
     publicIndexEnabled: boolean;
 }) {
@@ -20,6 +21,7 @@ export default function PublicShow({
     return (
         <>
             <Head title={article.title} />
+            <ArticleLanguageNotice resolvedLocale={article.resolvedLocale} />
             <div className="min-h-screen bg-background text-foreground">
                 <PublicArticleHeader editableArticleId={editableArticleId} />
                 <main className="mx-auto max-w-5xl space-y-6 px-6 py-10">

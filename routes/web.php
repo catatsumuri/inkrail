@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\SecurityEventController;
 use App\Http\Controllers\ArticleController;
 use App\Http\Controllers\DeleteNotificationController;
+use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\MarkNotificationAsReadController;
 use App\Http\Controllers\PublicArticleController;
 use App\Http\Controllers\SandboxController;
@@ -17,6 +18,8 @@ Route::post('sandbox', SandboxController::class)
     ->middleware('throttle:6,1')
     ->block(10, 10)
     ->name('sandbox.start');
+
+Route::post('locale', LocaleController::class)->name('locale.update');
 
 Route::get('p', [PublicArticleController::class, 'index'])
     ->name('public.articles.index');

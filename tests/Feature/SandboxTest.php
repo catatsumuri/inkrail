@@ -33,7 +33,7 @@ test('starting a sandbox authenticates a temporary visitor with private copies a
     expect($visitor->hasVerifiedEmail())->toBeTrue();
     expect($visitor->articles()->count())->toBe(8);
     expect($visitor->articles()->where('is_published', true)->exists())->toBeFalse();
-    $copy = $visitor->articles()->where('title', $original->title)->sole();
+    $copy = $visitor->articles()->whereRelation('translations', 'title', $original->title)->sole();
     expect($copy->content)->toBe($original->content);
     expect($copy->slug)->not->toBe($original->slug);
     expect($owner->is_showcase_owner)->toBeTrue();
@@ -60,7 +60,7 @@ test('visitors can edit only their own sandbox copies and cannot publish them', 
     $this->flushSession();
     $this->post(route('sandbox.start'));
     $visitor = Auth::user();
-    $copy = $visitor->articles()->where('title', $original->title)->sole();
+    $copy = $visitor->articles()->whereRelation('translations', 'title', $original->title)->sole();
 
     expect($visitor->id)->not->toBe($firstVisitor->id);
     $this->patch(route('articles.update', $firstCopy), ['title' => 'Changed'])->assertForbidden();

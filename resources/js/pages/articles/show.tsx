@@ -1,3 +1,4 @@
+import ArticleLanguageNotice from '@/components/article-language-notice';
 import { lang } from '@erag/lang-sync-inertia/react';
 import { Form, Head, Link, setLayoutProps } from '@inertiajs/react';
 import { toast } from 'sonner';
@@ -51,6 +52,7 @@ export default function Show({ article }: { article: Article }) {
     return (
         <>
             <Head title={article.title} />
+            <ArticleLanguageNotice resolvedLocale={article.resolvedLocale} />
             <main className="space-y-6 p-4">
                 <div className="flex items-center gap-4">
                     <Link href={index()}>一覧へ</Link>

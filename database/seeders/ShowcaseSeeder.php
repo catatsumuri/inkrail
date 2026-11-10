@@ -23,14 +23,18 @@ class ShowcaseSeeder extends Seeder
             $article = $user->articles()->firstOrCreate(
                 ['slug' => 'showcase-'.$syntax],
                 [
-                    'title' => $title,
-                    'content' => File::get(database_path('seeders/showcase/en/'.$syntax.'.md')),
                     'is_published' => true,
                 ],
             );
+            $article->translations()->firstOrCreate(['locale' => 'en'], ['title' => $title, 'content' => File::get(database_path('seeders/showcase/en/'.$syntax.'.md'))]);
             $legacyTitles = json_decode(File::get(database_path('seeders/showcase/ja/titles.json')), true);
-            if (isset($legacyTitles[$syntax]) && $article->title === $legacyTitles[$syntax] && $article->content === File::get(database_path('seeders/showcase/ja/'.$syntax.'.md'))) {
-                $article->update(['title' => $title, 'content' => File::get(database_path('seeders/showcase/en/'.$syntax.'.md'))]);
+            if (isset($legacyTitles[$syntax]) && File::exists(database_path('seeders/showcase/ja/'.$syntax.'.md'))) {
+                $article->translations()->firstOrCreate(['locale' => 'ja'], ['title' => $legacyTitles[$syntax], 'content' => File::get(database_path('seeders/showcase/ja/'.$syntax.'.md'))]);
+                $article->unsetRelation('translations');
+            }
+            $english = $article->translations()->where('locale', 'en')->firstOrFail();
+            if (isset($legacyTitles[$syntax]) && $english->title === $legacyTitles[$syntax] && $english->content === File::get(database_path('seeders/showcase/ja/'.$syntax.'.md'))) {
+                $english->update(['title' => $title, 'content' => File::get(database_path('seeders/showcase/en/'.$syntax.'.md'))]);
             }
         }
     }

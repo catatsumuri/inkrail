@@ -1,4 +1,5 @@
 import { lang } from '@erag/lang-sync-inertia/react';
+import { useState } from 'react';
 import { Form, Link, usePage } from '@inertiajs/react';
 import {
     store,
@@ -15,27 +16,97 @@ import type { Article } from '@/types/article';
 
 export default function ArticleForm({ article }: { article?: Article }) {
     const { __ } = lang();
-    const { auth } = usePage().props;
+    const { auth, locale, articleLocales } = usePage().props;
+    const [editingLocale, setEditingLocale] = useState(
+        articleLocales.includes(locale) ? locale : articleLocales[0],
+    );
     return (
         <Form
             {...(article ? update.form(article.id) : store.form())}
+            data-article-form
+            onError={(errors) => {
+                const invalidLanguage = articleLocales.find((language) =>
+                    Object.keys(errors).some((key) =>
+                        key.startsWith(`translations.${language}.`),
+                    ),
+                );
+                if (invalidLanguage) setEditingLocale(invalidLanguage);
+            }}
             className="grid max-w-3xl gap-6"
         >
             {({ errors, processing }) => (
                 <>
-                    <div className="grid gap-2">
-                        <Label htmlFor="title">{__('Title')}</Label>
-                        <Input
-                            id="title"
-                            name="title"
-                            defaultValue={article?.title}
-                            required
-                            maxLength={255}
-                            autoFocus
-                            aria-invalid={Boolean(errors.title)}
-                        />
-                        <InputError message={errors.title} />
+                    <div
+                        className="flex gap-2"
+                        role="tablist"
+                        aria-label={__('Article language')}
+                    >
+                        {articleLocales.map((language) => (
+                            <Button
+                                type="button"
+                                role="tab"
+                                aria-selected={editingLocale === language}
+                                variant={
+                                    editingLocale === language
+                                        ? 'default'
+                                        : 'outline'
+                                }
+                                key={language}
+                                onClick={() => setEditingLocale(language)}
+                            >
+                                {language === 'ja' ? '日本語' : 'English'}
+                            </Button>
+                        ))}
                     </div>
+                    <InputError message={errors.translations} />
+                    {articleLocales.map((language) => (
+                        <div
+                            key={language}
+                            hidden={editingLocale !== language}
+                            className="space-y-6"
+                        >
+                            <div className="grid gap-2">
+                                <Label htmlFor={`title-${language}`}>
+                                    {__('Title')}
+                                </Label>
+                                <Input
+                                    id={`title-${language}`}
+                                    name={`translations[${language}][title]`}
+                                    defaultValue={
+                                        article?.translations?.[language]
+                                            ?.title ?? ''
+                                    }
+                                    maxLength={255}
+                                />
+                                <InputError
+                                    message={
+                                        errors[`translations.${language}.title`]
+                                    }
+                                />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor={`content-${language}`}>
+                                    {__('Content')}
+                                </Label>
+                                <textarea
+                                    id={`content-${language}`}
+                                    name={`translations[${language}][content]`}
+                                    defaultValue={
+                                        article?.translations?.[language]
+                                            ?.content ?? ''
+                                    }
+                                    className="min-h-80 w-full rounded-md border bg-background p-3 font-mono text-sm"
+                                />
+                                <InputError
+                                    message={
+                                        errors[
+                                            `translations.${language}.content`
+                                        ]
+                                    }
+                                />
+                            </div>
+                        </div>
+                    ))}
                     <div className="grid gap-2">
                         <Label htmlFor="slug">{__('Slug')}</Label>
                         <Input
@@ -56,17 +127,6 @@ export default function ArticleForm({ article }: { article?: Article }) {
                             )}
                         </p>
                         <InputError message={errors.slug} />
-                    </div>
-                    <div className="grid gap-2">
-                        <Label htmlFor="content">{__('Content')}</Label>
-                        <textarea
-                            id="content"
-                            name="content"
-                            defaultValue={article?.content}
-                            className="min-h-80 w-full rounded-md border bg-background p-3 font-mono text-sm"
-                            aria-invalid={Boolean(errors.content)}
-                        />
-                        <InputError message={errors.content} />
                     </div>
                     {!auth.user?.is_sandbox && (
                         <div className="grid gap-2">

@@ -11,6 +11,8 @@ declare module '@inertiajs/core' {
         sharedPageProps: {
             name: string;
             demoMode: boolean;
+            locale: string;
+            articleLocales: string[];
             auth: Auth;
             notifications: NotificationFeed;
             sidebarOpen: boolean;

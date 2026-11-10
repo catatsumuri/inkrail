@@ -1,3 +1,4 @@
+import LocaleSwitcher from '@/components/locale-switcher';
 import { lang } from '@erag/lang-sync-inertia/react';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { ArrowRight, BookOpen, Code2, Layers } from 'lucide-react';
@@ -32,6 +33,7 @@ export default function Welcome({
                         aria-label={__('Main navigation')}
                         className="flex flex-wrap items-center gap-2"
                     >
+                        <LocaleSwitcher />
                         {publicIndexEnabled && (
                             <Button asChild variant="ghost">
                                 <Link href={publicArticles()}>

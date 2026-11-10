@@ -162,6 +162,7 @@ test('publication metadata does not allow other users to read or modify articles
 });
 
 test('article samples can be seeded repeatedly with valid publication metadata', function () {
+    app()->setLocale('en');
     $this->seed();
     $this->seed();
 

@@ -1,3 +1,4 @@
+import ArticleLanguageNotice from '@/components/article-language-notice';
 import { lang } from '@erag/lang-sync-inertia/react';
 import { Head, Link } from '@inertiajs/react';
 import { ArrowUpRight } from 'lucide-react';
@@ -6,7 +7,7 @@ import PublicArticleHeader from '@/components/public-article-header';
 import type { Article } from '@/types/article';
 
 type Articles = {
-    data: Pick<Article, 'title' | 'slug'>[];
+    data: Pick<Article, 'title' | 'slug' | 'resolvedLocale'>[];
     prev_page_url: string | null;
     next_page_url: string | null;
 };
@@ -64,6 +65,9 @@ export default function PublicIndex({ articles }: { articles: Articles }) {
                                             className="size-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-foreground"
                                         />
                                     </Link>
+                                    <ArticleLanguageNotice
+                                        resolvedLocale={article.resolvedLocale}
+                                    />
                                 </li>
                             ))}
                         </ul>

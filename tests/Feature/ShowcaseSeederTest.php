@@ -7,6 +7,7 @@ use Inertia\Testing\AssertableInertia as Assert;
 uses(RefreshDatabase::class);
 
 test('legacy welcome articles retain their URL and draft state when translated', function () {
+    app()->setLocale('en');
     $user = User::factory()->create(['email' => 'test@example.com']);
     $article = $user->articles()->create([
         'title' => 'InkRailへようこそ',
@@ -22,6 +23,7 @@ test('legacy welcome articles retain their URL and draft state when translated',
 });
 
 test('syntax showcase articles are published at stable URLs', function (string $syntax, string $example) {
+    app()->setLocale('en');
     $this->seed();
 
     $this->get(route('public.articles.show', 'showcase-'.$syntax))->assertOk()
@@ -53,6 +55,7 @@ test('reseeding preserves edited showcase articles and unrelated user articles',
 });
 
 test('unchanged Japanese guides become English without changing identity or publication', function () {
+    app()->setLocale('en');
     $user = User::factory()->create(['email' => 'test@example.com']);
     $titles = json_decode(file_get_contents(database_path('seeders/showcase/ja/titles.json')), true);
     $article = $user->articles()->create([
