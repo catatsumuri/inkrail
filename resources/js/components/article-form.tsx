@@ -1,5 +1,5 @@
 import { lang } from '@erag/lang-sync-inertia/react';
-import { Form, Link } from '@inertiajs/react';
+import { Form, Link, usePage } from '@inertiajs/react';
 import {
     store,
     update,
@@ -15,6 +15,7 @@ import type { Article } from '@/types/article';
 
 export default function ArticleForm({ article }: { article?: Article }) {
     const { __ } = lang();
+    const { auth } = usePage().props;
     return (
         <Form
             {...(article ? update.form(article.id) : store.form())}
@@ -67,26 +68,30 @@ export default function ArticleForm({ article }: { article?: Article }) {
                         />
                         <InputError message={errors.content} />
                     </div>
-                    <div className="grid gap-2">
-                        <div className="flex items-center gap-2">
-                            <input
-                                type="hidden"
-                                name="is_published"
-                                value="0"
-                            />
-                            <Checkbox
-                                id="is_published"
-                                name="is_published"
-                                value="1"
-                                defaultChecked={article?.is_published ?? false}
-                                aria-invalid={Boolean(errors.is_published)}
-                            />
-                            <Label htmlFor="is_published">
-                                {__('Published')}
-                            </Label>
+                    {!auth.user?.is_sandbox && (
+                        <div className="grid gap-2">
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="hidden"
+                                    name="is_published"
+                                    value="0"
+                                />
+                                <Checkbox
+                                    id="is_published"
+                                    name="is_published"
+                                    value="1"
+                                    defaultChecked={
+                                        article?.is_published ?? false
+                                    }
+                                    aria-invalid={Boolean(errors.is_published)}
+                                />
+                                <Label htmlFor="is_published">
+                                    {__('Published')}
+                                </Label>
+                            </div>
+                            <InputError message={errors.is_published} />
                         </div>
-                        <InputError message={errors.is_published} />
-                    </div>
+                    )}
                     <div className="flex items-center gap-4">
                         <Button disabled={processing}>{__('Save')}</Button>
                         <Link href={article ? show(article.id) : index()}>

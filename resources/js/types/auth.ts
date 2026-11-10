@@ -2,6 +2,8 @@ export type User = {
     id: number;
     name: string;
     email: string;
+    is_sandbox: boolean;
+    is_showcase_owner: boolean;
     avatar?: string;
     email_verified_at: string | null;
     /* @chisel-2fa */

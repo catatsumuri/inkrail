@@ -5,12 +5,18 @@ use App\Http\Controllers\ArticleController;
 use App\Http\Controllers\DeleteNotificationController;
 use App\Http\Controllers\MarkNotificationAsReadController;
 use App\Http\Controllers\PublicArticleController;
+use App\Http\Controllers\SandboxController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 Route::get('/', fn () => Inertia::render('welcome', [
     'publicIndexEnabled' => (bool) config('articles.public_index_enabled'),
 ]))->name('home');
+
+Route::post('sandbox', SandboxController::class)
+    ->middleware('throttle:6,1')
+    ->block(10, 10)
+    ->name('sandbox.start');
 
 Route::get('p', [PublicArticleController::class, 'index'])
     ->name('public.articles.index');

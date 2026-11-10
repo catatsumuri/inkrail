@@ -5,6 +5,7 @@ import { index as myArticles } from '@/actions/App/Http/Controllers/ArticleContr
 import { index as publicArticles } from '@/actions/App/Http/Controllers/PublicArticleController';
 import { Button } from '@/components/ui/button';
 import AppLogoIcon from '@/components/app-logo-icon';
+import DemoNotice from '@/components/demo-notice';
 import { login } from '@/routes';
 /* @chisel-registration */
 import { register } from '@/routes';
@@ -61,6 +62,7 @@ export default function Welcome({
                     </nav>
                 </header>
                 <main className="mx-auto max-w-5xl px-6 pb-16">
+                    <DemoNotice />
                     <section className="flex max-w-3xl flex-col items-start gap-7 py-16 sm:py-24">
                         <p className="text-sm font-medium tracking-widest text-muted-foreground">
                             Inkstream · Live demo

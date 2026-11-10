@@ -111,5 +111,11 @@
     "From everyday Markdown to Zenn disclosures and Mintlify components, see how different syntax works together.": "基本のMarkdownからZennの折りたたみやMintlifyのコンポーネントまで、さまざまな記法の組み合わせを確認できます。",
     "Source and rendering, side by side": "記法と描画結果を見比べる",
     "Each guide pairs copyable syntax examples with live previews, including diagrams, charts, trees, and quizzes.": "各ガイドにはコピーできる記法の例とプレビューを掲載。図、チャート、ツリー、クイズの表現も試せます。",
-    "View Inkstream on GitHub": "GitHubでInkstreamを見る"
+    "View Inkstream on GitHub": "GitHubでInkstreamを見る",
+    "Live demo": "ライブデモ",
+    "Your private sandbox": "あなた専用の sandbox",
+    "Start my sandbox": "自分の sandbox を始める",
+    "Public examples are read-only. Start a private sandbox to edit your own copies without signing up.": "公開の見本は閲覧専用です。登録不要の sandbox で、自分専用のコピーを編集できます。",
+    "Edit your own copies freely. Your changes stay private and do not affect the public examples or other visitors.": "コピーを自由に編集できます。変更は非公開で、公開の見本や他の訪問者には影響しません。",
+    "All demo data and sessions reset daily at 08:00 and 20:00 Japan time, and on every deployment. Do not store anything you want to keep.": "デモの全データとログイン状態は、日本時間の毎日8時・20時とデプロイ時に初期化されます。残したいデータは保存しないでください。"
 }

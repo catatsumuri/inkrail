@@ -112,5 +112,11 @@
     "From everyday Markdown to Zenn disclosures and Mintlify components, see how different syntax works together.": "From everyday Markdown to Zenn disclosures and Mintlify components, see how different syntax works together.",
     "Source and rendering, side by side": "Source and rendering, side by side",
     "Each guide pairs copyable syntax examples with live previews, including diagrams, charts, trees, and quizzes.": "Each guide pairs copyable syntax examples with live previews, including diagrams, charts, trees, and quizzes.",
-    "View Inkstream on GitHub": "View Inkstream on GitHub"
+    "View Inkstream on GitHub": "View Inkstream on GitHub",
+    "Live demo": "Live demo",
+    "Your private sandbox": "Your private sandbox",
+    "Start my sandbox": "Start my sandbox",
+    "Public examples are read-only. Start a private sandbox to edit your own copies without signing up.": "Public examples are read-only. Start a private sandbox to edit your own copies without signing up.",
+    "Edit your own copies freely. Your changes stay private and do not affect the public examples or other visitors.": "Edit your own copies freely. Your changes stay private and do not affect the public examples or other visitors.",
+    "All demo data and sessions reset daily at 08:00 and 20:00 Japan time, and on every deployment. Do not store anything you want to keep.": "All demo data and sessions reset daily at 08:00 and 20:00 Japan time, and on every deployment. Do not store anything you want to keep."
 }

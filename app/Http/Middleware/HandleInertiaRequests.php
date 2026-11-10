@@ -40,6 +40,7 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'name' => config('app.name'),
+            'demoMode' => (bool) config('app.demo_mode'),
             'auth' => [
                 'user' => $request->user(),
             ],

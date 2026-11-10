@@ -14,11 +14,11 @@ class ArticlePolicy
 
     public function update(User $user, Article $article): bool
     {
-        return $this->view($user, $article);
+        return ! $user->is_showcase_owner && $this->view($user, $article);
     }
 
     public function delete(User $user, Article $article): bool
     {
-        return $this->view($user, $article);
+        return $this->update($user, $article);
     }
 }

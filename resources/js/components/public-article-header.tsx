@@ -3,6 +3,7 @@ import { Link, usePage } from '@inertiajs/react';
 import { edit, index } from '@/actions/App/Http/Controllers/ArticleController';
 import { Button } from '@/components/ui/button';
 import AppLogoIcon from '@/components/app-logo-icon';
+import DemoNotice from '@/components/demo-notice';
 import { home } from '@/routes';
 
 export default function PublicArticleHeader({
@@ -42,6 +43,9 @@ export default function PublicArticleHeader({
                         )}
                     </nav>
                 )}
+            </div>
+            <div className="mx-auto max-w-5xl px-6 pb-4">
+                <DemoNotice />
             </div>
         </header>
     );

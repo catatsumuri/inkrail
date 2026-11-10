@@ -15,7 +15,17 @@ Regression tests cover account changes, security notifications and logs, access 
 
 For localization setup and adding locales, see the [upstream localization guide](https://github.com/catatsumuri/react-starter-kit-i18n#adding-a-locale).
 
-## Documentation
+## Live demo and sandboxes
+
+The live demo runs from `main` with `DEMO_MODE=true`. Other installations leave this setting disabled.
+
+- Public showcase articles belong to a protected owner with a random password. They are read-only, including for that owner.
+- **Start my sandbox** creates a separate, verified temporary user for the current browser session and private copies of the example articles. Returning to the button reuses the current signed-in workspace. Other visitors cannot edit these copies, and sandbox articles cannot be published.
+- All demo data and sessions reset at **08:00 and 20:00 Asia/Tokyo**, and on every deployment. This is disposable storage; visitors must copy anything they want to keep elsewhere.
+- The Cloud App instance must have its scheduler enabled. `php artisan demo:reset` resets SQLite and seeds the original examples; it refuses to run unless demo mode is enabled and the connection is SQLite.
+- Cloud builds initialize the disposable SQLite file and run `php artisan migrate --seed --force --no-interaction`. The regular production prohibition on destructive commands remains enabled outside the dedicated demo reset command.
+
+## Project documentation
 
 Documentation is published on GitHub Pages in [English](https://catatsumuri.github.io/laravel-react-secure-starter-kit/about/) and [Japanese](https://catatsumuri.github.io/laravel-react-secure-starter-kit/ja/about/). Each language's root page redirects to its project overview.
 

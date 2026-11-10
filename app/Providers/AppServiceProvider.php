@@ -9,6 +9,7 @@ use App\Models\User;
 use Carbon\CarbonImmutable;
 use Closure;
 use Illuminate\Auth\Events\Failed;
+use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -86,6 +87,12 @@ class AppServiceProvider extends ServiceProvider
      */
     protected function configureSecurityEventLogging(): void
     {
+        Event::listen(Login::class, function (Login $event): void {
+            if ($event->user instanceof User && $event->user->is_sandbox) {
+                app(LogSecurityEvent::class)('sandbox.started', $event->user, causer: $event->user);
+            }
+        });
+
         $saved = fn (User $user, string $key): bool => array_key_exists($key, $user->getPrevious()) && ! $user->isDirty($key);
 
         $record = function (object $event, string $name, ?Closure $stored = null, array $properties = []): void {

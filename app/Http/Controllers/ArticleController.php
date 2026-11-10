@@ -69,7 +69,7 @@ class ArticleController extends Controller
             'title' => ['required', 'string', 'max:255'],
             'content' => ['nullable', 'string'],
             'slug' => ['nullable', 'string', 'max:255', 'regex:/\A[a-z0-9]+(?:-[a-z0-9]+)*\z/', Rule::unique(Article::class, 'slug')->ignore($article)],
-            'is_published' => ['sometimes', 'boolean'],
+            'is_published' => ['sometimes', 'boolean', ...($request->user()->is_sandbox ? [Rule::in([false, 0, '0'])] : [])],
         ]);
 
         $attributes = [
