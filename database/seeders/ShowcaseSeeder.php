@@ -18,6 +18,7 @@ class ShowcaseSeeder extends Seeder
             'mintlify' => 'Mintlify flavor — Composing documentation',
             'gfm' => 'GitHub flavor — Tables, tasks, and alerts',
             'extensions' => 'inkstream extensions — Diagrams, charts, trees, and quizzes',
+            'inertia' => 'Inertia.js integration — From Markdown to React',
         ] as $syntax => $title) {
             $article = $user->articles()->firstOrCreate(
                 ['slug' => 'showcase-'.$syntax],
@@ -28,7 +29,7 @@ class ShowcaseSeeder extends Seeder
                 ],
             );
             $legacyTitles = json_decode(File::get(database_path('seeders/showcase/ja/titles.json')), true);
-            if ($article->title === $legacyTitles[$syntax] && $article->content === File::get(database_path('seeders/showcase/ja/'.$syntax.'.md'))) {
+            if (isset($legacyTitles[$syntax]) && $article->title === $legacyTitles[$syntax] && $article->content === File::get(database_path('seeders/showcase/ja/'.$syntax.'.md'))) {
                 $article->update(['title' => $title, 'content' => File::get(database_path('seeders/showcase/en/'.$syntax.'.md'))]);
             }
         }

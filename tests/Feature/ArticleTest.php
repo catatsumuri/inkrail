@@ -165,8 +165,8 @@ test('article samples can be seeded repeatedly with valid publication metadata',
     $this->seed();
 
     $articles = User::where('email', 'test@example.com')->sole()->articles()->get();
-    expect($articles)->toHaveCount(7);
-    expect($articles->pluck('slug')->unique())->toHaveCount(7);
+    expect($articles)->toHaveCount(8);
+    expect($articles->pluck('slug')->unique())->toHaveCount(8);
     expect($articles->firstWhere('title', 'Welcome to InkRail')->is_published)->toBeTrue();
     expect($articles->firstWhere('title', 'Editing and managing articles')->is_published)->toBeFalse();
     foreach ($articles as $article) {

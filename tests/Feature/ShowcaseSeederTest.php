@@ -18,7 +18,7 @@ test('legacy welcome articles retain their URL and draft state when translated',
     $this->seed();
 
     expect($article->fresh())->title->toBe('Welcome to InkRail')->slug->toBe('original-welcome')->is_published->toBeFalse();
-    expect($user->articles()->count())->toBe(7);
+    expect($user->articles()->count())->toBe(8);
 });
 
 test('syntax showcase articles are published at stable URLs', function (string $syntax, string $example) {
@@ -34,6 +34,7 @@ test('syntax showcase articles are published at stable URLs', function (string $
     ['mintlify', '<CardGroup cols="2">'],
     ['gfm', '> [!IMPORTANT]'],
     ['extensions', '```chart:radar'],
+    ['inertia', "Inertia::render('articles/public-show'"],
 ]);
 
 test('reseeding preserves edited showcase articles and unrelated user articles', function () {
@@ -47,7 +48,7 @@ test('reseeding preserves edited showcase articles and unrelated user articles',
 
     expect($showcase->fresh())->title->toBe('My edited guide')->content->toBe('My notes')->is_published->toBeFalse();
     expect($personal->fresh())->content->toBe('Keep this')->is_published->toBeFalse();
-    expect($user->articles()->count())->toBe(8);
+    expect($user->articles()->count())->toBe(9);
     $this->get(route('public.articles.show', 'showcase-markdown'))->assertNotFound();
 });
 
@@ -66,5 +67,5 @@ test('unchanged Japanese guides become English without changing identity or publ
     expect($article->fresh())->title->toBe('Zenn flavor — Messages and disclosures')
         ->slug->toBe('showcase-zenn')->is_published->toBeFalse();
     expect($article->fresh()->content)->toContain('Drafts are visible only to their owner.');
-    expect($user->articles()->count())->toBe(7);
+    expect($user->articles()->count())->toBe(8);
 });
