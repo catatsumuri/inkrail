@@ -1,32 +1,61 @@
-# Laravel React Secure Starter Kit
+# InkRail
 
-A Laravel + React starter kit with additional controls for account security, session management, and security event logging. Based on the multilingual [react-starter-kit-i18n](https://github.com/catatsumuri/react-starter-kit-i18n) project's `main` branch, which derives from Laravel's official [react-starter-kit](https://github.com/laravel/react-starter-kit), it extends the existing authentication flows with tools for users to spot account changes and end unwanted sessions, and for operators to investigate security events.
+An interactive showcase for [Inkstream](https://github.com/catatsumuri/inkstream), a Markdown rendering library. Browse working examples, compare source with rendered output, and experiment with your own private copies.
 
-Compared with that project's `main` branch, it adds:
+**[Open the live demo](https://inkrail-production-nkokth.laravel.cloud/)**
 
-- **Account change notifications** — email notices for password changes and resets, two-factor authentication changes, recovery code regeneration, passkey additions and removals, and account deletion. Email changes require the current password and notify the previous address.
-- **Database session management** — A settings page showing devices, IP addresses, and recent activity, with options to revoke one other session, all other sessions, or every session. **Session revocation requires `SESSION_DRIVER=database`.** The application can use other drivers, such as Redis or file, but this kit's revocation feature is unavailable with them. Revocation also invalidates existing remember-me logins. The settings page requires recent password confirmation.
-- **Operator session revocation (database only)** — an Artisan command to revoke a user's database sessions and reset remember-me logins by user ID or email.
-- **Security event logging** — records of sensitive account changes and rejected authentication attempts, with a read-only JSON endpoint restricted to explicitly configured users with verified email addresses. Security records reject updates and deletes through the application's activity model, and scheduled cleanup uses configurable retention periods.
-- **Rate limits for sensitive actions** — additional throttling for profile updates, password reset submissions, and session revocation.
-- **Notifications and operational alerts** — an in-app notification menu, shared delivery support for database, email, and optional Slack notifications, and throttled email alerts for reported exceptions and failed queue jobs.
+## Explore Inkstream
 
-Regression tests cover account changes, security notifications and logs, access restrictions, session revocation, and failure handling.
+The public showcase includes guides for:
 
-For localization setup and adding locales, see the [upstream localization guide](https://github.com/catatsumuri/react-starter-kit-i18n#adding-a-locale).
+- **Markdown** — everyday writing and formatting.
+- **GitHub Flavored Markdown** — tables, task lists, and alerts.
+- **Zenn** — messages and disclosures.
+- **Mintlify** — documentation components and layouts.
+- **Inkstream extensions** — diagrams, charts, trees, and quizzes.
+- **Inertia.js integration** — rendering Markdown in a Laravel and React application.
 
-## Live demo and sandboxes
+Each guide pairs copyable syntax with rendered examples. The application uses `@catatsumuri/inkstream` with Laravel, Inertia, React, and Tailwind CSS.
 
-The live demo runs from `main` with `DEMO_MODE=true`. Other installations leave this setting disabled.
+## Try a private sandbox
 
-- Public showcase articles belong to a protected owner with a random password. They are read-only, including for that owner.
-- **Start my sandbox** creates a separate, verified temporary user for the current browser session and private copies of the example articles. Returning to the button reuses the current signed-in workspace. Other visitors cannot edit these copies, and sandbox articles cannot be published.
-- All demo data and sessions reset at **08:00 and 20:00 Asia/Tokyo**, and on every deployment. This is disposable storage; visitors must copy anything they want to keep elsewhere.
-- The Cloud App instance must have its scheduler enabled. `php artisan demo:reset` resets SQLite and seeds the original examples; it refuses to run unless demo mode is enabled and the connection is SQLite.
-- Cloud builds initialize the disposable SQLite file and run `php artisan migrate --seed --force --no-interaction`. The regular production prohibition on destructive commands remains enabled outside the dedicated demo reset command.
+Public examples are read-only. Select **Start my sandbox** to create a temporary workspace without signing up. Each browser session gets its own user and editable copies of the example articles.
 
-## Project documentation
+You can edit, create, and delete your own articles. Sandbox articles remain private and cannot be published; your changes do not affect the public examples or other visitors. Returning to the app in the same signed-in session reuses your workspace.
 
-Documentation is published on GitHub Pages in [English](https://catatsumuri.github.io/laravel-react-secure-starter-kit/about/) and [Japanese](https://catatsumuri.github.io/laravel-react-secure-starter-kit/ja/about/). Each language's root page redirects to its project overview.
+**The live demo is disposable.** All data and login sessions reset daily at **08:00 and 20:00 Japan time (`Asia/Tokyo`)**, and on every deployment. Copy anything you want to keep elsewhere.
 
-The Astro Starlight sources, editing instructions, and documentation publishing workflow live on the separate [`docs` branch](https://github.com/catatsumuri/laravel-react-secure-starter-kit/tree/docs). They are not included in the application starter kit.
+## Run locally
+
+The application runs on PHP 8.5 using Laravel Sail. With dependencies installed and Sail running:
+
+```sh
+vendor/bin/sail composer setup
+vendor/bin/sail artisan db:seed --no-interaction
+vendor/bin/sail npm run dev
+```
+
+Seed content lives in `database/seeders/showcase/`. Outside demo mode, the application supports ordinary registration, authentication, and article management.
+
+To enable the protected showcase and visitor sandboxes, set `DEMO_MODE=true` in `.env` before seeding. Leave it disabled for an ordinary installation. The dedicated reset command and scheduled resets require demo mode; the reset command also requires SQLite.
+
+## Live demo operations
+
+The Laravel Cloud deployment follows `main` and uses `DEMO_MODE=true` with a disposable SQLite database. The App instance has its scheduler enabled and runs as a single replica so scheduled resets operate on the same database as web requests.
+
+- Each build empties the SQLite file and runs `php artisan migrate --seed --force --no-interaction` before the new release goes live.
+- The scheduler runs `php artisan demo:reset` at 08:00 and 20:00 Japan time. This rebuilds the database and restores the seed content.
+- Public examples belong to a protected owner with a random password. The application rejects writes by that owner, including article changes and account deletion.
+- Production restrictions on destructive Artisan commands remain enabled outside the dedicated demo reset command.
+
+To run the checks:
+
+```sh
+vendor/bin/sail composer ci:check
+```
+
+## Built on
+
+InkRail builds on the [Laravel React Secure Starter Kit](https://github.com/catatsumuri/laravel-react-secure-starter-kit), retaining its authentication, account security notifications, session management, audit logging, and localization support.
+
+For Inkstream itself, visit the [library repository](https://github.com/catatsumuri/inkstream). For the underlying starter kit, see its [English](https://catatsumuri.github.io/laravel-react-secure-starter-kit/about/) or [Japanese](https://catatsumuri.github.io/laravel-react-secure-starter-kit/ja/about/) documentation.
