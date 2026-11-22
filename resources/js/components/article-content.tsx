@@ -1,5 +1,4 @@
 import {
-    CodeBlock,
     extractRenderedHeadingText,
     headingComponents,
     InkstreamMarkdown,
@@ -7,41 +6,8 @@ import {
 } from '@catatsumuri/inkstream/react';
 import { lang } from '@erag/lang-sync-inertia/react';
 import { Pencil } from 'lucide-react';
-import {
-    useMemo,
-    type ComponentProps,
-    type ComponentType,
-    type ReactNode,
-} from 'react';
+import { useMemo, type ComponentType, type ReactNode } from 'react';
 import type { Components } from 'react-markdown';
-
-type CodeProps = ComponentProps<typeof CodeBlock> & { metastring?: string };
-
-/**
- * Lets "diff:path/to/file" work like "diff lang:path/to/file": inkstream only
- * reads a filename for diff blocks from the meta string.
- */
-function ArticleCodeBlock({ className, metastring, ...props }: CodeProps) {
-    const filename = /^language-diff:(.+)$/.exec(className ?? '')?.[1];
-
-    if (filename === undefined) {
-        return (
-            <CodeBlock
-                {...props}
-                className={className}
-                metastring={metastring}
-            />
-        );
-    }
-
-    return (
-        <CodeBlock
-            {...props}
-            className="language-diff"
-            metastring={`:${filename}${metastring ? ` ${metastring}` : ''}`}
-        />
-    );
-}
 
 export type EditHeadingPayload = { level: 2 | 3; text: string };
 
@@ -84,15 +50,14 @@ export default function ArticleContent({
     onEditHeading?: (payload: EditHeadingPayload) => void;
 }) {
     const { __ } = lang();
-    const components = useMemo<Components>(() => {
+    const components = useMemo<Components | undefined>(() => {
         if (!onEditHeading) {
-            return { code: ArticleCodeBlock };
+            return undefined;
         }
 
         const label = (text: string) => `${__('Edit this section')}: ${text}`;
 
         return {
-            code: ArticleCodeBlock,
             h2: editableHeading(2, onEditHeading, label),
             h3: editableHeading(3, onEditHeading, label),
         };
