@@ -9,11 +9,22 @@ use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Str;
 
 class ProfileUpdateRequest extends FormRequest
 {
     use PasswordValidationRules;
     use ProfileValidationRules;
+
+    /**
+     * Prepare the data for validation.
+     */
+    protected function prepareForValidation(): void
+    {
+        if (config('fortify.lowercase_usernames') && is_string($this->input('email'))) {
+            $this->merge(['email' => Str::lower($this->input('email'))]);
+        }
+    }
 
     /**
      * Get the validation rules that apply to the request.

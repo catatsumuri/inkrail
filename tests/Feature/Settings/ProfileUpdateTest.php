@@ -45,6 +45,51 @@ class ProfileUpdateTest extends TestCase
         $this->assertNull($user->email_verified_at);
     }
 
+    public function test_email_is_stored_in_lowercase_so_the_user_can_still_log_in()
+    {
+        $user = User::factory()->create();
+
+        $this
+            ->actingAs($user)
+            ->patch(route('profile.update'), [
+                'name' => 'Test User',
+                'email' => 'Test@Example.com',
+                'current_password' => 'password',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('test@example.com', $user->refresh()->email);
+
+        $this->post(route('logout'));
+
+        $this->post(route('login.store'), [
+            'email' => 'Test@Example.com',
+            'password' => 'password',
+        ]);
+
+        $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_email_must_be_unique_regardless_of_case()
+    {
+        User::factory()->create(['email' => 'taken@example.com']);
+
+        $user = User::factory()->create();
+
+        $response = $this
+            ->actingAs($user)
+            ->from(route('profile.edit'))
+            ->patch(route('profile.update'), [
+                'name' => 'Test User',
+                'email' => 'Taken@Example.com',
+                'current_password' => 'password',
+            ]);
+
+        $response
+            ->assertSessionHasErrors('email')
+            ->assertRedirect(route('profile.edit'));
+    }
+
     public function test_email_cannot_be_changed_without_the_current_password()
     {
         $user = User::factory()->create();
