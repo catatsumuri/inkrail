@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -16,6 +17,7 @@ use Illuminate\Support\Str;
  * @property string $content
  * @property string $slug
  * @property bool $is_published
+ * @property int $edit_version
  */
 #[Fillable(['title', 'content', 'slug', 'is_published'])]
 class Article extends Model
@@ -30,6 +32,18 @@ class Article extends Model
     public function translations(): HasMany
     {
         return $this->hasMany(ArticleTranslation::class);
+    }
+
+    /** @return HasMany<ArticleTranslation, $this> */
+    public function allTranslations(): HasMany
+    {
+        return $this->hasMany(ArticleTranslation::class)->withTrashed();
+    }
+
+    /** @return HasOne<ArticleTranslationReview, $this> */
+    public function latestReview(): HasOne
+    {
+        return $this->hasOne(ArticleTranslationReview::class)->latestOfMany();
     }
 
     public function resolvedTranslation(): ?ArticleTranslation
@@ -77,12 +91,43 @@ class Article extends Model
     public function replaceTranslations(array $translations): void
     {
         DB::transaction(function () use ($translations): void {
-            $this->translations()->whereNotIn('locale', array_keys($translations))->delete();
             foreach ($translations as $locale => $translation) {
-                $this->translations()->updateOrCreate(['locale' => $locale], $translation);
+                $existing = $this->translations()->withTrashed()->firstOrNew(['locale' => $locale]);
+                $existing->fill($translation);
+                $existing->deleted_at = null;
+                $existing->save();
             }
         });
         $this->unsetRelation('translations');
+        $this->unsetRelation('allTranslations');
+        $this->unsetRelation('latestReview');
+    }
+
+    /** @return array<string, array{state: string, revisionId: ?int, baselineId: ?int}> */
+    public function translationStatus(): array
+    {
+        $this->loadMissing(['allTranslations', 'latestReview']);
+        $review = $this->latestReview;
+        $translations = $this->allTranslations->keyBy('locale');
+        $states = [];
+        foreach (config('articles.locales') as $locale) {
+            $translation = $translations->get($locale);
+            $other = $locale === 'en' ? 'ja' : 'en';
+            $otherTranslation = $translations->get($other);
+            $state = $translation === null ? 'missing' : ($translation->trashed() ? 'deleted' : 'reviewed');
+            if ($translation !== null && ! $translation->trashed() && $review !== null) {
+                $otherChanged = $otherTranslation === null || $otherTranslation->trashed() || $otherTranslation->current_revision_id !== $review->{$other.'_revision_id'};
+                $state = $otherChanged ? 'other_changed' : 'reviewed';
+            } elseif ($translation !== null && ! $translation->trashed() && $otherTranslation !== null && ! $otherTranslation->trashed()) {
+                $state = $otherTranslation->current_revision_id > $translation->current_revision_id ? 'other_changed' : 'reviewed';
+            }
+            $states[$locale] = ['state' => $state, 'revisionId' => $translation?->current_revision_id, 'baselineId' => $review?->{$locale.'_revision_id'}];
+        }
+
+        $this->unsetRelation('allTranslations');
+        $this->unsetRelation('latestReview');
+
+        return $states;
     }
 
     protected static function booted(): void
@@ -91,10 +136,10 @@ class Article extends Model
             if ($article->pendingTranslation !== []) {
                 $locale = app()->getLocale();
                 $existing = $article->translations()->where('locale', $locale)->first();
-                $article->translations()->updateOrCreate(['locale' => $locale], [
+                $article->replaceTranslations([$locale => [
                     'title' => $article->pendingTranslation['title'] ?? $existing->title ?? '',
                     'content' => $article->pendingTranslation['content'] ?? $existing->content ?? '',
-                ]);
+                ]]);
                 $article->pendingTranslation = [];
                 $article->unsetRelation('translations');
             }

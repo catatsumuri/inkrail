@@ -18,7 +18,8 @@ class ArticleController extends Controller
     {
         return Inertia::render('articles/index', [
             'articles' => $request->user()->articles()
-                ->select(['id', 'slug', 'is_published'])->latest('id')->paginate(20)->through(fn (Article $article): array => [...$article->only(['id', 'title', 'slug', 'is_published']), ...$article->languageMetadata()]),
+                ->with(['allTranslations', 'latestReview'])
+                ->select(['id', 'slug', 'is_published'])->latest('id')->paginate(20)->through(fn (Article $article): array => [...$article->only(['id', 'title', 'slug', 'is_published']), ...$article->languageMetadata(), 'translationStatus' => $article->translationStatus()]),
         ]);
     }
 
@@ -48,24 +49,31 @@ class ArticleController extends Controller
     {
         Gate::authorize('view', $article);
 
-        return Inertia::render('articles/show', ['article' => [...$article->only(['id', 'title', 'content', 'slug', 'is_published']), ...$article->languageMetadata(), 'translations' => $article->translations->mapWithKeys(fn ($translation) => [$translation->locale => $translation->only(['title', 'content'])])->all()]]);
+        return Inertia::render('articles/show', ['article' => [...$article->only(['id', 'title', 'content', 'slug', 'is_published', 'edit_version']), ...$article->languageMetadata(), 'translationStatus' => $article->translationStatus(), 'translations' => $article->translations->mapWithKeys(fn ($translation) => [$translation->locale => $translation->only(['title', 'content'])])->all()]]);
     }
 
     public function edit(Article $article): Response
     {
         Gate::authorize('update', $article);
 
-        return Inertia::render('articles/edit', ['article' => [...$article->only(['id', 'title', 'content', 'slug', 'is_published']), ...$article->languageMetadata(), 'translations' => $article->translations->mapWithKeys(fn ($translation) => [$translation->locale => $translation->only(['title', 'content'])])->all()]]);
+        return Inertia::render('articles/edit', ['article' => [...$article->only(['id', 'title', 'content', 'slug', 'is_published', 'edit_version']), ...$article->languageMetadata(), 'translationStatus' => $article->translationStatus(), 'translations' => $article->translations->mapWithKeys(fn ($translation) => [$translation->locale => $translation->only(['title', 'content'])])->all()]]);
     }
 
     public function update(Request $request, Article $article): RedirectResponse
     {
         Gate::authorize('update', $article);
         $attributes = $this->validated($request, $article);
-        DB::transaction(function () use ($article, $attributes): void {
+        DB::transaction(function () use ($article, $attributes, $request): void {
+            $locked = Article::whereKey($article->id)->lockForUpdate()->firstOrFail();
+            if ($request->integer('edit_version') !== $locked->edit_version) {
+                throw ValidationException::withMessages(['edit_version' => __('This article has changed. Reload before continuing.')]);
+            }
             $translations = $attributes['translations'] ?? null;
             unset($attributes['translations']);
             $article->update($attributes);
+            if ($article->wasChanged(['slug', 'is_published'])) {
+                $article->increment('edit_version');
+            }
             if ($translations !== null) {
                 $article->replaceTranslations($translations);
             }
@@ -86,6 +94,7 @@ class ArticleController extends Controller
     private function validated(Request $request, ?Article $article = null): array
     {
         $validated = $request->validate([
+            'edit_version' => [$article === null ? 'sometimes' : 'required', 'integer', 'min:0'],
             'title' => ['required_without:translations', 'string', 'max:255'],
             'translations' => ['sometimes', 'required', 'array:'.implode(',', config('articles.locales'))],
             'translations.*' => ['array:title,content'],
@@ -106,6 +115,10 @@ class ArticleController extends Controller
                 $title = trim($translation['title'] ?? '');
                 $content = $translation['content'] ?? '';
                 if ($title === '' && trim($content) === '') {
+                    if ($article?->translations->contains('locale', $locale)) {
+                        throw ValidationException::withMessages(["translations.$locale.title" => __('validation.required', ['attribute' => __('Title')])]);
+                    }
+
                     continue;
                 }
                 if ($title === '') {

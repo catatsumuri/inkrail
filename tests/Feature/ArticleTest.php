@@ -29,7 +29,7 @@ test('an owner can create read update and delete an article', function () {
     $this->get(route('articles.show', $article))
         ->assertInertia(fn (Assert $page) => $page->component('articles/show')->where('article.title', '原稿'));
     $this->get(route('articles.edit', $article))->assertOk();
-    $this->patch(route('articles.update', $article), [
+    $this->patch(route('articles.update', $article), ['edit_version' => $article->fresh()->edit_version,
         'title' => '更新', 'content' => '<script>alert(1)</script>', 'user_id' => $other->id,
     ])->assertRedirect(route('articles.show', $article));
     expect($article->fresh())->title->toBe('更新')->user_id->toBe($user->id)
@@ -54,7 +54,7 @@ test('other users cannot read edit update or delete an article', function () {
     $this->actingAs(User::factory()->create());
     $this->get(route('articles.show', $article))->assertForbidden();
     $this->get(route('articles.edit', $article))->assertForbidden();
-    $this->patch(route('articles.update', $article), ['title' => 'stolen'])->assertForbidden();
+    $this->patch(route('articles.update', $article), ['edit_version' => $article->fresh()->edit_version, 'title' => 'stolen'])->assertForbidden();
     $this->delete(route('articles.destroy', $article))->assertForbidden();
     expect($article->fresh())->title->toBe('Private')->content->toBe('secret');
 });
@@ -100,20 +100,20 @@ test('owners can set a slug publish and return an article to draft', function ()
         ->assertInertia(fn (Assert $page) => $page
             ->where('articles.data.0.slug', 'first-article')->where('articles.data.0.is_published', true));
 
-    $this->patch(route('articles.update', $article), ['title' => '本文だけの更新'])->assertRedirect();
+    $this->patch(route('articles.update', $article), ['edit_version' => $article->fresh()->edit_version, 'title' => '本文だけの更新'])->assertRedirect();
     expect($article->fresh())->slug->toBe('first-article')->is_published->toBeTrue();
 
-    $this->patch(route('articles.update', $article), [
+    $this->patch(route('articles.update', $article), ['edit_version' => $article->fresh()->edit_version,
         'title' => '編集した記事', 'slug' => 'first-article', 'is_published' => '0',
     ])->assertRedirect();
     expect($article->fresh()->is_published)->toBeFalse();
 
-    $this->patch(route('articles.update', $article), [
+    $this->patch(route('articles.update', $article), ['edit_version' => $article->fresh()->edit_version,
         'title' => '更新', 'slug' => '',
     ])->assertRedirect();
     expect($article->fresh()->slug)->toBe('first-article');
 
-    $this->patch(route('articles.update', $article), [
+    $this->patch(route('articles.update', $article), ['edit_version' => $article->fresh()->edit_version,
         'title' => '更新', 'slug' => 'renamed-article',
     ])->assertRedirect();
     expect($article->fresh()->slug)->toBe('renamed-article');
@@ -128,7 +128,7 @@ test('article slugs are unique across owners and rejected updates preserve exist
     $this->actingAs($user)->post(route('articles.store'), [
         'title' => 'Duplicate', 'slug' => $other->slug,
     ])->assertSessionHasErrors('slug');
-    $this->patch(route('articles.update', $article), [
+    $this->patch(route('articles.update', $article), ['edit_version' => $article->fresh()->edit_version,
         'title' => 'Duplicate', 'slug' => $other->slug, 'is_published' => true,
     ])->assertSessionHasErrors('slug');
     expect($article->fresh())->slug->toBe('my-slug')->is_published->toBeFalse();
@@ -155,13 +155,14 @@ test('publication metadata does not allow other users to read or modify articles
     ]);
     $this->get(route('articles.show', $article))->assertRedirect(route('login'));
     $this->actingAs(User::factory()->create())->get(route('articles.show', $article))->assertForbidden();
-    $this->patch(route('articles.update', $article), [
+    $this->patch(route('articles.update', $article), ['edit_version' => $article->fresh()->edit_version,
         'title' => 'Changed', 'slug' => 'changed', 'is_published' => false,
     ])->assertForbidden();
     expect($article->fresh())->slug->toBe('owner-only')->is_published->toBeTrue();
 });
 
 test('article samples can be seeded repeatedly with valid publication metadata', function () {
+    config(['app.demo_mode' => false]);
     app()->setLocale('en');
     $this->seed();
     $this->seed();
@@ -172,11 +173,19 @@ test('article samples can be seeded repeatedly with valid publication metadata',
     expect(Hash::check('password', $user->password))->toBeTrue();
 
     $articles = $user->articles()->get();
-    expect($articles)->toHaveCount(8);
-    expect($articles->pluck('slug')->unique())->toHaveCount(8);
+    expect($articles)->toHaveCount(1);
+    $this->assertDatabaseCount('articles', 1);
+    $this->assertDatabaseCount('article_translations', 2);
     expect($articles->firstWhere('title', 'Welcome to InkRail')->is_published)->toBeTrue();
-    expect($articles->firstWhere('title', 'Editing and managing articles')->is_published)->toBeFalse();
-    foreach ($articles as $article) {
-        expect($article->slug)->not->toBeEmpty();
-    }
+    expect($articles->sole()->translations->pluck('locale')->all())->toEqualCanonicalizing(['en', 'ja']);
+    expect($articles->sole()->slug)->toBe('welcome-to-inkrail');
+    $this->get(route('public.articles.show', 'welcome-to-inkrail'))->assertOk();
+
+    $article = $articles->sole();
+    $article->replaceTranslations(['en' => ['title' => 'My introduction', 'content' => 'My own text']]);
+
+    $this->seed();
+
+    $this->assertDatabaseCount('articles', 1);
+    expect($article->fresh())->title->toBe('My introduction')->content->toBe('My own text')->slug->toBe('welcome-to-inkrail');
 });

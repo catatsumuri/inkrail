@@ -1,29 +1,22 @@
 # InkRail
 
-An interactive showcase for [Inkstream](https://github.com/catatsumuri/inkstream), a Markdown rendering library. Browse working examples, compare source with rendered output, and experiment with your own private copies.
+InkRail is an application for writing, managing, and publishing Markdown articles in English and Japanese. Keep drafts private and share finished articles through public URLs.
 
-**[Open the live demo](https://inkrail-production-nkokth.laravel.cloud/)**
+## Writing and publishing
 
-## Explore Inkstream
+- Create, edit, and delete your own articles.
+- Keep articles as private drafts, publish them, or unpublish them at any time.
+- Set an article slug and copy its public URL to share it with readers who do not need an account.
+- Browse published articles through an optional public index, controlled by `ARTICLES_PUBLIC_INDEX_ENABLED`.
+- Render Markdown with [Inkstream](https://github.com/catatsumuri/inkstream), including supported GitHub, Zenn, and Mintlify syntax, diagrams, and charts.
 
-The public showcase includes guides for:
+The application uses Laravel, Inertia, React, and Tailwind CSS.
 
-- **Markdown** — everyday writing and formatting.
-- **GitHub Flavored Markdown** — tables, task lists, and alerts.
-- **Zenn** — messages and disclosures.
-- **Mintlify** — documentation components and layouts.
-- **Inkstream extensions** — diagrams, charts, trees, and quizzes.
-- **Inertia.js integration** — rendering Markdown in a Laravel and React application.
+## Account security
 
-Each guide pairs copyable syntax with rendered examples. The application uses `@catatsumuri/inkstream` with Laravel, Inertia, React, and Tailwind CSS.
+InkRail includes registration, email verification, password resets, two-factor authentication, and passkeys. Users can manage their profile, review active sessions, and revoke access from other browsers. Session management requires `SESSION_DRIVER=database`.
 
-## Try a private sandbox
-
-Public examples are read-only. Select **Start my sandbox** to create a temporary workspace without signing up. Each browser session gets its own user and editable copies of the example articles.
-
-You can edit, create, and delete your own articles. Sandbox articles remain private and cannot be published; your changes do not affect the public examples or other visitors. Returning to the app in the same signed-in session reuses your workspace.
-
-**The live demo is disposable.** All data and login sessions reset daily at **08:00 and 20:00 Japan time (`Asia/Tokyo`)**, and on every deployment. Copy anything you want to keep elsewhere.
+Account security notifications, in-app notifications, security event logging, and configurable operational alerts provide the supporting account and operations features.
 
 ## Article languages
 
@@ -31,7 +24,7 @@ An article can contain English and Japanese versions of its title and Markdown b
 
 The header language switch changes the UI and article display together. If a translation is missing, InkRail uses the configured fallback language, then another available supported language, and shows which language is being displayed. Missing translations remain empty in the editor. Clear both fields of a translation to remove it; at least one title must remain.
 
-Sandboxes copy all available translations. Existing articles migrate to English without changing their contents or URLs. Migration rollback retains only one version, preferring English; back up the database before rolling back a multilingual installation.
+Existing articles migrate to English without changing their contents or URLs. Migration rollback retains only one version, preferring English; back up the database before rolling back a multilingual installation.
 
 ## Local development
 
@@ -39,22 +32,14 @@ The application runs on PHP 8.5 using Laravel Sail. With dependencies installed 
 
 ```sh
 vendor/bin/sail composer setup
-vendor/bin/sail artisan db:seed --no-interaction
 vendor/bin/sail npm run dev
 ```
 
-Seed content lives in `database/seeders/showcase/`. Outside demo mode, the application supports ordinary registration, authentication, and article management.
+Keep `DEMO_MODE=false` for an ordinary installation. Optional sample content can be loaded with `vendor/bin/sail artisan db:seed --no-interaction`; it creates one welcome article with English and Japanese versions.
 
-To enable the protected showcase and visitor sandboxes, set `DEMO_MODE=true` in `.env` before seeding. Leave it disabled for an ordinary installation. The dedicated reset command and scheduled resets require demo mode; the reset command also requires SQLite.
+## Live demo branch
 
-## Live demo operations
-
-The Laravel Cloud deployment follows `main` and uses `DEMO_MODE=true` with a disposable SQLite database. The App instance has its scheduler enabled and runs as a single replica so scheduled resets operate on the same database as web requests.
-
-- Each build empties the SQLite file and runs `php artisan migrate --seed --force --no-interaction` before the new release goes live.
-- The scheduler runs `php artisan demo:reset` at 08:00 and 20:00 Japan time. This rebuilds the database and restores the seed content.
-- Public examples belong to a protected owner with a random password. The application rejects writes by that owner, including article changes and account deletion.
-- Production restrictions on destructive Artisan commands remain enabled outside the dedicated demo reset command.
+The `live-demo` branch maintains the Inkstream showcase presentation and disposable visitor sandboxes. Laravel Cloud's demo environment follows that branch. Changes to `main` are not automatically deployed to the live demo.
 
 To run the checks:
 

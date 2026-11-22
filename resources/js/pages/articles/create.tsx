@@ -15,10 +15,10 @@ export default function Create() {
     return (
         <>
             <Head title="記事の新規作成" />
-            <main className="space-y-6 p-4">
+            <div className="w-full space-y-6 px-4 py-6 sm:px-8 sm:py-10">
                 <h1 className="text-xl font-semibold">記事の新規作成</h1>
                 <ArticleForm />
-            </main>
+            </div>
         </>
     );
 }

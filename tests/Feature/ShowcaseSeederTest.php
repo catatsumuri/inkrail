@@ -6,7 +6,40 @@ use Inertia\Testing\AssertableInertia as Assert;
 
 uses(RefreshDatabase::class);
 
+test('reseeding refreshes unchanged welcome translations while preserving their URL and draft state', function () {
+    config(['app.demo_mode' => false]);
+    $user = User::factory()->create(['email' => 'test@example.com']);
+    $article = $user->articles()->create(['slug' => 'original-welcome', 'is_published' => false]);
+    $article->replaceTranslations([
+        'en' => ['title' => 'Welcome to InkRail', 'content' => "InkRail is a place to capture your thoughts and ideas.\n\nCreate an article and write down something you learned today."],
+        'ja' => ['title' => 'InkRailへようこそ', 'content' => "InkRailは、考えやアイデアを書き留めるための場所です。\n\nまずは新しい記事を作成して、今日の気づきを残してみましょう。"],
+    ]);
+
+    $this->seed();
+    $this->seed();
+
+    expect($article->fresh())->slug->toBe('original-welcome')->is_published->toBeFalse();
+    expect($article->fresh()->translations->firstWhere('locale', 'en')->content)->toBe("## What is this?\n\n`InkRail` is a place to capture your thoughts and ideas.\n\nCreate an article and write down something you learned today.");
+    expect($article->fresh()->translations->firstWhere('locale', 'ja')->content)->toBe("## これは何ですか\n\n`InkRail`は、考えやアイデアを書き留めるための場所です。\n\nまずは新しい記事を作成して、今日の気づきを残してみましょう。");
+    $this->assertDatabaseCount('articles', 1);
+});
+
+test('reseeding preserves edited welcome bodies even when their titles are unchanged', function () {
+    config(['app.demo_mode' => false]);
+    $this->seed();
+    $article = User::where('email', 'test@example.com')->sole()->articles()->sole();
+    $article->translations()->where('locale', 'en')->update(['content' => 'My English introduction']);
+    $article->translations()->where('locale', 'ja')->update(['content' => '自分で編集した紹介文']);
+
+    $this->seed();
+
+    expect($article->fresh()->translations->firstWhere('locale', 'en')->content)->toBe('My English introduction');
+    expect($article->fresh()->translations->firstWhere('locale', 'ja')->content)->toBe('自分で編集した紹介文');
+    $this->assertDatabaseCount('articles', 1);
+});
+
 test('legacy welcome articles retain their URL and draft state when translated', function () {
+    config(['app.demo_mode' => false]);
     app()->setLocale('en');
     $user = User::factory()->create(['email' => 'test@example.com']);
     $article = $user->articles()->create([
@@ -19,10 +52,11 @@ test('legacy welcome articles retain their URL and draft state when translated',
     $this->seed();
 
     expect($article->fresh())->title->toBe('Welcome to InkRail')->slug->toBe('original-welcome')->is_published->toBeFalse();
-    expect($user->articles()->count())->toBe(8);
+    expect($user->articles()->count())->toBe(1);
 });
 
 test('syntax showcase articles are published at stable URLs', function (string $syntax, string $example) {
+    config(['app.demo_mode' => true]);
     app()->setLocale('en');
     $this->seed();
 
@@ -40,6 +74,7 @@ test('syntax showcase articles are published at stable URLs', function (string $
 ]);
 
 test('reseeding preserves edited showcase articles and unrelated user articles', function () {
+    config(['app.demo_mode' => true]);
     $this->seed();
     $user = User::where('email', 'test@example.com')->sole();
     $showcase = $user->articles()->where('slug', 'showcase-markdown')->sole();
@@ -55,6 +90,7 @@ test('reseeding preserves edited showcase articles and unrelated user articles',
 });
 
 test('unchanged Japanese guides become English without changing identity or publication', function () {
+    config(['app.demo_mode' => true]);
     app()->setLocale('en');
     $user = User::factory()->create(['email' => 'test@example.com']);
     $titles = json_decode(file_get_contents(database_path('seeders/showcase/ja/titles.json')), true);

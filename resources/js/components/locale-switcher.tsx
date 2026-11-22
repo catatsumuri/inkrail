@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { lang } from '@erag/lang-sync-inertia/react';
+import LanguageToggle from '@/components/language-toggle';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -12,7 +13,11 @@ import {
 } from '@/components/ui/dialog';
 import { update } from '@/routes/locale';
 
-export default function LocaleSwitcher() {
+export default function LocaleSwitcher({
+    compact = false,
+}: {
+    compact?: boolean;
+}) {
     const { locale, articleLocales } = usePage().props;
     const { __ } = lang();
     const [pending, setPending] = useState<string | null>(null);
@@ -52,20 +57,14 @@ export default function LocaleSwitcher() {
 
     return (
         <>
-            <nav aria-label={__('Language')} className="flex gap-2">
-                {articleLocales.map((language) => (
-                    <Button
-                        key={language}
-                        type="button"
-                        size="sm"
-                        variant={locale === language ? 'secondary' : 'ghost'}
-                        disabled={processing || locale === language}
-                        onClick={() => select(language)}
-                    >
-                        {language === 'ja' ? '日本語' : 'English'}
-                    </Button>
-                ))}
-            </nav>
+            <LanguageToggle
+                compact={compact}
+                locales={articleLocales}
+                value={locale}
+                onValueChange={select}
+                label={__('Language')}
+                disabled={processing}
+            />
             <Dialog
                 open={pending !== null}
                 onOpenChange={(open) => {

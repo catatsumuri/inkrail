@@ -8,6 +8,9 @@ import {
     show,
 } from '@/actions/App/Http/Controllers/ArticleController';
 import InputError from '@/components/input-error';
+import LanguageToggle from '@/components/language-toggle';
+import MarkdownEditor from '@/components/markdown-editor';
+import TranslationStatus from '@/components/translation-status';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -17,6 +20,7 @@ import type { Article } from '@/types/article';
 export default function ArticleForm({ article }: { article?: Article }) {
     const { __ } = lang();
     const { auth, locale, articleLocales } = usePage().props;
+    const [loadedVersion] = useState(article?.edit_version ?? 0);
     const [editingLocale, setEditingLocale] = useState(
         articleLocales.includes(locale) ? locale : articleLocales[0],
     );
@@ -32,32 +36,31 @@ export default function ArticleForm({ article }: { article?: Article }) {
                 );
                 if (invalidLanguage) setEditingLocale(invalidLanguage);
             }}
-            className="grid max-w-3xl gap-6"
+            className="grid gap-6"
         >
             {({ errors, processing }) => (
                 <>
-                    <div
-                        className="flex gap-2"
-                        role="tablist"
-                        aria-label={__('Article language')}
-                    >
-                        {articleLocales.map((language) => (
-                            <Button
-                                type="button"
-                                role="tab"
-                                aria-selected={editingLocale === language}
-                                variant={
-                                    editingLocale === language
-                                        ? 'default'
-                                        : 'outline'
-                                }
-                                key={language}
-                                onClick={() => setEditingLocale(language)}
-                            >
-                                {language === 'ja' ? '日本語' : 'English'}
-                            </Button>
-                        ))}
-                    </div>
+                    {article && (
+                        <>
+                            <input
+                                type="hidden"
+                                name="edit_version"
+                                value={loadedVersion}
+                            />
+                            <TranslationStatus
+                                articleId={article.id}
+                                states={article.translationStatus}
+                            />
+                        </>
+                    )}
+                    <InputError message={errors.edit_version} />
+                    <LanguageToggle
+                        locales={articleLocales}
+                        value={editingLocale}
+                        onValueChange={setEditingLocale}
+                        label={__('Article language')}
+                        states={article?.translationStatus}
+                    />
                     <InputError message={errors.translations} />
                     {articleLocales.map((language) => (
                         <div
@@ -65,7 +68,7 @@ export default function ArticleForm({ article }: { article?: Article }) {
                             hidden={editingLocale !== language}
                             className="space-y-6"
                         >
-                            <div className="grid gap-2">
+                            <div className="grid max-w-3xl gap-2">
                                 <Label htmlFor={`title-${language}`}>
                                     {__('Title')}
                                 </Label>
@@ -88,16 +91,27 @@ export default function ArticleForm({ article }: { article?: Article }) {
                                 <Label htmlFor={`content-${language}`}>
                                     {__('Content')}
                                 </Label>
-                                <textarea
+                                <MarkdownEditor
                                     id={`content-${language}`}
                                     name={`translations[${language}][content]`}
                                     defaultValue={
                                         article?.translations?.[language]
                                             ?.content ?? ''
                                     }
-                                    className="min-h-80 w-full rounded-md border bg-background p-3 font-mono text-sm"
+                                    invalid={Boolean(
+                                        errors[
+                                            `translations.${language}.content`
+                                        ],
+                                    )}
+                                    describedBy={`content-${language}-error`}
+                                    syntax={
+                                        article?.slug === 'showcase-zenn'
+                                            ? 'zenn'
+                                            : 'all'
+                                    }
                                 />
                                 <InputError
+                                    id={`content-${language}-error`}
                                     message={
                                         errors[
                                             `translations.${language}.content`
@@ -107,7 +121,7 @@ export default function ArticleForm({ article }: { article?: Article }) {
                             </div>
                         </div>
                     ))}
-                    <div className="grid gap-2">
+                    <div className="grid max-w-3xl gap-2">
                         <Label htmlFor="slug">{__('Slug')}</Label>
                         <Input
                             id="slug"

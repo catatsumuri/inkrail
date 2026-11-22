@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\SecurityEventController;
 use App\Http\Controllers\ArticleController;
+use App\Http\Controllers\ArticleHistoryController;
 use App\Http\Controllers\DeleteNotificationController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\MarkNotificationAsReadController;
@@ -36,6 +37,10 @@ Route::delete('notifications/{notification}', DeleteNotificationController::clas
     ->name('notifications.destroy');
 
 Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('articles/{article}/history', [ArticleHistoryController::class, 'index'])->name('articles.history');
+    Route::post('articles/{article}/translation-review', [ArticleHistoryController::class, 'confirm'])->name('articles.review');
+    Route::post('articles/{article}/revisions/{revision}/restore', [ArticleHistoryController::class, 'restore'])->name('articles.restore');
+    Route::delete('articles/{article}/translations/{translationLocale}', [ArticleHistoryController::class, 'destroy'])->name('articles.translations.destroy');
     Route::resource('articles', ArticleController::class);
 
     Route::inertia('dashboard', 'dashboard')->name('dashboard');

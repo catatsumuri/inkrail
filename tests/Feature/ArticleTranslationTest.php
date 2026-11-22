@@ -57,9 +57,10 @@ test('a Japanese only article can be published and deleting one translation pres
     $article = $user->articles()->create();
     $article->replaceTranslations(['en' => ['title' => 'English', 'content' => 'Body'], 'ja' => ['title' => '日本語', 'content' => '本文']]);
 
-    $this->actingAs($user)->patch(route('articles.update', $article), ['translations' => ['en' => ['title' => '', 'content' => ''], 'ja' => ['title' => '日本語', 'content' => '本文']], 'is_published' => true])->assertSessionHasNoErrors();
+    $this->actingAs($user)->delete(route('articles.translations.destroy', [$article, 'en']), ['edit_version' => $article->fresh()->edit_version])->assertSessionHasNoErrors();
+    $this->patch(route('articles.update', $article), ['edit_version' => $article->fresh()->edit_version, 'translations' => ['ja' => ['title' => '日本語', 'content' => '本文']], 'is_published' => true])->assertSessionHasNoErrors();
 
-    $this->assertDatabaseMissing('article_translations', ['article_id' => $article->id, 'locale' => 'en']);
+    $this->assertSoftDeleted('article_translations', ['article_id' => $article->id, 'locale' => 'en']);
     $this->withSession([Name::session() => 'en'])->get(route('public.articles.show', $article->slug))->assertOk()
         ->assertInertia(fn (Assert $page) => $page->where('article.title', '日本語')->where('article.resolvedLocale', 'ja'));
 });
@@ -69,11 +70,11 @@ test('empty translations content without title and unsupported languages are rej
     $article = $user->articles()->create();
     $article->replaceTranslations(['en' => ['title' => 'Keep', 'content' => 'Keep body']]);
 
-    $this->actingAs($user)->patch(route('articles.update', $article), ['translations' => $translations])->assertSessionHasErrors($error);
+    $this->actingAs($user)->patch(route('articles.update', $article), ['edit_version' => $article->fresh()->edit_version, 'translations' => $translations])->assertSessionHasErrors($error);
 
     $this->assertDatabaseHas('article_translations', ['article_id' => $article->id, 'title' => 'Keep', 'content' => 'Keep body']);
 })->with([
-    [['en' => ['title' => '', 'content' => '']], 'translations'],
+    [['en' => ['title' => '', 'content' => '']], 'translations.en.title'],
     [['ja' => ['title' => '', 'content' => '本文']], 'translations.ja.title'],
     [['fr' => ['title' => 'Bonjour', 'content' => 'Texte']], 'translations'],
 ]);

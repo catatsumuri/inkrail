@@ -63,17 +63,17 @@ test('visitors can edit only their own sandbox copies and cannot publish them', 
     $copy = $visitor->articles()->whereRelation('translations', 'title', $original->title)->sole();
 
     expect($visitor->id)->not->toBe($firstVisitor->id);
-    $this->patch(route('articles.update', $firstCopy), ['title' => 'Changed'])->assertForbidden();
+    $this->patch(route('articles.update', $firstCopy), ['edit_version' => $firstCopy->fresh()->edit_version, 'title' => 'Changed'])->assertForbidden();
     $this->get(route('articles.show', $firstCopy))->assertForbidden();
     $this->delete(route('articles.destroy', $firstCopy))->assertForbidden();
-    $this->patch(route('articles.update', $original), ['title' => 'Changed'])->assertForbidden();
+    $this->patch(route('articles.update', $original), ['edit_version' => $original->fresh()->edit_version, 'title' => 'Changed'])->assertForbidden();
     $this->delete(route('articles.destroy', $original))->assertForbidden();
-    $this->patch(route('articles.update', $copy), ['title' => 'My copy', 'content' => 'My notes'])
+    $this->patch(route('articles.update', $copy), ['edit_version' => $copy->fresh()->edit_version, 'title' => 'My copy', 'content' => 'My notes'])
         ->assertRedirect(route('articles.show', $copy));
     expect($copy->fresh()->content)->toBe('My notes');
     expect($original->fresh()->content)->toBe($original->content);
 
-    $this->patch(route('articles.update', $copy), ['title' => 'My copy', 'is_published' => true])
+    $this->patch(route('articles.update', $copy), ['edit_version' => $copy->fresh()->edit_version, 'title' => 'My copy', 'is_published' => true])
         ->assertSessionHasErrors('is_published');
     expect($copy->fresh()->is_published)->toBeFalse();
     $this->get(route('public.articles.show', $copy->slug))->assertNotFound();
@@ -91,7 +91,7 @@ test('the showcase owner cannot edit or delete originals or delete the owner acc
     expect(Gate::forUser($owner)->allows('update', $original))->toBeFalse();
     expect(Gate::forUser($owner)->allows('delete', $original))->toBeFalse();
 
-    $this->actingAs($owner)->patch(route('articles.update', $original), ['title' => 'Changed'])->assertForbidden();
+    $this->actingAs($owner)->patch(route('articles.update', $original), ['edit_version' => $original->fresh()->edit_version, 'title' => 'Changed'])->assertForbidden();
     $this->delete(route('articles.destroy', $original))->assertForbidden();
     $this->delete(route('profile.destroy'), ['password' => 'password'])->assertForbidden();
 

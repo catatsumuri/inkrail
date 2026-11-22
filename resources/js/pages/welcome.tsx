@@ -1,7 +1,7 @@
 import LocaleSwitcher from '@/components/locale-switcher';
 import { lang } from '@erag/lang-sync-inertia/react';
 import { Head, Link, usePage } from '@inertiajs/react';
-import { ArrowRight, BookOpen, Code2, Layers } from 'lucide-react';
+import { ArrowRight, BookOpen, Languages, PenLine } from 'lucide-react';
 import { index as myArticles } from '@/actions/App/Http/Controllers/ArticleController';
 import { index as publicArticles } from '@/actions/App/Http/Controllers/PublicArticleController';
 import { Button } from '@/components/ui/button';
@@ -22,7 +22,7 @@ export default function Welcome({
 
     return (
         <>
-            <Head title={__('Inkstream live demo')} />
+            <Head title={__('Welcome to InkRail')} />
             <div className="min-h-screen bg-background text-foreground">
                 <header className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4 px-6 py-6">
                     <span className="inline-flex items-center gap-2.5 text-xl font-semibold tracking-tight">
@@ -67,79 +67,91 @@ export default function Welcome({
                     <DemoNotice />
                     <section className="flex max-w-3xl flex-col items-start gap-7 py-16 sm:py-24">
                         <p className="text-sm font-medium tracking-widest text-muted-foreground">
-                            Inkstream · Live demo
+                            {__('Writing and publishing')}
                         </p>
                         <h1 className="text-4xl leading-tight font-semibold tracking-tight text-balance sm:text-6xl">
-                            {__('See Markdown come to life.')}
+                            {__('Give your ideas a place to grow.')}
                         </h1>
                         <p className="max-w-xl text-lg leading-relaxed text-pretty text-muted-foreground">
                             {__(
-                                'InkRail is a live showcase of Inkstream. Explore Markdown, GitHub, Zenn, and Mintlify syntax alongside their rendered results.',
+                                'Write in Markdown, keep your drafts private, and publish articles in English and Japanese when they are ready.',
                             )}
                         </p>
                         <div className="flex flex-wrap gap-3">
-                            {publicIndexEnabled && (
-                                <Button asChild size="lg">
-                                    <Link href={publicArticles()}>
-                                        <BookOpen aria-hidden="true" />
-                                        {__('Explore the demos')}
-                                        <ArrowRight aria-hidden="true" />
-                                    </Link>
-                                </Button>
-                            )}
                             {auth.user ? (
-                                <Button
-                                    asChild
-                                    size="lg"
-                                    variant={
-                                        publicIndexEnabled
-                                            ? 'outline'
-                                            : 'default'
-                                    }
-                                >
+                                <Button asChild size="lg">
                                     <Link href={myArticles()}>
+                                        <PenLine aria-hidden="true" />
                                         {__('Manage my articles')}
+                                        <ArrowRight aria-hidden="true" />
                                     </Link>
                                 </Button>
                             ) : (
+                                <>
+                                    {/* @chisel-registration */}
+                                    <Button asChild size="lg">
+                                        <Link href={register()}>
+                                            <PenLine aria-hidden="true" />
+                                            {__('Start writing')}
+                                            <ArrowRight aria-hidden="true" />
+                                        </Link>
+                                    </Button>
+                                    {/* @end-chisel-registration */}
+                                </>
+                            )}
+                            {publicIndexEnabled && (
                                 <Button asChild size="lg" variant="outline">
-                                    <a href="https://github.com/catatsumuri/inkstream">
-                                        {__('View Inkstream on GitHub')}
-                                        <ArrowRight aria-hidden="true" />
-                                    </a>
+                                    <Link href={publicArticles()}>
+                                        <BookOpen aria-hidden="true" />
+                                        {__('Explore public articles')}
+                                    </Link>
                                 </Button>
                             )}
                         </div>
                     </section>
                     <section
-                        aria-label={__('Inside the showcase')}
-                        className="grid gap-6 border-t pt-8 sm:grid-cols-2"
+                        aria-label={__('Writing and publishing')}
+                        className="grid gap-6 border-t pt-8 sm:grid-cols-3"
                     >
                         <div className="space-y-3">
-                            <Layers
+                            <PenLine
                                 aria-hidden="true"
                                 className="size-5 text-muted-foreground"
                             />
                             <h2 className="font-semibold">
-                                {__('One engine, multiple flavors')}
+                                {__('A space for your drafts')}
                             </h2>
                             <p className="text-sm leading-relaxed text-muted-foreground">
                                 {__(
-                                    'From everyday Markdown to Zenn disclosures and Mintlify components, see how different syntax works together.',
+                                    'Save your thoughts and return to edit them whenever you like.',
                                 )}
                             </p>
                         </div>
                         <div className="space-y-3">
-                            <Code2
+                            <Languages
                                 aria-hidden="true"
                                 className="size-5 text-muted-foreground"
                             />
                             <h2 className="font-semibold">
-                                {__('Source and rendering, side by side')}
+                                {__('Write in English and Japanese')}
                             </h2>
                             <p className="text-sm leading-relaxed text-muted-foreground">
                                 {__(
-                                    'Each guide pairs copyable syntax examples with live previews, including diagrams, charts, trees, and quizzes.',
+                                    'Keep both language versions in one article, with a shared URL and publication status.',
+                                )}
+                            </p>
+                        </div>
+                        <div className="space-y-3">
+                            <BookOpen
+                                aria-hidden="true"
+                                className="size-5 text-muted-foreground"
+                            />
+                            <h2 className="font-semibold">
+                                {__('Share when you are ready')}
+                            </h2>
+                            <p className="text-sm leading-relaxed text-muted-foreground">
+                                {__(
+                                    'Publish an article to share its URL, or return it to a private draft at any time.',
                                 )}
                             </p>
                         </div>
