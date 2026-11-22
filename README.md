@@ -15,6 +15,8 @@ Regression tests cover account changes, security notifications and logs, access 
 
 For localization setup and adding locales, see the [upstream localization guide](https://github.com/catatsumuri/react-starter-kit-i18n#adding-a-locale).
 
+The frontend requires `@erag/lang-sync-inertia` ^3.1.1, which fixes unreplaced placeholders in the session list when translation keys are missing. Existing installations should run `npm install '@erag/lang-sync-inertia@^3.1.1'` and `npm run build`. See the [upstream release notes](https://github.com/eramitgupta/lang-sync-inertia/releases/tag/v3.1.1).
+
 ## Documentation
 
 Documentation is published on GitHub Pages in [English](https://catatsumuri.github.io/laravel-react-secure-starter-kit/about/) and [Japanese](https://catatsumuri.github.io/laravel-react-secure-starter-kit/ja/about/). Each language's root page redirects to its project overview.
