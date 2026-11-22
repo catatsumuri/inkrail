@@ -21,9 +21,22 @@ export default function ArticleForm({ article }: { article?: Article }) {
     const { __ } = lang();
     const { auth, locale, articleLocales } = usePage().props;
     const [loadedVersion] = useState(article?.edit_version ?? 0);
-    const [editingLocale, setEditingLocale] = useState(
-        articleLocales.includes(locale) ? locale : articleLocales[0],
-    );
+    const [{ jumpTo, jumpLocale }] = useState(() => {
+        const params = new URLSearchParams(window.location.search);
+        const jump = params.get('jump');
+
+        return {
+            jumpTo: jump === null || jump === '' ? undefined : Number(jump),
+            jumpLocale: params.get('locale') ?? undefined,
+        };
+    });
+    const [editingLocale, setEditingLocale] = useState(() => {
+        const preferred = jumpLocale ?? locale;
+
+        return articleLocales.includes(preferred)
+            ? preferred
+            : articleLocales[0];
+    });
     return (
         <Form
             {...(article ? update.form(article.id) : store.form())}
@@ -104,6 +117,11 @@ export default function ArticleForm({ article }: { article?: Article }) {
                                         ],
                                     )}
                                     describedBy={`content-${language}-error`}
+                                    jumpTo={
+                                        language === jumpLocale
+                                            ? jumpTo
+                                            : undefined
+                                    }
                                     syntax={
                                         article?.slug === 'showcase-zenn'
                                             ? 'zenn'

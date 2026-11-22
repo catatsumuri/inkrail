@@ -1,9 +1,11 @@
 import ArticleLanguageNotice from '@/components/article-language-notice';
 import { lang } from '@erag/lang-sync-inertia/react';
-import { Form, Head, Link, setLayoutProps } from '@inertiajs/react';
+import { Form, Head, Link, router, setLayoutProps } from '@inertiajs/react';
 import { ArrowLeft, ExternalLink, Link2, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import ArticleContent from '@/components/article-content';
+import ArticleContent, {
+    type EditHeadingPayload,
+} from '@/components/article-content';
 import TranslationStatus from '@/components/translation-status';
 import { show as publicShow } from '@/actions/App/Http/Controllers/PublicArticleController';
 import {
@@ -28,6 +30,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
+import { findHeadingOffset } from '@/lib/heading-offset';
 import type { Article } from '@/types/article';
 import { useClipboard } from '@/hooks/use-clipboard';
 
@@ -49,6 +52,20 @@ export default function Show({ article }: { article: Article }) {
                 ),
             );
         }
+    }
+    function editHeading({ level, text }: EditHeadingPayload) {
+        const jump = findHeadingOffset(article.content, text, level);
+
+        router.visit(
+            edit(article.id, {
+                query: {
+                    ...(article.resolvedLocale
+                        ? { locale: article.resolvedLocale }
+                        : {}),
+                    ...(jump === null ? {} : { jump }),
+                },
+            }),
+        );
     }
     setLayoutProps({
         breadcrumbs: [
@@ -237,6 +254,7 @@ export default function Show({ article }: { article: Article }) {
                     <div className="pt-8">
                         <ArticleContent
                             content={article.content}
+                            onEditHeading={editHeading}
                             syntax={
                                 article.slug === 'showcase-zenn'
                                     ? 'zenn'

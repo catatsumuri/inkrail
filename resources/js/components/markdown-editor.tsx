@@ -1,8 +1,11 @@
 import { lang } from '@erag/lang-sync-inertia/react';
 import { Code2, Eye } from 'lucide-react';
-import { useDeferredValue, useState } from 'react';
+import { slugify } from '@catatsumuri/inkstream/advanced';
+import { useDeferredValue, useEffect, useRef, useState } from 'react';
 import ArticleContent from '@/components/article-content';
 import { Button } from '@/components/ui/button';
+import { listHeadings } from '@/lib/heading-offset';
+import { buildAnchors, mapScroll, type ScrollAnchor } from '@/lib/scroll-sync';
 import { cn } from '@/lib/utils';
 
 type Props = {
@@ -12,6 +15,7 @@ type Props = {
     invalid?: boolean;
     describedBy?: string;
     syntax?: 'all' | 'zenn';
+    jumpTo?: number;
 };
 
 export default function MarkdownEditor({
@@ -21,6 +25,7 @@ export default function MarkdownEditor({
     invalid = false,
     describedBy,
     syntax = 'all',
+    jumpTo,
 }: Props) {
     const { __ } = lang();
     const [content, setContent] = useState(defaultValue);
@@ -28,6 +33,129 @@ export default function MarkdownEditor({
     const [activePanel, setActivePanel] = useState<'write' | 'preview'>(
         'write',
     );
+
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const previewRef = useRef<HTMLDivElement>(null);
+
+    const anchorCache = useRef<{
+        key: string;
+        anchors: ScrollAnchor[];
+    } | null>(null);
+
+    useEffect(() => {
+        anchorCache.current = null;
+    }, [preview]);
+
+    function measureAnchors(
+        textarea: HTMLTextAreaElement,
+        pane: HTMLDivElement,
+    ): ScrollAnchor[] {
+        const maxFrom = textarea.scrollHeight - textarea.clientHeight;
+        const maxTo = pane.scrollHeight - pane.clientHeight;
+        const key = `${textarea.value.length}:${textarea.clientWidth}:${pane.scrollHeight}`;
+
+        if (anchorCache.current?.key === key) {
+            return anchorCache.current.anchors;
+        }
+
+        const source = listHeadings(textarea.value).filter(
+            (heading) => heading.level <= 4,
+        );
+        const rendered = pane.querySelectorAll('.ink-heading');
+        let headings: ScrollAnchor[] = [];
+
+        if (source.length > 0 && source.length === rendered.length) {
+            const style = window.getComputedStyle(textarea);
+            const mirror = document.createElement('div');
+            mirror.style.cssText = `position:fixed;visibility:hidden;left:-200%;top:0;height:auto;white-space:pre-wrap;overflow-wrap:break-word;box-sizing:${style.boxSizing};font:${style.font};line-height:${style.lineHeight};padding:${style.padding};width:${textarea.clientWidth}px`;
+            const paddingBottom = Number.parseFloat(style.paddingBottom) || 0;
+            const paneTop = pane.getBoundingClientRect().top;
+            document.body.appendChild(mirror);
+            headings = source.map((heading, index) => {
+                mirror.textContent = textarea.value.slice(0, heading.offset);
+
+                return {
+                    from: mirror.scrollHeight - paddingBottom,
+                    to:
+                        pane.scrollTop +
+                        rendered[index].getBoundingClientRect().top -
+                        paneTop,
+                };
+            });
+            document.body.removeChild(mirror);
+        }
+
+        const anchors = buildAnchors(headings, maxFrom, maxTo);
+        anchorCache.current = { key, anchors };
+
+        return anchors;
+    }
+
+    function syncPreview() {
+        const textarea = textareaRef.current;
+        const pane = previewRef.current;
+
+        if (
+            !textarea ||
+            !pane ||
+            !window.matchMedia('(min-width: 1024px)').matches ||
+            textarea.scrollHeight <= textarea.clientHeight
+        ) {
+            return;
+        }
+
+        const anchors = measureAnchors(textarea, pane);
+
+        pane.scrollTop =
+            anchors.length > 1
+                ? mapScroll(anchors, textarea.scrollTop)
+                : (textarea.scrollTop /
+                      (textarea.scrollHeight - textarea.clientHeight)) *
+                  (pane.scrollHeight - pane.clientHeight);
+    }
+
+    useEffect(() => {
+        const textarea = textareaRef.current;
+
+        if (!textarea || jumpTo === undefined || !Number.isFinite(jumpTo)) {
+            return;
+        }
+
+        const start = Math.max(0, Math.min(jumpTo, textarea.value.length));
+        const lineEnd = textarea.value.indexOf('\n', start);
+        const end = lineEnd === -1 ? textarea.value.length : lineEnd;
+
+        textarea.focus({ preventScroll: true });
+        textarea.setSelectionRange(start, end);
+
+        const style = window.getComputedStyle(textarea);
+        const lineHeight = Number.parseFloat(style.lineHeight) || 24;
+        const mirror = document.createElement('div');
+        mirror.style.cssText = `position:fixed;visibility:hidden;left:-200%;top:0;height:auto;white-space:pre-wrap;overflow-wrap:break-word;box-sizing:${style.boxSizing};font:${style.font};line-height:${style.lineHeight};padding:${style.padding};width:${textarea.clientWidth}px`;
+        mirror.textContent = textarea.value.slice(0, start);
+        document.body.appendChild(mirror);
+        const top = mirror.scrollHeight;
+        document.body.removeChild(mirror);
+        textarea.scrollTo({ top: Math.max(0, top - lineHeight * 2) });
+
+        const heading = /^#{1,6}\s+(.+?)(?:\s+#+\s*)?$/.exec(
+            textarea.value.slice(start, end),
+        );
+        const preview = previewRef.current;
+        const target = heading
+            ? preview?.querySelector(`#${CSS.escape(slugify(heading[1]))}`)
+            : null;
+
+        if (preview && target) {
+            preview.scrollTo({
+                top:
+                    preview.scrollTop +
+                    target.getBoundingClientRect().top -
+                    preview.getBoundingClientRect().top -
+                    16,
+            });
+        }
+    }, [jumpTo]);
 
     return (
         <div className="overflow-hidden rounded-xl border bg-background">
@@ -69,6 +197,8 @@ export default function MarkdownEditor({
                     </div>
                     <textarea
                         id={id}
+                        ref={textareaRef}
+                        onScroll={syncPreview}
                         name={name}
                         defaultValue={defaultValue}
                         onChange={(event) => setContent(event.target.value)}
@@ -91,6 +221,7 @@ export default function MarkdownEditor({
                         {__('Preview')}
                     </div>
                     <div
+                        ref={previewRef}
                         tabIndex={0}
                         className="h-[60vh] min-h-80 overflow-auto p-5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-inset sm:p-6"
                     >
