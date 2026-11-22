@@ -66,4 +66,6 @@ vendor/bin/sail composer ci:check
 
 InkRail builds on the [Laravel React Secure Starter Kit](https://github.com/catatsumuri/laravel-react-secure-starter-kit), retaining its authentication, account security notifications, session management, audit logging, and localization support.
 
+The frontend requires `@erag/lang-sync-inertia` ^3.1.1, which fixes unreplaced placeholders when translation keys are missing. Existing installations should run `vendor/bin/sail npm install '@erag/lang-sync-inertia@^3.1.1'` and `vendor/bin/sail npm run build`. See the [upstream release notes](https://github.com/eramitgupta/lang-sync-inertia/releases/tag/v3.1.1).
+
 For Inkstream itself, visit the [library repository](https://github.com/catatsumuri/inkstream). For the underlying starter kit, see its [English](https://catatsumuri.github.io/laravel-react-secure-starter-kit/about/) or [Japanese](https://catatsumuri.github.io/laravel-react-secure-starter-kit/ja/about/) documentation.

@@ -38,6 +38,50 @@ test('profile information can be updated', function () {
     expect($user->email_verified_at)->toBeNull();
 });
 
+test('email is stored in lowercase so the user can still log in', function () {
+    $user = User::factory()->create();
+
+    $this
+        ->actingAs($user)
+        ->patch(route('profile.update'), [
+            'name' => 'Test User',
+            'email' => 'Test@Example.com',
+            'current_password' => 'password',
+        ])
+        ->assertSessionHasNoErrors();
+
+    expect($user->refresh()->email)->toBe('test@example.com');
+
+    $this->post(route('logout'));
+
+    $this->post(route('login.store'), [
+        'email' => 'Test@Example.com',
+        'password' => 'password',
+    ]);
+
+    $this->assertAuthenticatedAs($user);
+});
+
+test('email must be unique regardless of case', function () {
+    User::factory()->create(['email' => 'taken@example.com']);
+
+    $user = User::factory()->create();
+    $originalEmail = $user->email;
+
+    $this
+        ->actingAs($user)
+        ->from(route('profile.edit'))
+        ->patch(route('profile.update'), [
+            'name' => 'Test User',
+            'email' => 'Taken@Example.com',
+            'current_password' => 'password',
+        ])
+        ->assertSessionHasErrors('email')
+        ->assertRedirect(route('profile.edit'));
+
+    expect($user->refresh()->email)->toBe($originalEmail);
+});
+
 test('email cannot be changed without the current password', function () {
     $user = User::factory()->create();
     $originalEmail = $user->email;
