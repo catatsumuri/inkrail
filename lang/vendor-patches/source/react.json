@@ -156,5 +156,12 @@
     "Discard unsaved changes?": "Discard unsaved changes?",
     "Changing the display language will discard your unsaved article changes.": "Changing the display language will discard your unsaved article changes.",
     "Discard and switch": "Discard and switch",
-    "Translation unavailable. Showing:": "Translation unavailable. Showing:"
+    "Translation unavailable. Showing:": "Translation unavailable. Showing:",
+    "Send to Zenn": "Send to Zenn",
+    "Send this article to Zenn?": "Send this article to Zenn?",
+    "The Japanese version will be committed to the Zenn repository and published on Zenn.": "The Japanese version will be committed to the Zenn repository and published on Zenn.",
+    "The Japanese version will be committed to the Zenn repository as a draft.": "The Japanese version will be committed to the Zenn repository as a draft.",
+    "The article could not be sent to Zenn.": "The article could not be sent to Zenn.",
+    "Sent to Zenn.": "Sent to Zenn.",
+    "Zenn is already up to date.": "Zenn is already up to date."
 }

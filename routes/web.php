@@ -8,6 +8,7 @@ use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\MarkNotificationAsReadController;
 use App\Http\Controllers\PublicArticleController;
 use App\Http\Controllers\SandboxController;
+use App\Http\Controllers\ZennPushController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -41,6 +42,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('articles/{article}/translation-review', [ArticleHistoryController::class, 'confirm'])->name('articles.review');
     Route::post('articles/{article}/revisions/{revision}/restore', [ArticleHistoryController::class, 'restore'])->name('articles.restore');
     Route::delete('articles/{article}/translations/{translationLocale}', [ArticleHistoryController::class, 'destroy'])->name('articles.translations.destroy');
+    Route::post('articles/{article}/zenn', ZennPushController::class)->name('articles.zenn.push');
     Route::resource('articles', ArticleController::class);
 
     Route::inertia('dashboard', 'dashboard')->name('dashboard');

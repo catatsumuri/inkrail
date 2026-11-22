@@ -49,7 +49,10 @@ class ArticleController extends Controller
     {
         Gate::authorize('view', $article);
 
-        return Inertia::render('articles/show', ['article' => [...$article->only(['id', 'title', 'content', 'slug', 'is_published', 'edit_version']), ...$article->languageMetadata(), 'translationStatus' => $article->translationStatus(), 'translations' => $article->translations->mapWithKeys(fn ($translation) => [$translation->locale => $translation->only(['title', 'content'])])->all()]]);
+        return Inertia::render('articles/show', [
+            'article' => [...$article->only(['id', 'title', 'content', 'slug', 'is_published', 'edit_version']), ...$article->languageMetadata(), 'translationStatus' => $article->translationStatus(), 'translations' => $article->translations->mapWithKeys(fn ($translation) => [$translation->locale => $translation->only(['title', 'content'])])->all()],
+            'canPushToZenn' => Gate::allows('push-to-zenn', $article),
+        ]);
     }
 
     public function edit(Article $article): Response

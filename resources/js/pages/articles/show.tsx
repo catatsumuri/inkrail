@@ -1,7 +1,14 @@
 import ArticleLanguageNotice from '@/components/article-language-notice';
 import { lang } from '@erag/lang-sync-inertia/react';
 import { Form, Head, Link, router, setLayoutProps } from '@inertiajs/react';
-import { ArrowLeft, ExternalLink, Link2, Pencil, Trash2 } from 'lucide-react';
+import {
+    ArrowLeft,
+    ExternalLink,
+    Link2,
+    Pencil,
+    Send,
+    Trash2,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import ArticleContent, {
     type EditHeadingPayload,
@@ -14,6 +21,7 @@ import {
     index,
     show,
 } from '@/actions/App/Http/Controllers/ArticleController';
+import ZennPushController from '@/actions/App/Http/Controllers/ZennPushController';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -34,7 +42,13 @@ import { findHeadingOffset } from '@/lib/heading-offset';
 import type { Article } from '@/types/article';
 import { useClipboard } from '@/hooks/use-clipboard';
 
-export default function Show({ article }: { article: Article }) {
+export default function Show({
+    article,
+    canPushToZenn,
+}: {
+    article: Article;
+    canPushToZenn: boolean;
+}) {
     const { __ } = lang();
     const [, copy] = useClipboard();
 
@@ -140,6 +154,61 @@ export default function Show({ article }: { article: Article }) {
                                     className="mx-2 h-4 border-l"
                                 />
                             </>
+                        )}
+                        {canPushToZenn && (
+                            <Dialog>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <DialogTrigger asChild>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon"
+                                                aria-label={__('Send to Zenn')}
+                                            >
+                                                <Send aria-hidden="true" />
+                                            </Button>
+                                        </DialogTrigger>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        {__('Send to Zenn')}
+                                    </TooltipContent>
+                                </Tooltip>
+                                <DialogContent>
+                                    <DialogTitle>
+                                        {__('Send this article to Zenn?')}
+                                    </DialogTitle>
+                                    <DialogDescription>
+                                        {__(
+                                            article.is_published
+                                                ? 'The Japanese version will be committed to the Zenn repository and published on Zenn.'
+                                                : 'The Japanese version will be committed to the Zenn repository as a draft.',
+                                        )}
+                                    </DialogDescription>
+                                    <Form
+                                        {...ZennPushController.form(article.id)}
+                                    >
+                                        {({ processing }) => (
+                                            <DialogFooter className="gap-2">
+                                                <DialogClose asChild>
+                                                    <Button
+                                                        type="button"
+                                                        variant="secondary"
+                                                    >
+                                                        {__('Cancel')}
+                                                    </Button>
+                                                </DialogClose>
+                                                <Button
+                                                    type="submit"
+                                                    disabled={processing}
+                                                >
+                                                    {__('Send to Zenn')}
+                                                </Button>
+                                            </DialogFooter>
+                                        )}
+                                    </Form>
+                                </DialogContent>
+                            </Dialog>
                         )}
                         <Tooltip>
                             <TooltipTrigger asChild>

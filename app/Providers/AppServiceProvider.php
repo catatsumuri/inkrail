@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Actions\LogSecurityEvent;
 use App\Actions\Notifications\SendThrowableAlert;
 use App\Http\Responses\FailedPasswordResetResponse;
+use App\Models\Article;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Closure;
@@ -49,6 +50,7 @@ class AppServiceProvider extends ServiceProvider
         $this->configureFailedJobAlerts();
         $this->configureSecurityEventLogging();
         $this->configureSecurityEventAccess();
+        $this->configureZennPublishing();
     }
 
     /**
@@ -79,6 +81,22 @@ class AppServiceProvider extends ServiceProvider
             $viewers = array_map(Str::lower(...), config('audit.security_viewers'));
 
             return in_array(Str::lower($user->getEmailForVerification()), $viewers, true);
+        });
+    }
+
+    /**
+     * Only configured publishers with a verified email may send their own articles to Zenn.
+     */
+    protected function configureZennPublishing(): void
+    {
+        Gate::define('push-to-zenn', function (Authenticatable $user, Article $article): bool {
+            if (! $user instanceof MustVerifyEmail || ! $user->hasVerifiedEmail() || $article->user_id !== $user->getAuthIdentifier()) {
+                return false;
+            }
+
+            $publishers = array_map(Str::lower(...), config('articles.zenn_publishers'));
+
+            return in_array(Str::lower($user->getEmailForVerification()), $publishers, true);
         });
     }
 

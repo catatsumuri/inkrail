@@ -40,4 +40,10 @@ return [
         ],
     ],
 
+    'github_zenn' => [
+        'token' => env('ZENN_GITHUB_TOKEN'),
+        'repository' => env('ZENN_GITHUB_REPOSITORY'),
+        'branch' => env('ZENN_GITHUB_BRANCH', 'main'),
+    ],
+
 ];

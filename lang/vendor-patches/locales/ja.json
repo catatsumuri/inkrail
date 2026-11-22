@@ -155,5 +155,12 @@
     "Discard unsaved changes?": "未保存の変更を破棄しますか？",
     "Changing the display language will discard your unsaved article changes.": "表示言語を変更すると、記事の未保存の変更は破棄されます。",
     "Discard and switch": "破棄して切り替える",
-    "Translation unavailable. Showing:": "翻訳がないため、次の言語で表示しています："
+    "Translation unavailable. Showing:": "翻訳がないため、次の言語で表示しています：",
+    "Send to Zenn": "Zennに送信",
+    "Send this article to Zenn?": "この記事をZennに送信しますか?",
+    "The Japanese version will be committed to the Zenn repository and published on Zenn.": "日本語版をZennのリポジトリにコミットし、Zennで公開します。",
+    "The Japanese version will be committed to the Zenn repository as a draft.": "日本語版を下書きとしてZennのリポジトリにコミットします。",
+    "The article could not be sent to Zenn.": "記事をZennに送信できませんでした。",
+    "Sent to Zenn.": "Zennに送信しました。",
+    "Zenn is already up to date.": "Zennはすでに最新です。"
 }
