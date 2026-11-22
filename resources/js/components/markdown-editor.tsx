@@ -1,7 +1,10 @@
 import { lang } from '@erag/lang-sync-inertia/react';
-import { Code2, Eye } from 'lucide-react';
+import { useHttp } from '@inertiajs/react';
+import { Code2, Eye, ImagePlus } from 'lucide-react';
+import { toast } from 'sonner';
 import { slugify } from '@catatsumuri/inkstream/advanced';
 import { useDeferredValue, useEffect, useRef, useState } from 'react';
+import { store as storeImage } from '@/actions/App/Http/Controllers/ArticleImageController';
 import ArticleContent from '@/components/article-content';
 import { Button } from '@/components/ui/button';
 import { listHeadings } from '@/lib/heading-offset';
@@ -34,6 +37,12 @@ export default function MarkdownEditor({
         'write',
     );
 
+    const [uploading, setUploading] = useState(0);
+    const [dragging, setDragging] = useState(false);
+    const imageUpload = useHttp<{ image: File | null }, { url: string }>({
+        image: null,
+    });
+
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const previewRef = useRef<HTMLDivElement>(null);
 
@@ -45,6 +54,75 @@ export default function MarkdownEditor({
     useEffect(() => {
         anchorCache.current = null;
     }, [preview]);
+
+    function imageFrom(files: FileList | null | undefined): File | undefined {
+        return Array.from(files ?? []).find((file) =>
+            file.type.startsWith('image/'),
+        );
+    }
+
+    async function uploadImage(file: File) {
+        let reported = false;
+
+        setUploading((count) => count + 1);
+        imageUpload.transform(() => ({ image: file }));
+
+        try {
+            const { url } = await imageUpload.post(storeImage.url(), {
+                onError: (errors) => {
+                    reported = true;
+                    toast.error(
+                        errors.image ?? __('Could not upload the image.'),
+                    );
+                },
+            });
+            const textarea = textareaRef.current;
+
+            if (textarea) {
+                const alt =
+                    file.name
+                        .replace(/\.[^.]+$/, '')
+                        .replace(/[[\]]/g, '')
+                        .trim() || 'image';
+                const markdown = `![${alt}](${url})\n`;
+
+                textarea.setRangeText(
+                    markdown,
+                    textarea.selectionStart,
+                    textarea.selectionEnd,
+                    'end',
+                );
+                setContent(textarea.value);
+                textarea.focus();
+            }
+        } catch {
+            if (!reported) {
+                toast.error(__('Could not upload the image.'));
+            }
+        } finally {
+            setUploading((count) => count - 1);
+        }
+    }
+
+    function handleDrop(event: React.DragEvent<HTMLTextAreaElement>) {
+        setDragging(false);
+
+        const file = imageFrom(event.dataTransfer.files);
+
+        if (file) {
+            event.preventDefault();
+            void uploadImage(file);
+        }
+    }
+
+    function handlePaste(event: React.ClipboardEvent<HTMLTextAreaElement>) {
+        const file = imageFrom(event.clipboardData.files);
+
+        if (file) {
+            event.preventDefault();
+            void uploadImage(file);
+        }
+    }
 
     function measureAnchors(
         textarea: HTMLTextAreaElement,
@@ -194,6 +272,15 @@ export default function MarkdownEditor({
                     <div className="hidden items-center gap-2 border-b bg-muted/30 px-5 py-3 text-xs font-medium text-muted-foreground lg:flex">
                         <Code2 aria-hidden="true" className="size-3.5" />
                         {__('Markdown')}
+                        <span className="ml-auto flex items-center gap-1.5 font-normal">
+                            <ImagePlus
+                                aria-hidden="true"
+                                className="size-3.5"
+                            />
+                            {uploading > 0
+                                ? __('Uploading image…')
+                                : __('Drop or paste an image to upload')}
+                        </span>
                     </div>
                     <textarea
                         id={id}
@@ -202,10 +289,23 @@ export default function MarkdownEditor({
                         name={name}
                         defaultValue={defaultValue}
                         onChange={(event) => setContent(event.target.value)}
+                        onDrop={handleDrop}
+                        onDragOver={(event) => {
+                            if (event.dataTransfer.types.includes('Files')) {
+                                event.preventDefault();
+                                setDragging(true);
+                            }
+                        }}
+                        onDragLeave={() => setDragging(false)}
+                        onPaste={handlePaste}
                         aria-invalid={invalid}
                         aria-describedby={describedBy}
                         spellCheck={false}
-                        className="block h-[60vh] min-h-80 w-full resize-none bg-transparent p-5 font-mono text-sm leading-7 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset sm:p-6"
+                        className={cn(
+                            'block h-[60vh] min-h-80 w-full resize-none bg-transparent p-5 font-mono text-sm leading-7 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset sm:p-6',
+                            dragging &&
+                                'bg-muted/50 ring-2 ring-ring ring-inset',
+                        )}
                     />
                 </div>
                 <section

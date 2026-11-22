@@ -162,5 +162,8 @@
     "The Japanese version will be committed to the Zenn repository as a draft.": "日本語版を下書きとしてZennのリポジトリにコミットします。",
     "The article could not be sent to Zenn.": "記事をZennに送信できませんでした。",
     "Sent to Zenn.": "Zennに送信しました。",
-    "Zenn is already up to date.": "Zennはすでに最新です。"
+    "Zenn is already up to date.": "Zennはすでに最新です。",
+    "Could not upload the image.": "画像をアップロードできませんでした。",
+    "Uploading image…": "画像をアップロード中…",
+    "Drop or paste an image to upload": "画像をドロップまたは貼り付けでアップロード"
 }

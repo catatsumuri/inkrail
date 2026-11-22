@@ -13,4 +13,12 @@ return [
         'trim',
         explode(',', (string) env('ZENN_PUBLISHERS', '')),
     ))),
+
+    /*
+    | Where images dropped into the article editor are stored, and the longest
+    | side (in pixels) they are scaled down to. Images are served from /images
+    | to anyone who knows the content-hash URL, including those of drafts.
+    */
+    'image_disk' => env('ARTICLE_IMAGE_DISK', 'public'),
+    'image_max_dimension' => 2048,
 ];

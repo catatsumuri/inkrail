@@ -8,6 +8,8 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
+Schedule::command('article-images:prune')->daily();
+
 if (config('app.demo_mode')) {
     Schedule::command('demo:reset')
         ->twiceDaily(8, 20)

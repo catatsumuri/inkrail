@@ -163,5 +163,8 @@
     "The Japanese version will be committed to the Zenn repository as a draft.": "The Japanese version will be committed to the Zenn repository as a draft.",
     "The article could not be sent to Zenn.": "The article could not be sent to Zenn.",
     "Sent to Zenn.": "Sent to Zenn.",
-    "Zenn is already up to date.": "Zenn is already up to date."
+    "Zenn is already up to date.": "Zenn is already up to date.",
+    "Could not upload the image.": "Could not upload the image.",
+    "Uploading image…": "Uploading image…",
+    "Drop or paste an image to upload": "Drop or paste an image to upload"
 }

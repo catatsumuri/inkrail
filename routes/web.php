@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\SecurityEventController;
 use App\Http\Controllers\ArticleController;
 use App\Http\Controllers\ArticleHistoryController;
+use App\Http\Controllers\ArticleImageController;
 use App\Http\Controllers\DeleteNotificationController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\MarkNotificationAsReadController;
@@ -23,6 +24,10 @@ Route::post('sandbox', SandboxController::class)
 
 Route::post('locale', LocaleController::class)->name('locale.update');
 
+Route::get('images/{path}', [ArticleImageController::class, 'show'])
+    ->where('path', '[0-9a-f]{64}\.(png|jpg|gif|webp)')
+    ->name('images.show');
+
 Route::get('p', [PublicArticleController::class, 'index'])
     ->name('public.articles.index');
 
@@ -42,6 +47,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('articles/{article}/translation-review', [ArticleHistoryController::class, 'confirm'])->name('articles.review');
     Route::post('articles/{article}/revisions/{revision}/restore', [ArticleHistoryController::class, 'restore'])->name('articles.restore');
     Route::delete('articles/{article}/translations/{translationLocale}', [ArticleHistoryController::class, 'destroy'])->name('articles.translations.destroy');
+    Route::post('article-images', [ArticleImageController::class, 'store'])->middleware('throttle:30,1')->name('article-images.store');
     Route::post('articles/{article}/zenn', ZennPushController::class)->name('articles.zenn.push');
     Route::resource('articles', ArticleController::class);
 
