@@ -22,6 +22,7 @@ class PushArticleToZenn
         private RenderZennArticle $render,
         private ResolveZennSlug $resolveSlug,
         private WithZennSyncLock $syncLock,
+        private SyncZennImages $syncImages,
     ) {}
 
     /**
@@ -91,13 +92,19 @@ class PushArticleToZenn
                 if ($sha === null || $article->zenn_sha === null || $sha !== $article->zenn_sha) {
                     throw new ZennPushException('The Zenn file has changed or was deleted since the last sync. Sending was stopped to protect the remote article.');
                 }
-
-                if ($sha === $this->blobSha($markdown)) {
-                    return ['zennSlug' => basename($path, '.md'), 'changed' => false];
-                }
             } else {
                 $path = $this->newPath($client, $article, $repository, $branch);
                 $sha = null;
+            }
+
+            $progress?->__invoke('progress', ['message' => 'Checking and syncing images.']);
+            $imagesChanged = ($this->syncImages)(
+                $article->translations->firstWhere('locale', RenderZennArticle::LOCALE)->content ?? '',
+                $client, $repository, $branch, $checkLock,
+            );
+
+            if ($sha === $this->blobSha($markdown)) {
+                return ['zennSlug' => basename($path, '.md'), 'changed' => $imagesChanged];
             }
 
             $progress?->__invoke('progress', ['message' => 'Committing article.']);
