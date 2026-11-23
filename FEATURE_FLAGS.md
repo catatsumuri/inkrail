@@ -42,11 +42,11 @@ convenient in development and a risk in production. Treat the flags as
 
 All flags default to `true`. They are defined in `config/features.php`.
 
-| Variable | When `false` |
-|---|---|
-| `FEATURE_REGISTRATION` | Registration routes are not registered; the "Sign up" and "Register" links are hidden. |
-| `FEATURE_PASSKEYS` | Passkey routes and `/.well-known/passkey-endpoints` are not registered; passkey buttons and management are hidden. |
-| `FEATURE_TWO_FACTOR` | Two-factor setup, recovery-code and challenge routes are not registered; the security page hides the section. |
+| Variable                        | When `false`                                                                                                                 |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `FEATURE_REGISTRATION`          | Registration routes are not registered; the "Sign up" and "Register" links are hidden.                                       |
+| `FEATURE_PASSKEYS`              | Passkey routes and `/.well-known/passkey-endpoints` are not registered; passkey buttons and management are hidden.           |
+| `FEATURE_TWO_FACTOR`            | Two-factor setup, recovery-code and challenge routes are not registered; the security page hides the section.                |
 | `FEATURE_PASSWORD_CONFIRMATION` | Sensitive operations no longer ask for a recent password confirmation, and the browser session-management pages are removed. |
 
 ## Read before turning one off
