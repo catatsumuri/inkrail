@@ -28,4 +28,12 @@ return [
     // /.well-known/passkey-endpoints discovery route.
     'passkeys' => (bool) env('FEATURE_PASSKEYS', true),
 
+    // Two-factor authentication: setup UI, recovery codes and the login
+    // challenge.
+    //
+    // WARNING: turning this off also removes the login challenge. Accounts
+    // that already enrolled in two-factor authentication can then sign in
+    // with their password alone. Only disable it deliberately.
+    'two_factor' => (bool) env('FEATURE_TWO_FACTOR', true),
+
 ];

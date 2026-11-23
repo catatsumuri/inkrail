@@ -58,4 +58,16 @@ class FeatureFlagServiceProviderTest extends TestCase
         $this->assertTrue(Features::enabled(Features::registration()));
         $this->assertFalse(Features::enabled(Features::passkeys()));
     }
+
+    public function test_two_factor_is_removed_independently_of_other_flags(): void
+    {
+        config(['fortify.features' => [Features::registration(), Features::twoFactorAuthentication(), Features::passkeys()]]);
+        config(['features.registration' => true, 'features.passkeys' => true, 'features.two_factor' => false]);
+
+        (new FeatureFlagServiceProvider($this->app))->register();
+
+        $this->assertFalse(Features::enabled(Features::twoFactorAuthentication()));
+        $this->assertTrue(Features::enabled(Features::registration()));
+        $this->assertTrue(Features::enabled(Features::passkeys()));
+    }
 }
