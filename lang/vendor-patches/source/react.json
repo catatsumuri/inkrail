@@ -207,5 +207,7 @@
     "Saving sync state.": "Saving sync state.",
     "Could not confirm the save result.": "Could not confirm the save result.",
     "Acquiring repository lock.": "Acquiring repository lock.",
-    "Committing article.": "Committing article."
+    "Committing article.": "Committing article.",
+    "Topics": "Topics",
+    "Separate topics with commas. Add up to 5 topics, shared across article languages.": "Separate topics with commas. Add up to 5 topics, shared across article languages."
 }

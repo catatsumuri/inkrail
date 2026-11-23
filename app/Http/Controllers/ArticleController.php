@@ -50,7 +50,7 @@ class ArticleController extends Controller
         Gate::authorize('view', $article);
 
         return Inertia::render('articles/show', [
-            'article' => [...$article->only(['id', 'title', 'content', 'slug', 'is_published', 'edit_version']), ...$article->languageMetadata(), 'translationStatus' => $article->translationStatus(), 'translations' => $article->translations->mapWithKeys(fn ($translation) => [$translation->locale => $translation->only(['title', 'content'])])->all()],
+            'article' => [...$article->only(['id', 'title', 'content', 'slug', 'is_published', 'edit_version', 'topics']), ...$article->languageMetadata(), 'translationStatus' => $article->translationStatus(), 'translations' => $article->translations->mapWithKeys(fn ($translation) => [$translation->locale => $translation->only(['title', 'content'])])->all()],
             'canPushToZenn' => Gate::allows('push-to-zenn', $article),
         ]);
     }
@@ -59,7 +59,7 @@ class ArticleController extends Controller
     {
         Gate::authorize('update', $article);
 
-        return Inertia::render('articles/edit', ['article' => [...$article->only(['id', 'title', 'content', 'slug', 'is_published', 'edit_version']), ...$article->languageMetadata(), 'translationStatus' => $article->translationStatus(), 'translations' => $article->translations->mapWithKeys(fn ($translation) => [$translation->locale => $translation->only(['title', 'content'])])->all()]]);
+        return Inertia::render('articles/edit', ['article' => [...$article->only(['id', 'title', 'content', 'slug', 'is_published', 'edit_version', 'topics']), ...$article->languageMetadata(), 'translationStatus' => $article->translationStatus(), 'translations' => $article->translations->mapWithKeys(fn ($translation) => [$translation->locale => $translation->only(['title', 'content'])])->all()]]);
     }
 
     public function update(Request $request, Article $article): RedirectResponse
@@ -73,12 +73,12 @@ class ArticleController extends Controller
             }
             $translations = $attributes['translations'] ?? null;
             unset($attributes['translations']);
-            $article->update($attributes);
-            if ($article->wasChanged(['slug', 'is_published'])) {
-                $article->increment('edit_version');
+            $locked->update($attributes);
+            if ($locked->wasChanged(['slug', 'is_published', 'zenn_frontmatter'])) {
+                $locked->increment('edit_version');
             }
             if ($translations !== null) {
-                $article->replaceTranslations($translations);
+                $locked->replaceTranslations($translations);
             }
         });
 
@@ -105,6 +105,8 @@ class ArticleController extends Controller
             'translations.*.content' => ['nullable', 'string'],
             'content' => ['nullable', 'string'],
             'slug' => ['nullable', 'string', 'max:255', 'regex:/\A[a-z0-9]+(?:-[a-z0-9]+)*\z/', Rule::unique(Article::class, 'slug')->ignore($article)],
+            'topics' => ['sometimes', 'array', 'list', 'max:5'],
+            'topics.*' => ['required', 'string', 'max:255', 'distinct:ignore_case'],
             'is_published' => ['sometimes', 'boolean', ...($request->user()->is_sandbox ? [Rule::in([false, 0, '0'])] : [])],
         ]);
 
@@ -136,6 +138,10 @@ class ArticleController extends Controller
         } else {
             $attributes['title'] = $validated['title'];
             $attributes['content'] = $validated['content'] ?? '';
+        }
+
+        if (array_key_exists('topics', $validated)) {
+            $attributes['topics'] = $validated['topics'];
         }
 
         if (isset($validated['slug'])) {

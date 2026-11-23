@@ -28,6 +28,10 @@ class RenderZennArticle
         ], $article->zenn_frontmatter ?? [], [
             'title' => $translation->title, 'published' => $article->is_published, 'inkrail_id' => $article->sync_id,
         ]);
+        unset($frontmatter['namespace']);
+        if ($article->namespace !== null) {
+            $frontmatter['namespace'] = $article->namespace->slug;
+        }
         $header = '';
         foreach ($frontmatter as $key => $value) {
             $header .= $key.': '.json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR)."\n";

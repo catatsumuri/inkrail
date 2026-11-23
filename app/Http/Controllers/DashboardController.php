@@ -20,7 +20,7 @@ class DashboardController extends Controller
                 'repository' => config('services.github_zenn.repository'),
                 'branch' => config('services.github_zenn.branch'),
                 'configured' => filled(config('services.github_zenn.repository')) && filled(config('services.github_zenn.token')) && filled(config('services.github_zenn.branch')),
-                'articles' => $request->user()->articles()->where('zenn_repository', config('services.github_zenn.repository'))
+                'articles' => $request->user()->articles()->with('namespace')->where('zenn_repository', config('services.github_zenn.repository'))
                     ->where('zenn_branch', config('services.github_zenn.branch'))->whereNotNull('zenn_path')->latest('id')->paginate(20)
                     ->through(fn (Article $article): array => [
                         'id' => $article->id, 'title' => $article->title, 'path' => $article->zenn_path,

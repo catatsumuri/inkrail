@@ -7,6 +7,7 @@ use App\Actions\Zenn\WithZennSyncLock;
 use App\Exceptions\ZennImportException;
 use App\Exceptions\ZennPushException;
 use App\Models\Activity;
+use App\Models\ArticleNamespace;
 use App\Models\User;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
@@ -375,4 +376,54 @@ test('sending an imported article uses its original remote path and preserves fr
     preg_match('/\A---\n(.*?)\n---/s', base64_decode($put['content']), $matches);
     expect(Yaml::parse($matches[1]))->toMatchArray(['emoji' => '🐱', 'type' => 'idea', 'topics' => ['laravel'], 'custom_field' => 'keep-me', 'inkrail_id' => $article->sync_id]);
     expect($article->fresh()->zenn_local_sha)->toBe($article->fresh()->zenn_sha);
+});
+
+test('restores namespaces from frontmatter and preserves them when the remote field disappears', function () {
+    $owner = User::factory()->create(['email' => 'publisher@example.com']);
+    $document = str_replace('custom_field:', "namespace: guides\ncustom_field:", zennImportMarkdown());
+    fakeZennImport(['articles/namespaced-article.md' => $document]);
+
+    app(ImportZennArticles::class)($owner);
+
+    $article = $owner->articles()->sole();
+    expect($article->namespace->slug)->toBe('guides');
+    expect(app(RenderZennArticle::class)($article))->toContain('namespace: "guides"');
+    fakeZennImport(['articles/namespaced-article.md' => zennImportMarkdown(body: 'Updated remotely')]);
+
+    $result = app(ImportZennArticles::class)($owner);
+
+    expect($result['updated'])->toBe(1);
+    expect($article->fresh()->namespace->slug)->toBe('guides');
+    expect($article->fresh()->zenn_local_sha)->toBe(app(RenderZennArticle::class)->localSha($article->fresh()));
+});
+
+test('uses explicit null frontmatter to remove namespace membership without deleting the namespace', function () {
+    $owner = User::factory()->create(['email' => 'publisher@example.com']);
+    fakeZennImport(['articles/namespaced-article.md' => str_replace('custom_field:', "namespace: guides\ncustom_field:", zennImportMarkdown())]);
+    app(ImportZennArticles::class)($owner);
+    $article = $owner->articles()->sole();
+    $namespace = $article->namespace;
+    fakeZennImport(['articles/namespaced-article.md' => str_replace('custom_field:', "namespace: null\ncustom_field:", zennImportMarkdown())]);
+
+    $result = app(ImportZennArticles::class)($owner);
+
+    expect($result['updated'])->toBe(1);
+    expect($article->fresh()->namespace)->toBeNull();
+    $this->assertModelExists($namespace);
+});
+
+test('does not overwrite a local namespace change during import', function () {
+    $owner = User::factory()->create(['email' => 'publisher@example.com']);
+    fakeZennImport(['articles/namespaced-article.md' => zennImportMarkdown()]);
+    app(ImportZennArticles::class)($owner);
+    $article = $owner->articles()->sole();
+    $namespace = ArticleNamespace::factory()->create();
+    $article->namespace()->associate($namespace);
+    $article->save();
+    fakeZennImport(['articles/namespaced-article.md' => zennImportMarkdown(body: 'Remote change')]);
+
+    $result = app(ImportZennArticles::class)($owner);
+
+    expect($result['conflict'])->toBe(1);
+    expect($article->fresh()->namespace->is($namespace))->toBeTrue();
 });

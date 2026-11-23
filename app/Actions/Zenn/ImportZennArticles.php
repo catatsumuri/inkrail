@@ -5,6 +5,7 @@ namespace App\Actions\Zenn;
 use App\Actions\LogSecurityEvent;
 use App\Exceptions\ZennImportException;
 use App\Models\Article;
+use App\Models\ArticleNamespace;
 use App\Models\User;
 use Closure;
 use Illuminate\Contracts\Cache\LockTimeoutException;
@@ -139,15 +140,22 @@ class ImportZennArticles
             }
         }
 
+        if (array_key_exists('namespace', $parsed['frontmatter'])) {
+            $namespaceSlug = $parsed['frontmatter']['namespace'];
+            $article->namespace()->associate($namespaceSlug === null ? null : ArticleNamespace::query()->firstOrCreate(
+                ['slug' => $namespaceSlug],
+                ['name' => $namespaceSlug],
+            ));
+        }
         $article->is_published = $parsed['is_published'];
         $article->zenn_repository = $repository;
         $article->zenn_branch = $branch;
         $article->zenn_path = $path;
         $article->zenn_sha = $sha;
         $article->zenn_frontmatter = $parsed['frontmatter'];
-        $publicationChanged = $article->exists && $article->isDirty('is_published');
+        $editableMetadataChanged = $article->exists && $article->isDirty(['is_published', 'zenn_frontmatter']);
         $article->save();
-        if ($publicationChanged) {
+        if ($editableMetadataChanged) {
             $article->increment('edit_version');
         }
         $article->replaceTranslations([RenderZennArticle::LOCALE => ['title' => $parsed['title'], 'content' => $parsed['content']]]);
