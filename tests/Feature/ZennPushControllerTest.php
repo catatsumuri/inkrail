@@ -1,12 +1,16 @@
 <?php
 
 use App\Actions\Zenn\PushArticleToZenn;
+use App\Actions\Zenn\RenderZennArticle;
 use App\Models\Activity;
 use App\Models\Article;
+use App\Models\ArticleImage;
 use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Http\Client\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
 
 uses(LazilyRefreshDatabase::class);
@@ -388,4 +392,137 @@ test('does not stream github details to another article owner', function () {
         ->post(route('articles.zenn.push', $article))->assertForbidden();
 
     Http::assertNothingSent();
+});
+
+test('uploads referenced images once before the article and ignores code and external images', function () {
+    Storage::fake(ArticleImage::disk());
+    $bytes = UploadedFile::fake()->image('example.png')->getContent();
+    $filename = hash('sha256', $bytes).'.png';
+    Storage::disk(ArticleImage::disk())->put('article-images/'.$filename, $bytes);
+    $article = createZennArticle($this->publisher);
+    $content = "![one](/images/{$filename})\n![two][same]\n\n[same]: /images/{$filename}\n\n".'`![code](/images/missing.png)`'."\n\n![external](https://example.com/image.png)";
+    $article->replaceTranslations(['ja' => ['title' => '画像', 'content' => $content]]);
+    Http::fake([
+        ZENN_READ => Http::response([], 404),
+        ZENN_FILE => Http::response([], 201),
+        'api.github.com/repos/owner/zenn/contents/images/*?ref=main' => Http::response([], 404),
+        'api.github.com/repos/owner/zenn/contents/images/*' => Http::response([], 201),
+    ]);
+
+    $this->actingAs($this->publisher)->post(route('articles.zenn.push', $article))
+        ->assertSessionHas('inertia.flash_data.toast.type', 'success');
+
+    $requests = pushedRequests();
+    expect($requests)->toHaveCount(2);
+    expect($requests[0]->url())->toEndWith('/contents/images/'.$filename);
+    expect($requests[0]['branch'])->toBe('main');
+    expect($requests[0]->data())->not->toHaveKey('sha');
+    expect(base64_decode($requests[0]['content']))->toBe($bytes);
+    expect(base64_decode($requests[1]['content']))->toContain($content);
+    expect($article->fresh()->zenn_sha)->not->toBeNull();
+});
+
+test('repairs missing images even when article content is unchanged', function (bool $remoteExists) {
+    Storage::fake(ArticleImage::disk());
+    $bytes = UploadedFile::fake()->image('example.png')->getContent();
+    $filename = hash('sha256', $bytes).'.png';
+    Storage::disk(ArticleImage::disk())->put('article-images/'.$filename, $bytes);
+    $article = createZennArticle($this->publisher);
+    $article->replaceTranslations(['ja' => ['title' => '画像', 'content' => "![image](/images/{$filename})"]]);
+    $sha = app(RenderZennArticle::class)->localSha($article->fresh());
+    $article->forceFill(['zenn_repository' => 'owner/zenn', 'zenn_branch' => 'main', 'zenn_path' => 'articles/existing.md', 'zenn_sha' => $sha])->save();
+    Http::fake([
+        ZENN_READ => Http::response(['sha' => $sha]),
+        'api.github.com/repos/owner/zenn/contents/images/*?ref=main' => Http::response(
+            ['type' => 'file', 'size' => strlen($bytes), 'sha' => sha1('blob '.strlen($bytes)."\0".$bytes)], $remoteExists ? 200 : 404
+        ),
+        'api.github.com/repos/owner/zenn/contents/images/*' => Http::response([], 201),
+    ]);
+
+    $this->actingAs($this->publisher)->post(route('articles.zenn.push', $article))
+        ->assertSessionHas('inertia.flash_data.toast.message', __($remoteExists ? 'The GitHub repository is already up to date.' : 'Saved to GitHub.'));
+
+    expect(pushedRequests())->toHaveCount($remoteExists ? 0 : 1);
+    $this->assertDatabaseHas('articles', ['id' => $article->id, 'zenn_sha' => $sha]);
+})->with(['missing image' => false, 'existing identical image' => true]);
+
+test('does not write an article when a repository image cannot be safely synced', function (string $failure) {
+    Storage::fake(ArticleImage::disk());
+    $bytes = $failure === 'oversized' ? str_repeat('x', 3_000_001) : UploadedFile::fake()->image('example.png')->getContent();
+    $filename = hash('sha256', $bytes).'.png';
+    if ($failure !== 'missing') {
+        Storage::disk(ArticleImage::disk())->put('article-images/'.$filename, $failure === 'damaged' ? 'damaged' : $bytes);
+    }
+    $article = createZennArticle($this->publisher);
+    $article->replaceTranslations(['ja' => ['title' => '画像', 'content' => "![image](/images/{$filename})"]]);
+    Http::fake([
+        ZENN_READ => Http::response([], 404),
+        'api.github.com/repos/owner/zenn/contents/images/*?ref=main' => Http::response(
+            ['type' => 'file', 'size' => strlen($bytes), 'sha' => 'different-sha'], $failure === 'conflict' ? 200 : 404
+        ),
+        'api.github.com/repos/owner/zenn/contents/images/*' => Http::response([], 403),
+    ]);
+
+    $this->actingAs($this->publisher)->post(route('articles.zenn.push', $article))
+        ->assertSessionHas('inertia.flash_data.toast.type', 'error');
+
+    Http::assertNotSent(fn (Request $request): bool => $request->method() === 'PUT' && str_contains($request->url(), '/contents/articles/'));
+    $this->assertDatabaseHas('articles', ['id' => $article->id, 'zenn_sha' => null, 'zenn_path' => null]);
+})->with(['missing', 'oversized', 'damaged', 'conflict', 'upload rejected']);
+
+test('keeps valid repository-only images without requiring a local copy', function (string $path) {
+    Storage::fake(ArticleImage::disk());
+    $article = createZennArticle($this->publisher);
+    $article->replaceTranslations(['ja' => ['title' => '画像', 'content' => "![image](/images/{$path})"]]);
+    Http::fake([
+        ZENN_READ => Http::response([], 404), ZENN_FILE => Http::response([], 201),
+        'api.github.com/repos/owner/zenn/contents/images/'.$path.'?ref=main' => Http::response(['type' => 'file', 'size' => 100, 'sha' => 'remote-image-sha']),
+    ]);
+
+    $this->actingAs($this->publisher)->post(route('articles.zenn.push', $article))
+        ->assertSessionHas('inertia.flash_data.toast.type', 'success');
+
+    expect(pushedRequests())->toHaveCount(1);
+    expect(pushedRequests()[0]->url())->toContain('/contents/articles/');
+})->with(['nested' => 'imported/photo.jpeg', 'encoded name' => 'imported/photo%20one.jpeg', 'unicode' => '%E7%94%BB%E5%83%8F.png']);
+
+test('rejects invalid repository images before committing', function (string $url, array $remote) {
+    Storage::fake(ArticleImage::disk());
+    $article = createZennArticle($this->publisher);
+    $article->replaceTranslations(['ja' => ['title' => '画像', 'content' => "![image]({$url})"]]);
+    Http::fake([
+        ZENN_READ => Http::response([], 404),
+        'api.github.com/repos/owner/zenn/contents/images/*?ref=main' => Http::response($remote),
+    ]);
+
+    $this->actingAs($this->publisher)->post(route('articles.zenn.push', $article))
+        ->assertSessionHas('inertia.flash_data.toast.type', 'error');
+
+    expect(pushedRequests())->toBeEmpty();
+})->with([
+    'unsupported extension' => ['/images/image.svg', []],
+    'traversal' => ['/images/../private.png', []],
+    'encoded traversal' => ['/images/%2e%2e/private.png', []],
+    'backslash' => ['/images/folder%5cprivate.png', []],
+    'remote oversized' => ['/images/image.png', ['type' => 'file', 'size' => 3_000_001]],
+    'remote directory' => ['/images/image.png', ['type' => 'dir', 'size' => 100]],
+]);
+
+test('checks all images before uploading any of them', function () {
+    Storage::fake(ArticleImage::disk());
+    $bytes = UploadedFile::fake()->image('example.png')->getContent();
+    $filename = hash('sha256', $bytes).'.png';
+    Storage::disk(ArticleImage::disk())->put('article-images/'.$filename, $bytes);
+    $article = createZennArticle($this->publisher);
+    $article->replaceTranslations(['ja' => ['title' => '画像', 'content' => "![first](/images/{$filename})\n![missing](/images/missing.png)"]]);
+    Http::fake([
+        ZENN_READ => Http::response([], 404),
+        'api.github.com/repos/owner/zenn/contents/images/*?ref=main' => Http::response([], 404),
+    ]);
+
+    $this->actingAs($this->publisher)->post(route('articles.zenn.push', $article))
+        ->assertSessionHas('inertia.flash_data.toast.type', 'error');
+
+    expect(pushedRequests())->toBeEmpty();
+    $this->assertDatabaseHas('articles', ['id' => $article->id, 'zenn_sha' => null]);
 });
