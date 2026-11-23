@@ -115,6 +115,7 @@ export default function Profile(
                                         )
                                     }
                                     name="username"
+                                    required={Boolean(auth.user.username)}
                                     autoComplete="off"
                                     autoCapitalize="none"
                                     placeholder={__('Username')}

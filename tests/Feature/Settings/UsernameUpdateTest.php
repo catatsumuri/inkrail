@@ -140,4 +140,33 @@ class UsernameUpdateTest extends TestCase
 
         $this->assertNull($user->fresh()->username);
     }
+
+    public function test_a_username_that_was_set_cannot_be_removed(): void
+    {
+        $user = User::factory()->withUsername('alice')->create();
+
+        $this->actingAs($user)->patch(route('profile.update'), [
+            'name' => $user->name,
+            'username' => '',
+            'email' => $user->email,
+            'current_password' => 'password',
+        ])->assertSessionHasErrors('username');
+
+        $this->assertSame('alice', $user->fresh()->username);
+        $this->assertSame(0, Activity::inLog('security')->count());
+    }
+
+    public function test_an_account_without_a_username_may_leave_it_empty(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->patch(route('profile.update'), [
+            'name' => 'Another Name',
+            'username' => '',
+            'email' => $user->email,
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame('Another Name', $user->fresh()->name);
+        $this->assertNull($user->fresh()->username);
+    }
 }
