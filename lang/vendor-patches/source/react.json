@@ -238,5 +238,7 @@
     "The backup could not be restored.": "The backup could not be restored.",
     "Restored :count article(s) from the backup.": "Restored :count article(s) from the backup.",
     "Backup deleted.": "Backup deleted.",
-    "Description (optional)": "Description (optional)"
+    "Description (optional)": "Description (optional)",
+    "Create a backup?": "Create a backup?",
+    "Every article with its translations, history and images will be saved.": "Every article with its translations, history and images will be saved."
 }

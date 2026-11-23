@@ -237,5 +237,7 @@
     "The backup could not be restored.": "バックアップを復元できませんでした。",
     "Restored :count article(s) from the backup.": "バックアップから:count件の記事を復元しました。",
     "Backup deleted.": "バックアップを削除しました。",
-    "Description (optional)": "説明(任意)"
+    "Description (optional)": "説明(任意)",
+    "Create a backup?": "バックアップを作成しますか?",
+    "Every article with its translations, history and images will be saved.": "すべての記事を、翻訳・履歴・画像ごと保存します。"
 }

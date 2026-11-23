@@ -1,4 +1,5 @@
 import { Form } from '@inertiajs/react';
+import { useState } from 'react';
 import { lang } from '@erag/lang-sync-inertia/react';
 import { Download, RotateCcw, Trash2, Upload } from 'lucide-react';
 import ArticleBackupController from '@/actions/App/Http/Controllers/ArticleBackupController';
@@ -156,6 +157,61 @@ function DeleteDialog({ filename }: { filename: string }) {
     );
 }
 
+function CreateDialog() {
+    const { __ } = lang();
+    const [open, setOpen] = useState(false);
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                <Button type="button">{__('Create backup')}</Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogTitle>{__('Create a backup?')}</DialogTitle>
+                <DialogDescription>
+                    {__(
+                        'Every article with its translations, history and images will be saved.',
+                    )}
+                </DialogDescription>
+                <Form
+                    {...ArticleBackupController.store.form()}
+                    options={{ preserveScroll: true }}
+                    onSuccess={() => setOpen(false)}
+                    className="space-y-4"
+                >
+                    {({ processing, errors }) => (
+                        <>
+                            <div className="space-y-2">
+                                <Label htmlFor="backup-description">
+                                    {__('Description (optional)')}
+                                </Label>
+                                <Input
+                                    id="backup-description"
+                                    name="description"
+                                    maxLength={2000}
+                                    autoComplete="off"
+                                />
+                                <InputError message={errors.description} />
+                            </div>
+                            <DialogFooter className="gap-2">
+                                <DialogClose asChild>
+                                    <Button type="button" variant="secondary">
+                                        {__('Cancel')}
+                                    </Button>
+                                </DialogClose>
+                                <Button type="submit" disabled={processing}>
+                                    {processing && <Spinner />}
+                                    {__('Create backup')}
+                                </Button>
+                            </DialogFooter>
+                        </>
+                    )}
+                </Form>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
 export default function ArticleBackupsCard({
     backups,
 }: {
@@ -176,33 +232,7 @@ export default function ArticleBackupsCard({
             </CardHeader>
             <CardContent className="space-y-6">
                 <div className="flex flex-wrap items-start gap-4">
-                    <Form
-                        {...ArticleBackupController.store.form()}
-                        options={{ preserveScroll: true }}
-                    >
-                        {({ processing, errors }) => (
-                            <div className="space-y-2">
-                                <div className="flex flex-wrap items-center gap-2">
-                                    <Input
-                                        name="description"
-                                        maxLength={2000}
-                                        placeholder={__(
-                                            'Description (optional)',
-                                        )}
-                                        aria-label={__(
-                                            'Description (optional)',
-                                        )}
-                                        className="w-64"
-                                    />
-                                    <Button type="submit" disabled={processing}>
-                                        {processing && <Spinner />}
-                                        {__('Create backup')}
-                                    </Button>
-                                </div>
-                                <InputError message={errors.description} />
-                            </div>
-                        )}
-                    </Form>
+                    <CreateDialog />
                     <Form
                         {...ArticleBackupController.upload.form()}
                         options={{ preserveScroll: true }}
