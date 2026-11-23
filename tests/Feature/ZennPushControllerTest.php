@@ -20,11 +20,11 @@ const ZENN_FILE = 'api.github.com/repos/owner/zenn/contents/articles/*';
 
 beforeEach(function () {
     config([
-        'articles.zenn_publishers' => ['publisher@example.com'],
+        'articles.zenn_publishers' => ['publisher'],
         'services.github_zenn' => ['token' => 'secret-token', 'repository' => 'owner/zenn', 'branch' => 'main'],
     ]);
     Http::preventStrayRequests();
-    $this->publisher = User::factory()->create(['email' => 'publisher@example.com']);
+    $this->publisher = User::factory()->withUsername('publisher')->create();
 });
 
 function createZennArticle(User $owner, bool $isPublished = true): Article

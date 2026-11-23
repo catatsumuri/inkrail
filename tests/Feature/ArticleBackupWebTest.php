@@ -16,10 +16,10 @@ beforeEach(function () {
     config([
         'articles.backup_disk' => 'backups',
         'articles.backup_directory' => 'backups',
-        'articles.zenn_publishers' => ['owner@example.com'],
+        'articles.zenn_publishers' => ['owner'],
         'inertia.ssr.enabled' => false,
     ]);
-    $this->owner = User::factory()->withUsername('owner')->create(['email' => 'owner@example.com']);
+    $this->owner = User::factory()->withUsername('owner')->create();
 });
 
 function storedBackup(): string

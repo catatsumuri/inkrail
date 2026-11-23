@@ -85,41 +85,27 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * Only configured publishers with a verified email may import from and send their own articles to Zenn.
+     * Only configured publishers (matched by username) with a verified account may import from and send their own articles to Zenn.
      */
     protected function configureZennPublishing(): void
     {
-        Gate::define('import-from-zenn', function (Authenticatable $user): bool {
-            if (! $user instanceof MustVerifyEmail || ! $user->hasVerifiedEmail()) {
+        $isPublisher = static function (Authenticatable $user): bool {
+            if (! $user instanceof User || ! $user->hasVerifiedEmail() || $user->username === null) {
                 return false;
             }
 
-            return $user instanceof User && ! $user->is_sandbox
-                && in_array(Str::lower($user->getEmailForVerification()), array_map(Str::lower(...), config('articles.zenn_publishers')), true);
-        });
+            return in_array(Str::lower($user->username), array_map(Str::lower(...), config('articles.zenn_publishers')), true);
+        };
+
+        Gate::define('import-from-zenn', fn (Authenticatable $user): bool => $user instanceof User && ! $user->is_sandbox && $isPublisher($user));
 
         /*
          * Backups hold every article, so they are limited to the same trusted
          * publishers, never to sandbox accounts.
          */
-        Gate::define('manage-article-backups', function (Authenticatable $user): bool {
-            if (! $user instanceof MustVerifyEmail || ! $user->hasVerifiedEmail()) {
-                return false;
-            }
+        Gate::define('manage-article-backups', fn (Authenticatable $user): bool => $user instanceof User && ! $user->is_sandbox && $isPublisher($user));
 
-            return $user instanceof User && ! $user->is_sandbox
-                && in_array(Str::lower($user->getEmailForVerification()), array_map(Str::lower(...), config('articles.zenn_publishers')), true);
-        });
-
-        Gate::define('push-to-zenn', function (Authenticatable $user, Article $article): bool {
-            if (! $user instanceof MustVerifyEmail || ! $user->hasVerifiedEmail() || $article->user_id !== $user->getAuthIdentifier()) {
-                return false;
-            }
-
-            $publishers = array_map(Str::lower(...), config('articles.zenn_publishers'));
-
-            return in_array(Str::lower($user->getEmailForVerification()), $publishers, true);
-        });
+        Gate::define('push-to-zenn', fn (Authenticatable $user, Article $article): bool => $isPublisher($user) && $article->user_id === $user->getAuthIdentifier());
     }
 
     /**

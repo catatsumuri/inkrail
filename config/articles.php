@@ -6,7 +6,7 @@ return [
     'zenn_repository_path' => env('ZENN_REPOSITORY_PATH'),
 
     /*
-    | Email addresses (comma separated in ZENN_PUBLISHERS) of the users allowed to
+    | Usernames (comma separated in ZENN_PUBLISHERS) of the users allowed to
     | send their articles to the Zenn GitHub repository. When empty, nobody can.
     */
     'zenn_publishers' => array_values(array_filter(array_map(

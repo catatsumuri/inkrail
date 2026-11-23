@@ -11,17 +11,17 @@ use Illuminate\Console\Command;
 class ImportArticlesFromZennCommand extends Command
 {
     /** @var string */
-    protected $signature = 'articles:import-zenn {--user= : Email address of the verified publisher who will own the imported articles}';
+    protected $signature = 'articles:import-zenn {--user= : Username of the verified publisher who will own the imported articles}';
 
     /** @var string */
     protected $description = 'Import Japanese articles from the configured Zenn GitHub repository';
 
     public function handle(ImportZennArticles $import): int
     {
-        $email = $this->option('user');
-        $owner = is_string($email) && $email !== '' ? User::query()->where('email', $email)->first() : null;
+        $username = $this->option('user');
+        $owner = is_string($username) && $username !== '' ? User::query()->where('username', $username)->first() : null;
         if ($owner === null) {
-            $this->error('Specify an existing publisher with --user=email@example.com.');
+            $this->error('Specify an existing publisher with --user=username.');
 
             return self::FAILURE;
         }

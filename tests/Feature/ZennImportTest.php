@@ -21,7 +21,7 @@ uses(LazilyRefreshDatabase::class);
 
 beforeEach(function () {
     config([
-        'articles.zenn_publishers' => ['publisher@example.com'],
+        'articles.zenn_publishers' => ['publisher'],
         'services.github_zenn' => ['repository' => 'owner/zenn', 'branch' => 'main', 'token' => 'secret-token'],
         'inertia.ssr.enabled' => false,
     ]);
@@ -52,7 +52,7 @@ function fakeZennImport(array $documents): void
 }
 
 test('imports a legacy article through the dashboard without writing to GitHub and repeated imports do not duplicate it', function () {
-    $owner = User::factory()->create(['email' => 'publisher@example.com']);
+    $owner = User::factory()->withUsername('publisher')->create();
     fakeZennImport(['articles/original-article.md' => zennImportMarkdown()]);
 
     $this->actingAs($owner)->post(route('zenn.import'))->assertRedirect(route('dashboard'))
@@ -74,7 +74,7 @@ test('imports a legacy article through the dashboard without writing to GitHub a
 });
 
 test('restores a remote UUID and uses a distinct local slug when that slug is already taken', function () {
-    $owner = User::factory()->create(['email' => 'publisher@example.com']);
+    $owner = User::factory()->withUsername('publisher')->create();
     $unrelated = User::factory()->create()->articles()->create(['slug' => 'original-article', 'title' => 'Keep me']);
     $identity = 'e306984e-a4ed-471a-a60e-41e7f20b637c';
     fakeZennImport(['articles/original-article.md' => zennImportMarkdown(identity: $identity)]);
@@ -87,7 +87,7 @@ test('restores a remote UUID and uses a distinct local slug when that slug is al
 });
 
 test('updates a clean imported article while keeping its local slug and English translation', function () {
-    $owner = User::factory()->create(['email' => 'publisher@example.com']);
+    $owner = User::factory()->withUsername('publisher')->create();
     fakeZennImport(['articles/original-article.md' => zennImportMarkdown()]);
     app(ImportZennArticles::class)($owner);
     $article = $owner->articles()->sole();
@@ -104,7 +104,7 @@ test('updates a clean imported article while keeping its local slug and English 
 });
 
 test('keeps local edits and their sync baseline when the remote article also changes', function (bool $matchingContent) {
-    $owner = User::factory()->create(['email' => 'publisher@example.com']);
+    $owner = User::factory()->withUsername('publisher')->create();
     fakeZennImport(['articles/original-article.md' => zennImportMarkdown()]);
     app(ImportZennArticles::class)($owner);
     $article = $owner->articles()->sole();
@@ -121,7 +121,7 @@ test('keeps local edits and their sync baseline when the remote article also cha
 })->with(['different content' => false, 'coincidentally matching content' => true]);
 
 test('an unchanged remote article does not reset local edits or mark them as synced', function () {
-    $owner = User::factory()->create(['email' => 'publisher@example.com']);
+    $owner = User::factory()->withUsername('publisher')->create();
     fakeZennImport(['articles/original-article.md' => zennImportMarkdown()]);
     app(ImportZennArticles::class)($owner);
     $article = $owner->articles()->sole();
@@ -138,7 +138,7 @@ test('an unchanged remote article does not reset local edits or mark them as syn
 });
 
 test('the same repository cannot be pushed or imported while a sync is running', function () {
-    $owner = User::factory()->create(['email' => 'publisher@example.com']);
+    $owner = User::factory()->withUsername('publisher')->create();
     $article = $owner->articles()->create(['slug' => 'local-article']);
     $article->replaceTranslations(['ja' => ['title' => 'Title', 'content' => 'Body']]);
 
@@ -177,7 +177,7 @@ test('a failed sync releases its repository lock', function () {
 });
 
 test('an import whose lease expires during a GitHub request stops before saving', function () {
-    $owner = User::factory()->create(['email' => 'publisher@example.com']);
+    $owner = User::factory()->withUsername('publisher')->create();
     $this->freezeTime();
     Http::fake(['api.github.com/repos/owner/zenn/git/trees/main?recursive=1' => function () {
         $this->travel(121)->seconds();
@@ -192,7 +192,7 @@ test('an import whose lease expires during a GitHub request stops before saving'
 });
 
 test('does not claim an identity belonging to another user', function () {
-    $owner = User::factory()->create(['email' => 'publisher@example.com']);
+    $owner = User::factory()->withUsername('publisher')->create();
     $otherArticle = User::factory()->create()->articles()->create(['title' => 'Private article']);
     fakeZennImport(['articles/original-article.md' => zennImportMarkdown(identity: $otherArticle->sync_id)]);
 
@@ -204,7 +204,7 @@ test('does not claim an identity belonging to another user', function () {
 });
 
 test('rejects a changed UUID at an already linked remote path', function () {
-    $owner = User::factory()->create(['email' => 'publisher@example.com']);
+    $owner = User::factory()->withUsername('publisher')->create();
     fakeZennImport(['articles/original-article.md' => zennImportMarkdown()]);
     app(ImportZennArticles::class)($owner);
     $article = $owner->articles()->sole();
@@ -217,7 +217,7 @@ test('rejects a changed UUID at an already linked remote path', function () {
 });
 
 test('tracks a renamed remote file by UUID while preserving its local identity', function () {
-    $owner = User::factory()->create(['email' => 'publisher@example.com']);
+    $owner = User::factory()->withUsername('publisher')->create();
     $markdown = zennImportMarkdown(identity: 'e306984e-a4ed-471a-a60e-41e7f20b637c');
     fakeZennImport(['articles/original-article.md' => $markdown]);
     app(ImportZennArticles::class)($owner);
@@ -232,7 +232,7 @@ test('tracks a renamed remote file by UUID while preserving its local identity',
 });
 
 test('rejects duplicate remote UUIDs instead of letting import order choose a file', function () {
-    $owner = User::factory()->create(['email' => 'publisher@example.com']);
+    $owner = User::factory()->withUsername('publisher')->create();
     $markdown = zennImportMarkdown(identity: 'e306984e-a4ed-471a-a60e-41e7f20b637c');
     fakeZennImport(['articles/original-article.md' => $markdown, 'articles/duplicate-article.md' => $markdown]);
 
@@ -243,7 +243,7 @@ test('rejects duplicate remote UUIDs instead of letting import order choose a fi
 });
 
 test('skips invalid frontmatter without importing a partially parsed article', function (string $markdown) {
-    $owner = User::factory()->create(['email' => 'publisher@example.com']);
+    $owner = User::factory()->withUsername('publisher')->create();
     fakeZennImport(['articles/original-article.md' => $markdown]);
 
     $result = app(ImportZennArticles::class)($owner);
@@ -260,7 +260,7 @@ test('skips invalid frontmatter without importing a partially parsed article', f
 ]);
 
 test('rejects a truncated GitHub tree before changing local articles', function () {
-    $owner = User::factory()->create(['email' => 'publisher@example.com']);
+    $owner = User::factory()->withUsername('publisher')->create();
     Http::fake(['api.github.com/repos/owner/zenn/git/trees/main?recursive=1' => Http::response(['truncated' => true, 'tree' => []])]);
 
     $this->actingAs($owner)->post(route('zenn.import'))->assertSessionHas('inertia.flash_data.toast.type', 'error');
@@ -276,7 +276,7 @@ test('the import command requires an explicit existing owner', function () {
 });
 
 test('does not import partial data if fetching a later blob fails', function () {
-    $owner = User::factory()->create(['email' => 'publisher@example.com']);
+    $owner = User::factory()->withUsername('publisher')->create();
     $content = zennImportMarkdown();
     $sha = sha1('blob '.strlen($content)."\0".$content);
     $missingSha = str_repeat('b', 40);
@@ -296,7 +296,7 @@ test('does not import partial data if fetching a later blob fails', function () 
 });
 
 test('does not contact GitHub when its token is missing', function () {
-    $owner = User::factory()->create(['email' => 'publisher@example.com']);
+    $owner = User::factory()->withUsername('publisher')->create();
     config(['services.github_zenn.token' => null]);
 
     $this->actingAs($owner)->post(route('zenn.import'))->assertSessionHas('inertia.flash_data.toast.type', 'error');
@@ -306,7 +306,7 @@ test('does not contact GitHub when its token is missing', function () {
 });
 
 test('does not move a known identity into a different repository', function () {
-    $owner = User::factory()->create(['email' => 'publisher@example.com']);
+    $owner = User::factory()->withUsername('publisher')->create();
     $article = $owner->articles()->create(['title' => 'Keep me']);
     $article->forceFill(['zenn_repository' => 'other/repository', 'zenn_branch' => 'main', 'zenn_path' => 'articles/original-article.md', 'zenn_sha' => 'old-sha'])->save();
     fakeZennImport(['articles/original-article.md' => zennImportMarkdown(identity: $article->sync_id)]);
@@ -318,10 +318,10 @@ test('does not move a known identity into a different repository', function () {
 });
 
 test('the import command restores articles for a configured publisher', function () {
-    $owner = User::factory()->create(['email' => 'publisher@example.com']);
+    $owner = User::factory()->withUsername('publisher')->create();
     fakeZennImport(['articles/original-article.md' => zennImportMarkdown()]);
 
-    $this->artisan('articles:import-zenn', ['--user' => $owner->email])->assertSuccessful();
+    $this->artisan('articles:import-zenn', ['--user' => $owner->username])->assertSuccessful();
 
     $this->assertDatabaseCount('articles', 1);
     expect($owner->articles()->sole()->zenn_path)->toBe('articles/original-article.md');
@@ -329,12 +329,12 @@ test('the import command restores articles for a configured publisher', function
 
 test('only verified configured publishers can import', function (string $kind) {
     $user = match ($kind) {
-        'unverified' => User::factory()->unverified()->create(['email' => 'publisher@example.com']),
-        'sandbox' => User::factory()->create(['email' => 'publisher@example.com', 'is_sandbox' => true]),
+        'unverified' => User::factory()->withUsername('publisher')->unverified()->create(),
+        'sandbox' => User::factory()->withUsername('publisher')->create(['is_sandbox' => true]),
         default => User::factory()->create(),
     };
 
-    $this->artisan('articles:import-zenn', ['--user' => $user->email])->assertFailed();
+    $this->artisan('articles:import-zenn', ['--user' => $user->username ?? 'nobody'])->assertFailed();
 
     Http::assertNothingSent();
 })->with(['unverified', 'sandbox', 'unlisted']);
@@ -359,7 +359,7 @@ test('the dashboard does not disclose repository settings to other users', funct
 });
 
 test('sending an imported article uses its original remote path and preserves frontmatter', function () {
-    $owner = User::factory()->create(['email' => 'publisher@example.com']);
+    $owner = User::factory()->withUsername('publisher')->create();
     fakeZennImport(['articles/original-article.md' => zennImportMarkdown()]);
     app(ImportZennArticles::class)($owner);
     $article = $owner->articles()->sole();
@@ -379,7 +379,7 @@ test('sending an imported article uses its original remote path and preserves fr
 });
 
 test('restores namespaces from frontmatter and preserves them when the remote field disappears', function () {
-    $owner = User::factory()->create(['email' => 'publisher@example.com']);
+    $owner = User::factory()->withUsername('publisher')->create();
     $document = str_replace('custom_field:', "namespace: guides\ncustom_field:", zennImportMarkdown());
     fakeZennImport(['articles/namespaced-article.md' => $document]);
 
@@ -398,7 +398,7 @@ test('restores namespaces from frontmatter and preserves them when the remote fi
 });
 
 test('uses explicit null frontmatter to remove namespace membership without deleting the namespace', function () {
-    $owner = User::factory()->create(['email' => 'publisher@example.com']);
+    $owner = User::factory()->withUsername('publisher')->create();
     fakeZennImport(['articles/namespaced-article.md' => str_replace('custom_field:', "namespace: guides\ncustom_field:", zennImportMarkdown())]);
     app(ImportZennArticles::class)($owner);
     $article = $owner->articles()->sole();
@@ -413,7 +413,7 @@ test('uses explicit null frontmatter to remove namespace membership without dele
 });
 
 test('does not overwrite a local namespace change during import', function () {
-    $owner = User::factory()->create(['email' => 'publisher@example.com']);
+    $owner = User::factory()->withUsername('publisher')->create();
     fakeZennImport(['articles/namespaced-article.md' => zennImportMarkdown()]);
     app(ImportZennArticles::class)($owner);
     $article = $owner->articles()->sole();
@@ -429,7 +429,7 @@ test('does not overwrite a local namespace change during import', function () {
 });
 
 test('streams import progress and the final result over server-sent events', function () {
-    $owner = User::factory()->create(['email' => 'publisher@example.com']);
+    $owner = User::factory()->withUsername('publisher')->create();
     fakeZennImport(['articles/original-article.md' => zennImportMarkdown()]);
 
     $content = $this->actingAs($owner)->withHeader('Accept', 'text/event-stream')
@@ -441,7 +441,7 @@ test('streams import progress and the final result over server-sent events', fun
 });
 
 test('streams a terminal failure when the import cannot read GitHub', function () {
-    $owner = User::factory()->create(['email' => 'publisher@example.com']);
+    $owner = User::factory()->withUsername('publisher')->create();
     Http::swap(new Factory);
     Http::preventStrayRequests();
     Http::fake(['api.github.com/*' => Http::response([], 403)]);
