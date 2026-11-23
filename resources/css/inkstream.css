@@ -10,3 +10,29 @@
     --ink-accent: var(--accent);
     --ink-card: var(--card);
 }
+
+.ink-markdown .ink-html-embed {
+    /* Override the renderer's inline frame styling with the app theme. */
+    border-color: color-mix(
+        in oklab,
+        var(--border) 65%,
+        transparent
+    ) !important;
+    border-radius: 1rem !important;
+    background: var(--card);
+    box-shadow:
+        0 2px 4px oklch(0 0 0 / 0.02),
+        0 12px 32px oklch(0 0 0 / 0.04);
+}
+
+.ink-markdown .ink-html-embed > figcaption {
+    width: fit-content;
+    margin: 0.75rem 1rem 0.25rem;
+    padding: 0.25rem 0.625rem !important;
+    border-radius: 999px;
+    background: var(--muted);
+    color: var(--muted-foreground);
+    font-weight: 500;
+    line-height: 1.5;
+    letter-spacing: 0.015em;
+}
