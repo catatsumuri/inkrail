@@ -11,6 +11,7 @@ import InputError from '@/components/input-error';
 import LanguageToggle from '@/components/language-toggle';
 import MarkdownEditor from '@/components/markdown-editor';
 import TranslationStatus from '@/components/translation-status';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -20,6 +21,13 @@ import type { Article } from '@/types/article';
 export default function ArticleForm({ article }: { article?: Article }) {
     const { __ } = lang();
     const { auth, locale, articleLocales } = usePage().props;
+    const [topicsInput, setTopicsInput] = useState(
+        article?.topics?.join(', ') ?? '',
+    );
+    const topics = topicsInput
+        .split(',')
+        .map((topic) => topic.trim())
+        .filter(Boolean);
     const [loadedVersion] = useState(article?.edit_version ?? 0);
     const [{ jumpTo, jumpLocale }] = useState(() => {
         const params = new URLSearchParams(window.location.search);
@@ -40,6 +48,13 @@ export default function ArticleForm({ article }: { article?: Article }) {
     return (
         <Form
             {...(article ? update.form(article.id) : store.form())}
+            transform={({ topics_input, ...data }) => ({
+                ...data,
+                topics: String(topics_input ?? '')
+                    .split(',')
+                    .map((topic) => topic.trim())
+                    .filter(Boolean),
+            })}
             data-article-form
             onError={(errors) => {
                 const invalidLanguage = articleLocales.find((language) =>
@@ -159,6 +174,51 @@ export default function ArticleForm({ article }: { article?: Article }) {
                             )}
                         </p>
                         <InputError message={errors.slug} />
+                    </div>
+                    <div className="grid max-w-3xl gap-2">
+                        <Label htmlFor="topics">{__('Topics')}</Label>
+                        <Input
+                            id="topics"
+                            name="topics_input"
+                            value={topicsInput}
+                            onChange={(event) =>
+                                setTopicsInput(event.target.value)
+                            }
+                            placeholder="zenn, github"
+                            aria-invalid={
+                                Boolean(errors.topics) ||
+                                Object.keys(errors).some((key) =>
+                                    key.startsWith('topics.'),
+                                )
+                            }
+                            aria-describedby="topics-help topics-error"
+                        />
+                        <p
+                            id="topics-help"
+                            className="text-sm text-muted-foreground"
+                        >
+                            {__(
+                                'Separate topics with commas. Add up to 5 topics, shared across article languages.',
+                            )}
+                        </p>
+                        {topics.length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                                {topics.map((topic, position) => (
+                                    <Badge key={position} variant="secondary">
+                                        {topic}
+                                    </Badge>
+                                ))}
+                            </div>
+                        )}
+                        <InputError
+                            id="topics-error"
+                            message={
+                                errors.topics ??
+                                Object.entries(errors).find(([key]) =>
+                                    key.startsWith('topics.'),
+                                )?.[1]
+                            }
+                        />
                     </div>
                     {!auth.user?.is_sandbox && (
                         <div className="grid gap-2">

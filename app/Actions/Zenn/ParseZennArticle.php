@@ -53,13 +53,14 @@ class ParseZennArticle
                 }
             }],
             'inkrail_id' => ['sometimes', 'required', 'uuid'],
+            'namespace' => ['sometimes', 'nullable', 'string', 'max:255', 'regex:/\A[a-z0-9]+(?:-[a-z0-9]+)*\z/'],
             'emoji' => ['sometimes', 'string'],
             'type' => ['sometimes', 'in:tech,idea'],
             'topics' => ['sometimes', 'array', 'max:5'],
             'topics.*' => ['string'],
         ]);
 
-        if ($validator->fails()) {
+        if ($validator->fails() || ($frontmatter['namespace'] ?? null) === '') {
             throw new ZennImportException('The article frontmatter fields are invalid.');
         }
 

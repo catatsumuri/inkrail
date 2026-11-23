@@ -1,5 +1,6 @@
 export type Article = {
     edit_version?: number;
+    topics?: string[];
     translationStatus?: Record<string, TranslationState>;
     id: number;
     resolvedLocale?: string;

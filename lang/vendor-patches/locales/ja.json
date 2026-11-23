@@ -206,5 +206,7 @@
     "Saving sync state.": "同期情報を保存しています。",
     "Could not confirm the save result.": "保存結果を確認できませんでした。",
     "Acquiring repository lock.": "リポジトリのロックを取得しています。",
-    "Committing article.": "記事をコミットしています。"
+    "Committing article.": "記事をコミットしています。",
+    "Topics": "トピック",
+    "Separate topics with commas. Add up to 5 topics, shared across article languages.": "カンマ区切りで最大5件まで入力できます。トピックは記事の各言語で共通です。"
 }

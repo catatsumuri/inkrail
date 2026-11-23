@@ -13,9 +13,12 @@ use Illuminate\Support\Str;
 
 /**
  * @property int $id
+ * @property int|null $namespace_id
+ * @property ArticleNamespace|null $namespace
  * @property int $user_id
  * @property string $title
  * @property string $content
+ * @property list<string> $topics
  * @property string $slug
  * @property bool $is_published
  * @property int $edit_version
@@ -27,8 +30,8 @@ use Illuminate\Support\Str;
  * @property string|null $zenn_local_sha SHA of the locally rendered article at the last sync; formatting may differ from the remote blob.
  * @property array<string, mixed>|null $zenn_frontmatter
  */
-#[Fillable(['title', 'content', 'slug', 'is_published'])]
-#[Hidden(['sync_id', 'zenn_repository', 'zenn_branch', 'zenn_path', 'zenn_sha', 'zenn_local_sha', 'zenn_frontmatter'])]
+#[Fillable(['title', 'content', 'slug', 'is_published', 'topics'])]
+#[Hidden(['namespace_id', 'namespace', 'sync_id', 'zenn_repository', 'zenn_branch', 'zenn_path', 'zenn_sha', 'zenn_local_sha', 'zenn_frontmatter'])]
 class Article extends Model
 {
     /** @var array<string, string> */
@@ -36,6 +39,12 @@ class Article extends Model
 
     /** @var list<string> */
     protected $with = ['translations'];
+
+    /** @return BelongsTo<ArticleNamespace, $this> */
+    public function namespace(): BelongsTo
+    {
+        return $this->belongsTo(ArticleNamespace::class, 'namespace_id');
+    }
 
     /** @return HasMany<ArticleTranslation, $this> */
     public function translations(): HasMany
@@ -65,6 +74,18 @@ class Article extends Model
         }
 
         return null;
+    }
+
+    /** @return list<string> */
+    public function getTopicsAttribute(): array
+    {
+        return array_values($this->zenn_frontmatter['topics'] ?? []);
+    }
+
+    /** @param list<string> $topics */
+    public function setTopicsAttribute(array $topics): void
+    {
+        $this->zenn_frontmatter = [...($this->zenn_frontmatter ?? []), 'topics' => $topics];
     }
 
     public function getTitleAttribute(): string
