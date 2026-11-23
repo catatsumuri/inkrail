@@ -1,11 +1,12 @@
 import ArticleLanguageNotice from '@/components/article-language-notice';
 import { lang } from '@erag/lang-sync-inertia/react';
-import { Head, Link } from '@inertiajs/react';
+import { Link } from '@inertiajs/react';
 import { ArrowLeft } from 'lucide-react';
 import { index } from '@/actions/App/Http/Controllers/PublicArticleController';
 import ArticleContent from '@/components/article-content';
 import ArticleCover from '@/components/article-cover';
 import PublicArticleHeader from '@/components/public-article-header';
+import SocialHead, { type SocialMetadata } from '@/components/social-head';
 import { cn } from '@/lib/utils';
 import type { Article } from '@/types/article';
 
@@ -13,6 +14,7 @@ export default function PublicShow({
     article,
     editableArticleId,
     publicIndexEnabled,
+    social,
 }: {
     article: Pick<
         Article,
@@ -25,12 +27,13 @@ export default function PublicShow({
     >;
     editableArticleId: number | null;
     publicIndexEnabled: boolean;
+    social: SocialMetadata;
 }) {
     const { __ } = lang();
 
     return (
         <>
-            <Head title={article.title} />
+            <SocialHead social={social} />
             <ArticleLanguageNotice resolvedLocale={article.resolvedLocale} />
             <div className="min-h-screen bg-background text-foreground">
                 <PublicArticleHeader editableArticleId={editableArticleId} />

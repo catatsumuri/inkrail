@@ -1,10 +1,11 @@
 import ArticleLanguageNotice from '@/components/article-language-notice';
 import { lang } from '@erag/lang-sync-inertia/react';
-import { Head, Link } from '@inertiajs/react';
+import { Link } from '@inertiajs/react';
 import { ArrowRight, ArrowUpRight } from 'lucide-react';
 import { show } from '@/actions/App/Http/Controllers/PublicArticleController';
 import ArticleCover from '@/components/article-cover';
 import PublicArticleHeader from '@/components/public-article-header';
+import SocialHead, { type SocialMetadata } from '@/components/social-head';
 import { cn } from '@/lib/utils';
 import type { Article } from '@/types/article';
 
@@ -18,12 +19,18 @@ type Articles = {
     next_page_url: string | null;
 };
 
-export default function PublicIndex({ articles }: { articles: Articles }) {
+export default function PublicIndex({
+    articles,
+    social,
+}: {
+    articles: Articles;
+    social: SocialMetadata;
+}) {
     const { __ } = lang();
 
     return (
         <>
-            <Head title={__('Public articles')} />
+            <SocialHead social={social} />
             <div className="min-h-screen bg-background text-foreground">
                 <PublicArticleHeader />
                 <main className="mx-auto max-w-5xl px-6 pt-14 pb-20 sm:pt-20">
