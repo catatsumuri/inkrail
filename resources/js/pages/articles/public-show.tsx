@@ -4,6 +4,7 @@ import { Head, Link } from '@inertiajs/react';
 import { ArrowLeft } from 'lucide-react';
 import { index } from '@/actions/App/Http/Controllers/PublicArticleController';
 import ArticleContent from '@/components/article-content';
+import ArticleCover from '@/components/article-cover';
 import PublicArticleHeader from '@/components/public-article-header';
 import type { Article } from '@/types/article';
 
@@ -12,7 +13,10 @@ export default function PublicShow({
     editableArticleId,
     publicIndexEnabled,
 }: {
-    article: Pick<Article, 'title' | 'content' | 'slug' | 'resolvedLocale'>;
+    article: Pick<
+        Article,
+        'title' | 'content' | 'slug' | 'resolvedLocale' | 'eyecatch_url'
+    >;
     editableArticleId: number | null;
     publicIndexEnabled: boolean;
 }) {
@@ -35,6 +39,13 @@ export default function PublicShow({
                         </Link>
                     )}
                     <article className="space-y-8">
+                        {article.eyecatch_url && (
+                            <ArticleCover
+                                src={article.eyecatch_url}
+                                title={article.title}
+                                className="aspect-video rounded-2xl"
+                            />
+                        )}
                         <h1 className="text-3xl font-semibold break-words">
                             {article.title}
                         </h1>

@@ -240,5 +240,11 @@
     "Backup deleted.": "Backup deleted.",
     "Description (optional)": "Description (optional)",
     "Create a backup?": "Create a backup?",
-    "Every article with its translations, history and images will be saved.": "Every article with its translations, history and images will be saved."
+    "Every article with its translations, history and images will be saved.": "Every article with its translations, history and images will be saved.",
+    "Ideas, notes, and things worth sharing.": "Ideas, notes, and things worth sharing.",
+    "All stories": "All stories",
+    "Read article": "Read article",
+    "Cover image": "Cover image",
+    "Upload image": "Upload image",
+    "Upload a cover or enter an image filename. Leave empty for a typographic cover.": "Upload a cover or enter an image filename. Leave empty for a typographic cover."
 }

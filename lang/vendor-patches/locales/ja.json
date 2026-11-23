@@ -239,5 +239,11 @@
     "Backup deleted.": "バックアップを削除しました。",
     "Description (optional)": "説明(任意)",
     "Create a backup?": "バックアップを作成しますか?",
-    "Every article with its translations, history and images will be saved.": "すべての記事を、翻訳・履歴・画像ごと保存します。"
+    "Every article with its translations, history and images will be saved.": "すべての記事を、翻訳・履歴・画像ごと保存します。",
+    "Ideas, notes, and things worth sharing.": "アイデア、記録、伝えたいこと。",
+    "All stories": "すべての記事",
+    "Read article": "記事を読む",
+    "Cover image": "アイキャッチ画像",
+    "Upload image": "画像をアップロード",
+    "Upload a cover or enter an image filename. Leave empty for a typographic cover.": "画像をアップロードするか、画像ファイル名を入力してください。未指定の場合はタイトルの表紙を表示します。"
 }

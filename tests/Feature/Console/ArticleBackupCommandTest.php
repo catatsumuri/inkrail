@@ -53,6 +53,7 @@ test('a backup restores articles with revision history, reviews, images and meta
     $article = createBackedUpArticle($owner);
     $image = ArticleImage::factory()->for($owner)->create(['path' => hash('sha256', 'image-bytes').'.png']);
     Storage::disk('public')->put($image->storagePath(), 'image-bytes');
+    $article->update(['eyecatch' => $image->path]);
     $expected = [
         'sync_id' => $article->sync_id,
         'edit_version' => $article->edit_version,
@@ -70,6 +71,7 @@ test('a backup restores articles with revision history, reviews, images and meta
     $this->artisan('articles:restore', ['path' => $this->backupPath])->assertSuccessful();
 
     $restored = Article::query()->where('slug', 'backed-up')->firstOrFail();
+    expect($restored->eyecatch_url)->toBe('/images/'.$image->path);
     expect($restored->sync_id)->toBe($expected['sync_id'])
         ->and($restored->user_id)->toBe($newOwner->id)
         ->and($restored->is_published)->toBeTrue()

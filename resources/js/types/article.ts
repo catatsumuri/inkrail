@@ -1,6 +1,8 @@
 export type Article = {
     edit_version?: number;
     topics?: string[];
+    eyecatch?: string | null;
+    eyecatch_url?: string | null;
     translationStatus?: Record<string, TranslationState>;
     id: number;
     resolvedLocale?: string;

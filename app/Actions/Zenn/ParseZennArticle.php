@@ -3,6 +3,7 @@
 namespace App\Actions\Zenn;
 
 use App\Exceptions\ZennImportException;
+use App\Support\ArticleEyecatch;
 use DateTimeInterface;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -55,6 +56,7 @@ class ParseZennArticle
             'inkrail_id' => ['sometimes', 'required', 'uuid'],
             'namespace' => ['sometimes', 'nullable', 'string', 'max:255', 'regex:/\A[a-z0-9]+(?:-[a-z0-9]+)*\z/'],
             'emoji' => ['sometimes', 'string'],
+            'eyecatch' => ['sometimes', 'nullable', 'string', 'max:255', 'regex:'.ArticleEyecatch::PATTERN],
             'type' => ['sometimes', 'in:tech,idea'],
             'topics' => ['sometimes', 'array', 'max:5'],
             'topics.*' => ['string'],

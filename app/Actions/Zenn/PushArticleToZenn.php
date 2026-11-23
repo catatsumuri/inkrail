@@ -100,7 +100,7 @@ class PushArticleToZenn
             $progress?->__invoke('progress', ['message' => 'Checking and syncing images.']);
             $imagesChanged = ($this->syncImages)(
                 $article->translations->firstWhere('locale', RenderZennArticle::LOCALE)->content ?? '',
-                $client, $repository, $branch, $checkLock,
+                $client, $repository, $branch, $checkLock, $article->eyecatch_url,
             );
 
             if ($sha === $this->blobSha($markdown)) {

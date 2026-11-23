@@ -61,3 +61,15 @@ test('keeps images that only an earlier revision references', function () {
     expect(Article::query()->find($article->id)->content)->toBe('画像を消した本文');
     $this->assertModelExists($image);
 });
+
+test('keeps images used only as article covers', function (bool $withPrefix) {
+    $image = storedArticleImage(now()->subDays(8));
+    $article = User::factory()->create()->articles()->create(['title' => 'Cover']);
+    $article->zenn_frontmatter = ['eyecatch' => $withPrefix ? $image->url() : $image->path];
+    $article->save();
+
+    $this->artisan('article-images:prune')->assertSuccessful();
+
+    $this->assertModelExists($image);
+    Storage::disk('public')->assertExists($image->storagePath());
+})->with([false, true]);
