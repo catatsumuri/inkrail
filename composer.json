@@ -31,6 +31,7 @@
         "laravel/slack-notification-channel": "^3.10",
         "laravel/tinker": "^3.0",
         "laravel/wayfinder": "^0.1.14",
+        "league/flysystem-aws-s3-v3": "^3.0",
         "spatie/laravel-activitylog": "^5.1",
         "symfony/yaml": "^8.1"
     },
