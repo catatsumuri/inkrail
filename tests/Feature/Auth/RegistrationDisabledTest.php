@@ -57,8 +57,13 @@ class RegistrationDisabledTest extends TestCase
 
     public function test_login_page_reports_registration_as_disabled(): void
     {
-        $this->get(route('login'))->assertOk();
+        $this->get(route('login'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('auth/login')
+                ->where('features.registration', false));
 
-        $this->get('/')->assertInertia(fn ($page) => $page->where('features.registration', false));
+        $this->get('/')
+            ->assertInertia(fn ($page) => $page->where('features.registration', false));
     }
 }
