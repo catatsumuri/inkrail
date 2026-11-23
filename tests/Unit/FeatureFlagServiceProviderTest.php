@@ -70,4 +70,44 @@ class FeatureFlagServiceProviderTest extends TestCase
         $this->assertTrue(Features::enabled(Features::registration()));
         $this->assertTrue(Features::enabled(Features::passkeys()));
     }
+
+    public function test_disabling_password_confirmation_clears_the_fortify_options(): void
+    {
+        config([
+            'fortify-options.two-factor-authentication.confirmPassword' => true,
+            'fortify-options.passkeys.confirmPassword' => true,
+            'features.password_confirmation' => false,
+        ]);
+
+        (new FeatureFlagServiceProvider($this->app))->register();
+
+        $this->assertFalse(config('fortify-options.two-factor-authentication.confirmPassword'));
+        $this->assertFalse(config('fortify-options.passkeys.confirmPassword'));
+    }
+
+    public function test_all_flags_are_forced_on_while_generating_frontend_routes(): void
+    {
+        $argv = $_SERVER['argv'] ?? null;
+        $_SERVER['argv'] = ['artisan', 'wayfinder:generate'];
+
+        try {
+            config(['features' => [
+                'registration' => false,
+                'passkeys' => false,
+                'two_factor' => false,
+                'password_confirmation' => false,
+                'unrelated' => false,
+            ]]);
+
+            (new FeatureFlagServiceProvider($this->app))->register();
+
+            $this->assertTrue(config('features.registration'));
+            $this->assertTrue(config('features.passkeys'));
+            $this->assertTrue(config('features.two_factor'));
+            $this->assertTrue(config('features.password_confirmation'));
+            $this->assertFalse(config('features.unrelated'));
+        } finally {
+            $_SERVER['argv'] = $argv;
+        }
+    }
 }
