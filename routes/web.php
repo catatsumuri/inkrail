@@ -54,15 +54,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('articles/{article}/zenn', ZennPushController::class)->name('articles.zenn.push');
     Route::resource('articles', ArticleController::class);
 
-    Route::get('dashboard', DashboardController::class)->name('dashboard');
+    Route::get('dashboard', DashboardController::class)->withoutMiddleware('verified')->name('dashboard');
     Route::post('zenn/import', ZennImportController::class)->middleware('throttle:6,1')->name('zenn.import');
 
     Route::prefix('backups')->name('backups.')->middleware('throttle:10,1')->where(['filename' => 'inkrail-[0-9]{8}-[0-9]{6}(-[a-z0-9]{4})?\.zip'])->group(function () {
-        Route::post('/', [ArticleBackupController::class, 'store'])->name('store');
-        Route::post('upload', [ArticleBackupController::class, 'upload'])->name('upload');
-        Route::get('{filename}', [ArticleBackupController::class, 'download'])->name('download');
-        Route::post('{filename}/restore', [ArticleBackupController::class, 'restore'])->name('restore');
-        Route::delete('{filename}', [ArticleBackupController::class, 'destroy'])->name('destroy');
+        Route::post('/', [ArticleBackupController::class, 'store'])->withoutMiddleware('verified')->name('store');
+        Route::post('upload', [ArticleBackupController::class, 'upload'])->withoutMiddleware('verified')->name('upload');
+        Route::get('{filename}', [ArticleBackupController::class, 'download'])->withoutMiddleware('verified')->name('download');
+        Route::post('{filename}/restore', [ArticleBackupController::class, 'restore'])->withoutMiddleware('verified')->name('restore');
+        Route::delete('{filename}', [ArticleBackupController::class, 'destroy'])->withoutMiddleware('verified')->name('destroy');
     });
 
     Route::get('admin/security-events', SecurityEventController::class)

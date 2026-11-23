@@ -106,7 +106,8 @@ class OptionalEmailTest extends TestCase
         $this->skipUnlessFortifyHas(Features::emailVerification());
         $user = User::factory()->unverified()->create();
 
-        $this->actingAs($user)->get(route('dashboard'))->assertRedirect(route('verification.notice'));
+        $this->actingAs($user)->get(route('dashboard'))->assertOk();
+        $this->actingAs($user)->get(route('articles.index'))->assertRedirect(route('verification.notice'));
     }
 
     public function test_an_account_without_an_email_is_never_a_security_log_viewer(): void

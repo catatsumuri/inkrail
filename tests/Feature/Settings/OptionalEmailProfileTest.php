@@ -86,7 +86,8 @@ class OptionalEmailProfileTest extends TestCase
             'current_password' => 'password',
         ]);
 
-        $this->actingAs($user->fresh())->get(route('dashboard'))
+        $this->actingAs($user->fresh())->get(route('dashboard'))->assertOk();
+        $this->actingAs($user->fresh())->get(route('articles.index'))
             ->assertRedirect(route('verification.notice'));
     }
 
