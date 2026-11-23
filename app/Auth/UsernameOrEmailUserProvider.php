@@ -2,8 +2,10 @@
 
 namespace App\Auth;
 
+use Closure;
 use Illuminate\Auth\EloquentUserProvider;
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
@@ -39,9 +41,26 @@ class UsernameOrEmailUserProvider extends EloquentUserProvider
 
         $login = Str::lower($login);
 
-        $user = $this->newModelQuery()
-            ->where(fn ($query) => $query->where('username', $login)->orWhere('email', $login))
-            ->first();
+        $query = $this->newModelQuery()
+            ->where(fn ($query) => $query->where('username', $login)->orWhere('email', $login));
+
+        // Any other condition passed alongside "login" still has to hold, exactly
+        // as in the parent implementation.
+        foreach ($credentials as $key => $value) {
+            if ($key === self::LOGIN_KEY || str_contains($key, 'password')) {
+                continue;
+            }
+
+            if (is_array($value) || $value instanceof Arrayable) {
+                $query->whereIn($key, $value);
+            } elseif ($value instanceof Closure) {
+                $value($query);
+            } else {
+                $query->where($key, $value);
+            }
+        }
+
+        $user = $query->first();
 
         return $user instanceof Authenticatable ? $user : null;
     }

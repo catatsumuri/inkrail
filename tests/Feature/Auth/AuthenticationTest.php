@@ -2,8 +2,10 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Auth\LoginThrottleKey;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Laravel\Fortify\Features;
 use Tests\TestCase;
@@ -82,7 +84,11 @@ class AuthenticationTest extends TestCase
     {
         $user = User::factory()->create();
 
-        RateLimiter::increment(md5('login'.implode('|', [$user->email, '127.0.0.1'])), amount: 5);
+        // The limiter is keyed per account, so a user's username and email
+        // address share it; the request IP is 127.0.0.1 in tests.
+        $request = Request::create('/login', 'POST', ['login' => $user->email], server: ['REMOTE_ADDR' => '127.0.0.1']);
+
+        RateLimiter::increment(md5('login'.LoginThrottleKey::for($request)), amount: 5);
 
         $response = $this->post(route('login.store'), [
             'login' => $user->email,

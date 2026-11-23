@@ -90,21 +90,44 @@ class UsernameLoginTest extends TestCase
         $this->assertSame($unknownMessage, $knownMessage);
     }
 
-    public function test_failed_attempts_are_throttled_per_login_value(): void
+    public function test_username_and_email_share_one_throttle_allowance(): void
     {
         $user = User::factory()->withUsername('alice')->create();
+
+        // Alternating identifiers must not buy extra guesses at one account.
+        foreach (['alice', $user->email, 'alice', $user->email, 'ALICE'] as $login) {
+            $this->post(route('login.store'), ['login' => $login, 'password' => 'wrong-password']);
+        }
+
+        $this->post(route('login.store'), ['login' => 'alice', 'password' => 'password']);
+        $this->assertGuest();
+
+        $this->post(route('login.store'), ['login' => $user->email, 'password' => 'password']);
+        $this->assertGuest();
+    }
+
+    public function test_throttling_one_account_does_not_lock_other_accounts(): void
+    {
+        User::factory()->withUsername('alice')->create();
+        $bob = User::factory()->withUsername('bob')->create();
 
         for ($i = 0; $i < 5; $i++) {
             $this->post(route('login.store'), ['login' => 'alice', 'password' => 'wrong-password']);
         }
 
-        $this->post(route('login.store'), ['login' => 'alice', 'password' => 'password']);
+        $this->post(route('login.store'), ['login' => 'bob', 'password' => 'password']);
 
-        $this->assertGuest();
+        $this->assertAuthenticatedAs($bob);
+    }
 
-        $this->post(route('login.store'), ['login' => $user->email, 'password' => 'password']);
+    public function test_unknown_logins_are_throttled_like_known_ones(): void
+    {
+        for ($i = 0; $i < 5; $i++) {
+            $this->post(route('login.store'), ['login' => 'nobody', 'password' => 'wrong-password']);
+        }
 
-        $this->assertAuthenticatedAs($user);
+        $this->post(route('login.store'), ['login' => 'nobody', 'password' => 'wrong-password'])
+            ->assertStatus(429);
     }
 
     public function test_signing_in_with_a_username_still_requires_the_two_factor_challenge(): void
