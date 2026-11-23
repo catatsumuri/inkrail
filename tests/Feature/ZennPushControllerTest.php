@@ -53,7 +53,7 @@ test('commits the Japanese version to the Zenn repository and records the action
 
     $requests = pushedRequests();
     expect($requests)->toHaveCount(1);
-    expect($requests[0]->url())->toMatch('#/contents/articles/inkrail-sync-[0-9a-f]{8}\.md$#');
+    expect($requests[0]->url())->toEndWith('/contents/articles/inkrail-sync.md');
     expect($requests[0]->hasHeader('Authorization', 'Bearer secret-token'))->toBeTrue();
     expect($requests[0]['branch'])->toBe('main');
     expect($requests[0]->data())->not->toHaveKey('sha');
@@ -250,6 +250,7 @@ test('does not adopt a colliding legacy export even when its content matches', f
     expect($requests)->toHaveCount(1);
     expect($requests[0]->data())->not->toHaveKey('sha');
     expect(base64_decode($requests[0]['content']))->toContain("inkrail_id: \"{$article->sync_id}\"");
+    expect($requests[0]->url())->toMatch('#/contents/articles/inkrail-sync-[0-9a-f]{8}\.md$#');
     $reads = Http::recorded(fn (Request $request): bool => $request->method() === 'GET')->values();
     expect($reads)->toHaveCount(2);
     expect($requests[0]->url())->not->toBe(strtok($reads[0][0]->url(), '?'));

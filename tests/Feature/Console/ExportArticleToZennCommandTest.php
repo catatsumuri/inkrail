@@ -34,7 +34,7 @@ test('exports only the Japanese version with Zenn frontmatter', function () {
 
     $files = File::files($this->zennRepository.'/articles');
     expect($files)->toHaveCount(1);
-    expect($files[0]->getFilename())->toMatch('/^inkrail-sync-[0-9a-f]{8}\.md$/');
+    expect($files[0]->getFilename())->toBe('inkrail-sync.md');
     expect(File::get($files[0]->getPathname()))->toBe(
         "---\ntitle: \"日本語の \\\"題名\\\"\"\nemoji: \"📝\"\ntype: \"tech\"\ntopics: []\npublished: true\ninkrail_id: \"{$article->sync_id}\"\n---\n\n日本語の本文\n\n:::message\n補足\n:::\n"
     );
@@ -106,6 +106,26 @@ test('fails when the article has no Japanese version', function () {
     $this->artisan('articles:export-zenn', ['slug' => 'english-only', '--path' => $this->zennRepository])->assertFailed();
 
     expect(File::files($this->zennRepository.'/articles'))->toBeEmpty();
+});
+
+test('preserves valid readable slugs without reserving space for a suffix', function (string $slug) {
+    createBilingualArticle($slug, true);
+
+    $this->artisan('articles:export-zenn', ['slug' => $slug, '--path' => $this->zennRepository])->assertSuccessful();
+
+    expect(File::files($this->zennRepository.'/articles')[0]->getFilenameWithoutExtension())->toBe($slug);
+})->with(['readable' => 'catatsumurii-github-sync', 'maximum length' => str_repeat('a', 50)]);
+
+test('adds a suffix only when the readable filename belongs to another article', function () {
+    createBilingualArticle('inkrail-sync', true);
+    $existingPath = $this->zennRepository.'/articles/inkrail-sync.md';
+    File::put($existingPath, "---\ntitle: Existing\n---\n\nKeep me\n");
+
+    $this->artisan('articles:export-zenn', ['slug' => 'inkrail-sync', '--path' => $this->zennRepository])->assertSuccessful();
+
+    expect(File::files($this->zennRepository.'/articles'))->toHaveCount(2);
+    expect(File::get($existingPath))->toBe("---\ntitle: Existing\n---\n\nKeep me\n");
+    expect(collect(File::files($this->zennRepository.'/articles'))->filter(fn (SplFileInfo $file): bool => preg_match('/^inkrail-sync-[0-9a-f]{8}\.md$/', $file->getFilename()) === 1))->toHaveCount(1);
 });
 
 test('fails when the article does not exist', function () {
