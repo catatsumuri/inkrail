@@ -1,11 +1,13 @@
 <?php
 
+use App\Actions\Backup\RestoreArticleBackup;
 use App\Models\Article;
 use App\Models\ArticleImage;
 use App\Models\ArticleNamespace;
 use App\Models\ArticleRevision;
 use App\Models\ArticleTranslationReview;
 use App\Models\User;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
@@ -49,7 +51,7 @@ function wipeArticles(): void
 test('a backup restores articles with revision history, reviews, images and metadata', function () {
     $owner = User::factory()->withUsername('writer')->create();
     $article = createBackedUpArticle($owner);
-    $image = ArticleImage::factory()->for($owner)->create();
+    $image = ArticleImage::factory()->for($owner)->create(['path' => hash('sha256', 'image-bytes').'.png']);
     Storage::disk('public')->put($image->storagePath(), 'image-bytes');
     $expected = [
         'sync_id' => $article->sync_id,
@@ -148,4 +150,71 @@ test('restore rejects image paths that escape the image directory', function () 
     $this->artisan('articles:restore', ['path' => $this->backupPath])->assertFailed();
 
     Storage::disk('public')->assertMissing('evil.php');
+});
+
+function archiveWithImages(string $path, array $images): void
+{
+    $zip = new ZipArchive;
+    $zip->open($path, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+    $zip->addFromString('manifest.json', json_encode(['format' => 1]));
+    $zip->addFromString('data.json', json_encode(['images' => array_map(
+        fn (string $name): array => ['path' => $name, 'mime' => 'image/png', 'size' => 1, 'owner' => null, 'created_at' => null, 'updated_at' => null],
+        array_keys($images),
+    )]));
+
+    foreach ($images as $name => $bytes) {
+        if ($bytes !== null) {
+            $zip->addFromString('_files/'.$name, $bytes);
+        }
+    }
+
+    $zip->close();
+}
+
+test('a missing or damaged image aborts the restore before any image is written', function () {
+    User::factory()->create();
+    $good = hash('sha256', 'good').'.png';
+    $missing = hash('sha256', 'missing').'.png';
+    $damaged = hash('sha256', 'expected').'.png';
+
+    archiveWithImages($this->backupPath, [$good => 'good', $missing => null]);
+    $this->artisan('articles:restore', ['path' => $this->backupPath])->expectsOutputToContain('missing the image file')->assertFailed();
+
+    archiveWithImages($this->backupPath, [$good => 'good', $damaged => 'tampered']);
+    $this->artisan('articles:restore', ['path' => $this->backupPath])->expectsOutputToContain('damaged')->assertFailed();
+
+    Storage::disk('public')->assertMissing(ArticleImage::DIRECTORY.'/'.$good);
+    expect(ArticleImage::count())->toBe(0);
+});
+
+test('images written by a restore that later fails are removed again', function () {
+    User::factory()->create();
+    $first = hash('sha256', 'first').'.png';
+    $second = hash('sha256', 'second').'.png';
+    archiveWithImages($this->backupPath, [$first => 'first', $second => 'second']);
+    $zip = new ZipArchive;
+    $zip->open($this->backupPath);
+    $zip->addFromString('data.json', json_encode(['images' => [
+        ['path' => $first, 'mime' => 'image/png', 'size' => 1, 'owner' => null, 'created_at' => null, 'updated_at' => null],
+        ['path' => $second, 'mime' => null, 'size' => 1, 'owner' => null, 'created_at' => null, 'updated_at' => null],
+    ]]));
+    $zip->close();
+
+    expect(fn () => app(RestoreArticleBackup::class)($this->backupPath))->toThrow(QueryException::class);
+
+    Storage::disk('public')->assertMissing(ArticleImage::DIRECTORY.'/'.$first);
+    Storage::disk('public')->assertMissing(ArticleImage::DIRECTORY.'/'.$second);
+    expect(ArticleImage::count())->toBe(0);
+});
+
+test('an image that already exists is not overwritten', function () {
+    User::factory()->create();
+    $name = hash('sha256', 'same').'.png';
+    Storage::disk('public')->put(ArticleImage::DIRECTORY.'/'.$name, 'already there');
+    archiveWithImages($this->backupPath, [$name => 'same']);
+
+    $this->artisan('articles:restore', ['path' => $this->backupPath])->assertSuccessful();
+
+    expect(Storage::disk('public')->get(ArticleImage::DIRECTORY.'/'.$name))->toBe('already there');
+    expect(ArticleImage::where('path', $name)->exists())->toBeTrue();
 });

@@ -44,28 +44,37 @@ class RestoreArticleBackup
             $users = User::query()->whereNotNull('username')->pluck('id', 'username');
             $resolveUser = fn (?string $username): int => $users->get($username, $fallbackUser->id);
 
-            return DB::transaction(function () use ($zip, $data, $users, $resolveUser): array {
-                $namespaceIds = $this->restoreNamespaces($data['namespaces'] ?? []);
-                $counts = ['articles' => 0, 'created' => 0, 'updated' => 0];
+            $images = $this->verifiedImages($zip, $data['images'] ?? []);
+            $writtenImages = [];
 
-                foreach ($data['articles'] ?? [] as $article) {
-                    $existingId = DB::table('articles')->where('sync_id', $article['sync_id'])->value('id');
+            try {
+                return DB::transaction(function () use ($zip, $data, $users, $resolveUser, $images, &$writtenImages): array {
+                    $namespaceIds = $this->restoreNamespaces($data['namespaces'] ?? []);
+                    $counts = ['articles' => 0, 'created' => 0, 'updated' => 0];
 
-                    $this->assertNoConflicts($article, $existingId);
+                    foreach ($data['articles'] ?? [] as $article) {
+                        $existingId = DB::table('articles')->where('sync_id', $article['sync_id'])->value('id');
 
-                    $articleId = $this->storeArticle($article, $existingId, $namespaceIds, $resolveUser);
-                    $this->storeHistory($articleId, $article, fn (?string $username): ?int => $users->get($username));
+                        $this->assertNoConflicts($article, $existingId);
 
-                    $counts['articles']++;
-                    $counts[$existingId === null ? 'created' : 'updated']++;
-                }
+                        $articleId = $this->storeArticle($article, $existingId, $namespaceIds, $resolveUser);
+                        $this->storeHistory($articleId, $article, fn (?string $username): ?int => $users->get($username));
 
-                return [
-                    ...$counts,
-                    'namespaces' => count($namespaceIds),
-                    'images' => $this->restoreImages($zip, $data['images'] ?? [], $resolveUser),
-                ];
-            });
+                        $counts['articles']++;
+                        $counts[$existingId === null ? 'created' : 'updated']++;
+                    }
+
+                    return [
+                        ...$counts,
+                        'namespaces' => count($namespaceIds),
+                        'images' => $this->restoreImages($zip, $images, $resolveUser, $writtenImages),
+                    ];
+                });
+            } catch (\Throwable $exception) {
+                $this->discardWrittenImages($writtenImages);
+
+                throw $exception;
+            }
         } finally {
             $zip->close();
         }
@@ -282,40 +291,81 @@ class RestoreArticleBackup
     }
 
     /**
+     * Check every image in the archive before anything is written: the path
+     * must be a content-hash name, the file must be present, and its bytes
+     * must hash to that name. A damaged archive therefore fails up front
+     * instead of half way through the restore.
+     *
      * @param  list<array<string, mixed>>  $images
-     * @param  callable(?string): int  $resolveUser
+     * @return list<array<string, mixed>>
      */
-    private function restoreImages(ZipArchive $zip, array $images, callable $resolveUser): int
+    private function verifiedImages(ZipArchive $zip, array $images): array
     {
-        $disk = Storage::disk(ArticleImage::disk());
-        $restored = 0;
-
         foreach ($images as $image) {
             $imagePath = (string) $image['path'];
 
-            if (preg_match('/\A[A-Za-z0-9][A-Za-z0-9._-]*\z/', $imagePath) !== 1 || str_contains($imagePath, '..')) {
+            if (preg_match('/\A([0-9a-f]{64})\.(png|jpg|gif|webp)\z/', $imagePath, $matches) !== 1) {
                 throw new RuntimeException('The backup archive contains an invalid image path.');
             }
 
-            $bytes = $zip->getFromName(CreateArticleBackup::FILES_DIRECTORY.$imagePath);
+            $stream = $zip->getStream(CreateArticleBackup::FILES_DIRECTORY.$imagePath);
 
-            if ($bytes === false) {
-                continue;
+            if (! is_resource($stream)) {
+                throw new RuntimeException("The backup archive is missing the image file {$imagePath}.");
             }
 
-            $disk->put(ArticleImage::DIRECTORY.'/'.$imagePath, $bytes);
+            $hash = hash_init('sha256');
+            hash_update_stream($hash, $stream);
+            fclose($stream);
 
-            DB::table('article_images')->updateOrInsert(['path' => $imagePath], [
+            if (! hash_equals($matches[1], hash_final($hash))) {
+                throw new RuntimeException("The image file {$imagePath} in the backup archive is damaged.");
+            }
+        }
+
+        return $images;
+    }
+
+    /**
+     * Image files are named after their content, so an existing file is already
+     * the right one and is never overwritten. Newly written paths are collected
+     * so a failed restore can remove them again.
+     *
+     * @param  list<array<string, mixed>>  $images
+     * @param  callable(?string): int  $resolveUser
+     * @param  list<string>  $written
+     */
+    private function restoreImages(ZipArchive $zip, array $images, callable $resolveUser, array &$written): int
+    {
+        $disk = Storage::disk(ArticleImage::disk());
+
+        foreach ($images as $image) {
+            $imagePath = ArticleImage::DIRECTORY.'/'.$image['path'];
+
+            if (! $disk->exists($imagePath)) {
+                $disk->put($imagePath, (string) $zip->getFromName(CreateArticleBackup::FILES_DIRECTORY.$image['path']));
+                $written[] = $imagePath;
+            }
+
+            DB::table('article_images')->updateOrInsert(['path' => $image['path']], [
                 'user_id' => $resolveUser($image['owner']),
                 'mime' => $image['mime'],
                 'size' => $image['size'],
                 'created_at' => $image['created_at'],
                 'updated_at' => $image['updated_at'],
             ]);
-
-            $restored++;
         }
 
-        return $restored;
+        return count($images);
+    }
+
+    /**
+     * @param  list<string>  $paths
+     */
+    private function discardWrittenImages(array $paths): void
+    {
+        foreach ($paths as $path) {
+            Storage::disk(ArticleImage::disk())->delete($path);
+        }
     }
 }

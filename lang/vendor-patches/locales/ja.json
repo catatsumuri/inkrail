@@ -224,7 +224,7 @@
     "Download": "ダウンロード",
     "Restore": "復元",
     "Restore this backup?": "このバックアップを復元しますか?",
-    "Articles in the backup overwrite articles with the same ID, including their translations and history. Nothing is deleted, and articles not in the backup are kept.": "バックアップ内の記事は、同じIDの記事を翻訳や履歴ごと上書きします。削除は行われず、バックアップに含まれない記事はそのまま残ります。",
+    "Articles in the backup overwrite the articles they were saved from, matched by their sync ID rather than the database ID, including translations and history. Nothing is deleted, and articles not in the backup are kept.": "バックアップ内の記事は、保存元の記事を翻訳や履歴ごと上書きします。照合にはデータベースのIDではなく同期ID(sync ID)を使います。削除は行われず、バックアップに含まれない記事はそのまま残ります。",
     "Type \"restore\" to confirm": "確認のため「restore」と入力してください",
     "Restore backup": "バックアップを復元する",
     "Delete backup": "バックアップを削除",
