@@ -50,6 +50,18 @@ class UserFactory extends Factory
     }
 
     /**
+     * An account that has no email address (it signs in with its username).
+     */
+    public function withoutEmail(string $username = 'tester'): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'username' => $username,
+            'email' => null,
+            'email_verified_at' => null,
+        ]);
+    }
+
+    /**
      * Indicate that the model's email address should be unverified.
      */
     public function unverified(): static

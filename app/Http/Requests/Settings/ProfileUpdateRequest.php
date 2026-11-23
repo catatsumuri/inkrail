@@ -42,6 +42,8 @@ class ProfileUpdateRequest extends FormRequest
             // Accounts created before usernames existed may leave it empty,
             // but a username that has been set can be changed, never removed.
             'username' => $this->usernameRules($this->user()->id, required: $this->user()->username !== null),
+            // Same for the email address: it may be added or changed, never removed.
+            'email' => $this->emailRules($this->user()->id, required: $this->user()->email !== null),
             'current_password' => $this->isChangingEmail() || $this->isChangingUsername()
                 ? ['bail', ...$this->currentPasswordRules()]
                 : ['nullable'],
@@ -73,7 +75,7 @@ class ProfileUpdateRequest extends FormRequest
     {
         $email = $this->input('email');
 
-        return ! is_string($email) || $email !== $this->user()->email;
+        return (is_string($email) ? $email : null) !== $this->user()->email;
     }
 
     /**

@@ -87,6 +87,27 @@ remove a helper the pages import and break the build.
    running test cannot remove routes that are already registered.
 6. Document the consequences of turning it off in this file.
 
+## Accounts without an email address
+
+Registration requires a username; the email address is optional. Accounts
+that have none behave as follows:
+
+- **Verification.** There is nothing to verify, so they pass the `verified`
+  middleware (`EnsureEmailIsVerifiedWhenPresent`, aliased in
+  `bootstrap/app.php`). An account that has an email address is still checked
+  as before, including right after it adds one.
+- **Notifications.** Security notices that would be mailed are delivered as
+  in-app notifications instead.
+- **Password reset.** The self-service reset works by email only. **There is
+  no recovery path yet for an account without an email address that forgot its
+  password**; an operator command for it is planned but not implemented.
+- **Security log.** Access requires a verified email address, so these accounts
+  can never be viewers.
+- **Email address.** It can be added or changed (with the current password)
+  but not removed once set, like the username.
+- **Database.** `users.email` is nullable. Rolling the migration back fails
+  while any account without an email exists.
+
 ## Merging upstream into `extended`
 
 `extended` follows this repository's `main`. When `main` moves, merge it in and
@@ -115,6 +136,11 @@ a conflict:
 | `config/auth.php`                                                                      | The users provider driver is `eloquent-login`. Keep it.                                                                                                                                                           |
 | `CreateNewUser`, `ProfileValidationRules`, `ProfileUpdateRequest`, `ProfileController` | Handle `username`, including lowercasing and the current-password requirement. Re-apply on top of upstream's version.                                                                                             |
 | `login.tsx`, `register.tsx`, `profile.tsx`                                             | The login field is named `login`; the username field was added.                                                                                                                                                   |
+
+The optional email address also touches `bootstrap/app.php` (the `verified`
+alias), `User`, `SendGeneralNotification`, `ResolveSecurityUser`, the two
+Artisan commands that print a user, and `user-info.tsx`. Keep the
+null-tolerant behaviour described above when resolving a conflict there.
 
 After resolving, run the whole suite, the formatter check (`npm run check`,
 ideally in a clean checkout so untracked files do not affect it) and

@@ -148,6 +148,21 @@ class NotificationTest extends TestCase
         (new SendGeneralNotification)->toAlertRecipients('Down', 'Body', 'http://example.com');
     }
 
+    public function test_the_notification_command_finds_a_user_by_username(): void
+    {
+        Notification::fake();
+        $user = User::factory()->withUsername('alice')->create(['email' => null]);
+
+        $this->artisan('notifications:send', [
+            'user' => 'Alice',
+            '--title' => 'Hello',
+            '--body' => 'Body',
+            '--url' => '',
+        ])->expectsOutputToContain("Notification sent to {$user->name} (alice).")->assertSuccessful();
+
+        Notification::assertSentTo($user, GeneralNotification::class);
+    }
+
     public function test_the_alert_command_sends_to_requested_channels(): void
     {
         Notification::fake();

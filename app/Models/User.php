@@ -19,7 +19,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property int $id
  * @property string $name
  * @property string|null $username
- * @property string $email
+ * @property string|null $email
  * @property Carbon|null $email_verified_at
  * @property string $password
  * @property string|null $two_factor_secret
@@ -41,14 +41,38 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
      *
      * Fortify's password confirmation and the two-factor QR code label read
      * $user->{Fortify::username()}. That setting is "login" (it accepts a
-     * username or an email address when signing in), so expose the email
-     * address, which always resolves to this same account.
+     * username or an email address when signing in), so expose an identifier
+     * that always resolves to this same account: the email address, or the
+     * username for an account that has none.
      *
-     * @return Attribute<string, never>
+     * @return Attribute<string|null, never>
      */
     protected function login(): Attribute
     {
-        return Attribute::get(fn (): string => $this->email);
+        return Attribute::get(fn (): ?string => $this->email ?? $this->username);
+    }
+
+    /**
+     * Send the email verification notification, unless there is no address.
+     */
+    public function sendEmailVerificationNotification(): void
+    {
+        if ($this->email === null) {
+            return;
+        }
+
+        parent::sendEmailVerificationNotification();
+    }
+
+    /**
+     * Get the username shown by authenticators for a passkey.
+     *
+     * The package falls back from the email address to the numeric ID, which
+     * would show an account that has no email as just a number.
+     */
+    public function getPasskeyUsername(): string
+    {
+        return $this->username ?? $this->email ?? (string) $this->getAuthIdentifier();
     }
 
     /**
