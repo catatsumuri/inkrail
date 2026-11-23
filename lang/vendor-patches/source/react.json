@@ -237,5 +237,6 @@
     "Backup uploaded.": "Backup uploaded.",
     "The backup could not be restored.": "The backup could not be restored.",
     "Restored :count article(s) from the backup.": "Restored :count article(s) from the backup.",
-    "Backup deleted.": "Backup deleted."
+    "Backup deleted.": "Backup deleted.",
+    "Description (optional)": "Description (optional)"
 }

@@ -26,8 +26,10 @@ class ArticleBackupController extends Controller
     {
         Gate::authorize('manage-article-backups');
 
+        $data = $request->validate(['description' => ['nullable', 'string', 'max:2000']]);
+
         try {
-            $result = $this->store->create();
+            $result = $this->store->create($data['description'] ?? null);
         } catch (Throwable $exception) {
             report($exception);
             $this->logSecurityEvent->failure('articles.backup_failed', $request->user());
@@ -60,7 +62,8 @@ class ArticleBackupController extends Controller
             throw ValidationException::withMessages(['backup' => __('The file is not a valid InkRail backup.')]);
         }
 
-        $filename = $this->store->put($path);
+        $description = app(RestoreArticleBackup::class)->manifest($path)['description'] ?? null;
+        $filename = $this->store->put($path, is_string($description) ? mb_substr($description, 0, 2000) : null);
 
         ($this->logSecurityEvent)('articles.backup_uploaded', $request->user(), ['filename' => $filename]);
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Backup uploaded.')]);

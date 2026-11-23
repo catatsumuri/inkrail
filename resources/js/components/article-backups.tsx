@@ -26,7 +26,12 @@ import { Spinner } from '@/components/ui/spinner';
 
 export type ArticleBackups = {
     disk: string;
-    items: { filename: string; size: number; created_at: string }[];
+    items: {
+        filename: string;
+        size: number;
+        created_at: string;
+        description: string | null;
+    }[];
 };
 
 function formatSize(bytes: number): string {
@@ -175,11 +180,27 @@ export default function ArticleBackupsCard({
                         {...ArticleBackupController.store.form()}
                         options={{ preserveScroll: true }}
                     >
-                        {({ processing }) => (
-                            <Button type="submit" disabled={processing}>
-                                {processing && <Spinner />}
-                                {__('Create backup')}
-                            </Button>
+                        {({ processing, errors }) => (
+                            <div className="space-y-2">
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <Input
+                                        name="description"
+                                        maxLength={2000}
+                                        placeholder={__(
+                                            'Description (optional)',
+                                        )}
+                                        aria-label={__(
+                                            'Description (optional)',
+                                        )}
+                                        className="w-64"
+                                    />
+                                    <Button type="submit" disabled={processing}>
+                                        {processing && <Spinner />}
+                                        {__('Create backup')}
+                                    </Button>
+                                </div>
+                                <InputError message={errors.description} />
+                            </div>
                         )}
                     </Form>
                     <Form
@@ -233,6 +254,11 @@ export default function ArticleBackupsCard({
                                     <p className="font-medium break-all">
                                         {backup.filename}
                                     </p>
+                                    {backup.description && (
+                                        <p className="text-sm break-words">
+                                            {backup.description}
+                                        </p>
+                                    )}
                                     <p className="text-xs text-muted-foreground">
                                         {new Intl.DateTimeFormat(undefined, {
                                             dateStyle: 'medium',

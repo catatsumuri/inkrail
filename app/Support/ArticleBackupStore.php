@@ -32,7 +32,7 @@ class ArticleBackupStore
     }
 
     /**
-     * @return list<array{filename: string, size: int, created_at: string}>
+     * @return list<array{filename: string, size: int, created_at: string, description: string|null}>
      */
     public function list(): array
     {
@@ -45,6 +45,7 @@ class ArticleBackupStore
                 'filename' => $filename,
                 'size' => $disk->size($this->path($filename)),
                 'created_at' => date(DATE_ATOM, $disk->lastModified($this->path($filename))),
+                'description' => $this->description($filename),
             ])
             ->sortByDesc('created_at')
             ->all();
@@ -69,7 +70,7 @@ class ArticleBackupStore
         try {
             $result = ($this->create)($temporary, $description);
 
-            return ['filename' => $this->put($temporary), ...$result];
+            return ['filename' => $this->put($temporary, $description), ...$result];
         } finally {
             @unlink($temporary);
         }
@@ -77,8 +78,9 @@ class ArticleBackupStore
 
     /**
      * Keep an existing local archive on the backup disk under a new name.
+     * The description is stored beside it so listing never has to open the zip.
      */
-    public function put(string $localPath): string
+    public function put(string $localPath, ?string $description = null): string
     {
         $filename = 'inkrail-'.now()->format('Ymd-His').'.zip';
 
@@ -90,7 +92,21 @@ class ArticleBackupStore
             throw new RuntimeException('The backup could not be written to the backup disk.');
         }
 
+        $description = trim((string) $description);
+
+        if ($description !== '') {
+            $this->disk()->put($this->descriptionPath($filename), json_encode(['description' => $description], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
+        }
+
         return $filename;
+    }
+
+    public function description(string $filename): ?string
+    {
+        $raw = $this->disk()->get($this->descriptionPath($filename));
+        $description = is_string($raw) ? (json_decode($raw, true)['description'] ?? null) : null;
+
+        return is_string($description) && $description !== '' ? $description : null;
     }
 
     public function download(string $filename): StreamedResponse
@@ -100,7 +116,7 @@ class ArticleBackupStore
 
     public function delete(string $filename): void
     {
-        $this->disk()->delete($this->path($filename));
+        $this->disk()->delete([$this->path($filename), $this->descriptionPath($filename)]);
     }
 
     /**
@@ -143,6 +159,11 @@ class ArticleBackupStore
     private function path(string $filename): string
     {
         return ltrim($this->directory().'/'.$filename, '/');
+    }
+
+    private function descriptionPath(string $filename): string
+    {
+        return $this->path(substr($filename, 0, -4).'.json');
     }
 
     private function disk(): Filesystem

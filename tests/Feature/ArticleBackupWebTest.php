@@ -52,10 +52,11 @@ test('the dashboard lists backups on the backup disk', function () {
 test('creating a backup stores it on the disk and is audited', function () {
     $this->owner->articles()->create(['slug' => 'one']);
 
-    $this->actingAs($this->owner)->post(route('backups.store'))->assertRedirect(route('dashboard'));
+    $this->actingAs($this->owner)->post(route('backups.store'), ['description' => 'before fresh'])->assertRedirect(route('dashboard'));
 
-    $files = Storage::disk('backups')->files('backups');
-    expect($files)->toHaveCount(1);
+    expect(Storage::disk('backups')->files('backups'))->toHaveCount(2);
+    $this->actingAs($this->owner)->get(route('dashboard'))
+        ->assertInertia(fn (Assert $page) => $page->where('backups.items.0.description', 'before fresh'));
     expect(Activity::query()->where('event', 'articles.backup_created')->count())->toBe(1);
 });
 
@@ -129,4 +130,16 @@ test('the commands use the backup disk too', function () {
     $this->artisan('articles:restore', ['path' => $filename])->assertSuccessful();
 
     expect(Article::where('slug', 'cli')->exists())->toBeTrue();
+});
+
+test('a description survives upload and is removed with the backup', function () {
+    $filename = app(ArticleBackupStore::class)->create('keep me')['filename'];
+    $contents = Storage::disk('backups')->get('backups/'.$filename);
+    app(ArticleBackupStore::class)->delete($filename);
+    expect(Storage::disk('backups')->files('backups'))->toBeEmpty();
+
+    $this->actingAs($this->owner)->post(route('backups.upload'), ['backup' => UploadedFile::fake()->createWithContent('x.zip', $contents)]);
+
+    $this->actingAs($this->owner)->get(route('dashboard'))
+        ->assertInertia(fn (Assert $page) => $page->where('backups.items.0.description', 'keep me'));
 });

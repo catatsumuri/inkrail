@@ -236,5 +236,6 @@
     "Backup uploaded.": "バックアップをアップロードしました。",
     "The backup could not be restored.": "バックアップを復元できませんでした。",
     "Restored :count article(s) from the backup.": "バックアップから:count件の記事を復元しました。",
-    "Backup deleted.": "バックアップを削除しました。"
+    "Backup deleted.": "バックアップを削除しました。",
+    "Description (optional)": "説明(任意)"
 }
