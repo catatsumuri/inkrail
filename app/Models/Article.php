@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\ArticleEyecatch;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Model;
@@ -19,6 +20,8 @@ use Illuminate\Support\Str;
  * @property string $title
  * @property string $content
  * @property list<string> $topics
+ * @property string|null $eyecatch
+ * @property string|null $eyecatch_url
  * @property string $slug
  * @property bool $is_published
  * @property int $edit_version
@@ -30,7 +33,7 @@ use Illuminate\Support\Str;
  * @property string|null $zenn_local_sha SHA of the locally rendered article at the last sync; formatting may differ from the remote blob.
  * @property array<string, mixed>|null $zenn_frontmatter
  */
-#[Fillable(['title', 'content', 'slug', 'is_published', 'topics'])]
+#[Fillable(['title', 'content', 'slug', 'is_published', 'topics', 'eyecatch'])]
 #[Hidden(['namespace_id', 'namespace', 'sync_id', 'zenn_repository', 'zenn_branch', 'zenn_path', 'zenn_sha', 'zenn_local_sha', 'zenn_frontmatter'])]
 class Article extends Model
 {
@@ -91,6 +94,26 @@ class Article extends Model
     public function getTitleAttribute(): string
     {
         return $this->pendingTranslation['title'] ?? $this->resolvedTranslation()->title ?? '';
+    }
+
+    public function getEyecatchAttribute(): ?string
+    {
+        return ArticleEyecatch::filename($this->zenn_frontmatter['eyecatch'] ?? null);
+    }
+
+    public function getEyecatchUrlAttribute(): ?string
+    {
+        return $this->eyecatch === null ? null : '/images/'.$this->eyecatch;
+    }
+
+    public function setEyecatchAttribute(?string $value): void
+    {
+        $frontmatter = $this->zenn_frontmatter ?? [];
+        unset($frontmatter['eyecatch']);
+        if (($filename = ArticleEyecatch::filename($value)) !== null) {
+            $frontmatter['eyecatch'] = $filename;
+        }
+        $this->zenn_frontmatter = $frontmatter;
     }
 
     public function getContentAttribute(): string

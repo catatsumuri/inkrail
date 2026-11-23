@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\Article;
 use App\Models\ArticleImage;
 use App\Models\ArticleRevision;
 use App\Models\ArticleTranslation;
@@ -41,7 +42,8 @@ class PruneArticleImagesCommand extends Command
      */
     private function isReferenced(ArticleImage $image): bool
     {
-        return ArticleTranslation::withTrashed()->where('content', 'like', "%{$image->path}%")->exists()
+        return Article::query()->whereIn('zenn_frontmatter->eyecatch', [$image->path, $image->url()])->exists()
+            || ArticleTranslation::withTrashed()->where('content', 'like', "%{$image->path}%")->exists()
             || ArticleRevision::query()->where('content', 'like', "%{$image->path}%")->exists();
     }
 }

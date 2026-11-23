@@ -20,12 +20,15 @@ class SyncZennImages
      * Validate every referenced repository image before uploading missing files.
      * Existing remote images are never overwritten or deleted.
      */
-    public function __invoke(string $content, PendingRequest $client, string $repository, string $branch, Closure $checkLock): bool
+    public function __invoke(string $content, PendingRequest $client, string $repository, string $branch, Closure $checkLock, ?string $eyecatchUrl = null): bool
     {
         $environment = new Environment;
         $environment->addExtension(new CommonMarkCoreExtension);
         $document = (new MarkdownParser($environment))->parse($content);
         $paths = [];
+        if ($eyecatchUrl !== null) {
+            $paths[$eyecatchUrl] = true;
+        }
         foreach ($document->iterator() as $node) {
             if ($node instanceof Image && str_starts_with($node->getUrl(), '/images/')) {
                 $paths[$node->getUrl()] = true;

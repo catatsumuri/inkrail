@@ -8,6 +8,7 @@ import {
     show,
 } from '@/actions/App/Http/Controllers/ArticleController';
 import InputError from '@/components/input-error';
+import ArticleEyecatchInput from '@/components/article-eyecatch-input';
 import LanguageToggle from '@/components/language-toggle';
 import MarkdownEditor from '@/components/markdown-editor';
 import TranslationStatus from '@/components/translation-status';
@@ -21,6 +22,7 @@ import type { Article } from '@/types/article';
 export default function ArticleForm({ article }: { article?: Article }) {
     const { __ } = lang();
     const { auth, locale, articleLocales } = usePage().props;
+    const [uploadingEyecatch, setUploadingEyecatch] = useState(false);
     const [topicsInput, setTopicsInput] = useState(
         article?.topics?.join(', ') ?? '',
     );
@@ -220,6 +222,11 @@ export default function ArticleForm({ article }: { article?: Article }) {
                             }
                         />
                     </div>
+                    <ArticleEyecatchInput
+                        defaultValue={article?.eyecatch}
+                        error={errors.eyecatch}
+                        onUploadingChange={setUploadingEyecatch}
+                    />
                     {!auth.user?.is_sandbox && (
                         <div className="grid gap-2">
                             <div className="flex items-center gap-2">
@@ -245,7 +252,9 @@ export default function ArticleForm({ article }: { article?: Article }) {
                         </div>
                     )}
                     <div className="flex items-center gap-4">
-                        <Button disabled={processing}>{__('Save')}</Button>
+                        <Button disabled={processing || uploadingEyecatch}>
+                            {__('Save')}
+                        </Button>
                         <Link href={article ? show(article.id) : index()}>
                             {__('Cancel')}
                         </Link>

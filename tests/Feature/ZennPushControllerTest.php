@@ -395,7 +395,7 @@ test('does not stream github details to another article owner', function () {
     Http::assertNothingSent();
 });
 
-test('uploads referenced images once before the article and ignores code and external images', function () {
+test('uploads referenced images once before the article and ignores code and external images', function (bool $coverOnly) {
     Storage::fake(ArticleImage::disk());
     $bytes = UploadedFile::fake()->image('example.png')->getContent();
     $filename = hash('sha256', $bytes).'.png';
@@ -403,6 +403,11 @@ test('uploads referenced images once before the article and ignores code and ext
     $article = createZennArticle($this->publisher);
     $content = "![one](/images/{$filename})\n![two][same]\n\n[same]: /images/{$filename}\n\n".'`![code](/images/missing.png)`'."\n\n![external](https://example.com/image.png)";
     $article->replaceTranslations(['ja' => ['title' => '画像', 'content' => $content]]);
+    $article->update(['eyecatch' => $filename]);
+    if ($coverOnly) {
+        $content = 'Cover only, with no inline images.';
+        $article->replaceTranslations(['ja' => ['title' => '画像', 'content' => $content]]);
+    }
     Http::fake([
         ZENN_READ => Http::response([], 404),
         ZENN_FILE => Http::response([], 201),
@@ -421,7 +426,7 @@ test('uploads referenced images once before the article and ignores code and ext
     expect(base64_decode($requests[0]['content']))->toBe($bytes);
     expect(base64_decode($requests[1]['content']))->toContain($content);
     expect($article->fresh()->zenn_sha)->not->toBeNull();
-});
+})->with(['cover and body' => false, 'cover only' => true]);
 
 test('repairs missing images even when article content is unchanged', function (bool $remoteExists) {
     Storage::fake(ArticleImage::disk());
