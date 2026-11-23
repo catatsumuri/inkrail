@@ -6,6 +6,7 @@ import { index } from '@/actions/App/Http/Controllers/PublicArticleController';
 import ArticleContent from '@/components/article-content';
 import ArticleCover from '@/components/article-cover';
 import PublicArticleHeader from '@/components/public-article-header';
+import { cn } from '@/lib/utils';
 import type { Article } from '@/types/article';
 
 export default function PublicShow({
@@ -55,19 +56,31 @@ export default function PublicShow({
                                     />
                                     <div
                                         aria-hidden="true"
-                                        className="absolute inset-0 bg-linear-to-r from-background/95 via-background/70 to-background/10"
+                                        className="absolute inset-0 bg-linear-to-t from-black/85 via-black/35 to-black/5"
                                     />
                                 </>
                             )}
                             <div className="relative flex min-h-60 flex-col justify-end gap-6 p-6 sm:min-h-80 sm:p-12">
-                                <p className="flex items-center gap-3 font-mono text-[10px] tracking-[0.2em] text-muted-foreground uppercase">
+                                <p
+                                    className={cn(
+                                        'flex items-center gap-3 font-mono text-[10px] tracking-[0.2em] uppercase',
+                                        article.eyecatch_url
+                                            ? 'text-white/80'
+                                            : 'text-muted-foreground',
+                                    )}
+                                >
                                     <span
                                         aria-hidden="true"
                                         className="h-px w-8 bg-current"
                                     />
                                     InkRail
                                 </p>
-                                <h1 className="max-w-3xl text-3xl leading-tight font-semibold tracking-tight text-balance break-words sm:text-5xl">
+                                <h1
+                                    className={cn(
+                                        'max-w-3xl text-3xl leading-tight font-semibold tracking-tight text-balance break-words sm:text-5xl',
+                                        article.eyecatch_url && 'text-white',
+                                    )}
+                                >
                                     {article.title}
                                 </h1>
                                 {article.topics &&
@@ -76,7 +89,12 @@ export default function PublicShow({
                                             {article.topics.map((topic) => (
                                                 <span
                                                     key={topic}
-                                                    className="rounded-full border bg-background/70 px-3 py-1 text-xs text-muted-foreground"
+                                                    className={cn(
+                                                        'rounded-full border px-3 py-1 text-xs',
+                                                        article.eyecatch_url
+                                                            ? 'border-white/25 bg-black/30 text-white'
+                                                            : 'bg-background/70 text-muted-foreground',
+                                                    )}
                                                 >
                                                     {topic}
                                                 </span>

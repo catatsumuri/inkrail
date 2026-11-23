@@ -31,9 +31,8 @@ export default function ArticleCover({
                     onError={() => setFailedSrc(src)}
                     className={cn(
                         'absolute inset-0 size-full object-cover',
-                        presentation === 'backdrop'
-                            ? 'scale-110 opacity-70 blur-[2px] saturate-50 dark:opacity-40'
-                            : 'transition-transform duration-500 group-hover:scale-[1.025]',
+                        presentation === 'image' &&
+                            'transition-transform duration-500 group-hover:scale-[1.025]',
                     )}
                 />
             ) : (
