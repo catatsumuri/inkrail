@@ -81,7 +81,7 @@ class SecurityController extends Controller
             $request->user(),
             SecurityEvent::PasswordChanged->subject(),
             SecurityEvent::PasswordChanged->mailBody(),
-            channels: ['mail'],
+            channels: ['mail', 'database'],
             deferred: true,
         );
         $logSecurityEvent('password.changed', $request->user());

@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
+use InvalidArgumentException;
 use Laravel\Fortify\Contracts\FailedPasswordResetResponse as FailedPasswordResetResponseContract;
 use Laravel\Fortify\Events\RecoveryCodesGenerated;
 use Laravel\Fortify\Events\TwoFactorAuthenticationDisabled;
@@ -205,14 +206,41 @@ class AppServiceProvider extends ServiceProvider
             app()->isProduction(),
         );
 
-        Password::defaults(fn (): ?Password => app()->isProduction()
-            ? Password::min(12)
-                ->mixedCase()
-                ->letters()
-                ->numbers()
-                ->symbols()
-                ->uncompromised()
-            : null,
-        );
+        Password::defaults(fn (): ?Password => $this->passwordDefaults());
+    }
+
+    /**
+     * Build the default password rule from config/auth.php, falling back to
+     * strict rules in production and Laravel's own defaults elsewhere.
+     */
+    protected function passwordDefaults(): ?Password
+    {
+        $minLength = config('auth.password_rules.min_length');
+        $rules = config('auth.password_rules.rules');
+
+        if ($minLength === null && $rules === null) {
+            return app()->isProduction()
+                ? Password::min(12)->mixedCase()->letters()->numbers()->symbols()->uncompromised()
+                : null;
+        }
+
+        $password = Password::min((int) ($minLength ?? (app()->isProduction() ? 12 : 8)));
+
+        $names = $rules === null
+            ? (app()->isProduction() ? ['mixed_case', 'letters', 'numbers', 'symbols', 'uncompromised'] : [])
+            : array_filter(array_map('trim', explode(',', (string) $rules)));
+
+        foreach ($names as $name) {
+            match ($name) {
+                'mixed_case' => $password->mixedCase(),
+                'letters' => $password->letters(),
+                'numbers' => $password->numbers(),
+                'symbols' => $password->symbols(),
+                'uncompromised' => $password->uncompromised(),
+                default => throw new InvalidArgumentException("Unknown password rule [{$name}] in PASSWORD_RULES."),
+            };
+        }
+
+        return $password;
     }
 }

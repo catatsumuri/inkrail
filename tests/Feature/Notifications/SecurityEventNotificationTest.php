@@ -40,7 +40,7 @@ class SecurityEventNotificationTest extends TestCase
 
         $this->updatePassword($user, 'password')->assertSessionHasNoErrors();
 
-        $this->assertNotifiedOnce($user, SecurityEvent::PasswordChanged);
+        $this->assertNotifiedOnce($user, SecurityEvent::PasswordChanged, ['mail', 'database']);
     }
 
     public function test_password_change_with_wrong_current_password_does_not_notify(): void
