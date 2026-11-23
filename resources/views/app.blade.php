@@ -39,7 +39,17 @@
         @viteReactRefresh
         @vite(['resources/css/app.css', 'resources/js/app.tsx', "resources/js/pages/{$page['component']}.tsx"])
         <x-inertia::head>
-            <title>{{ config('app.name', 'Laravel') }}</title>
+            <title>{{ isset($page['props']['social']) ? $page['props']['social']['title'].' - '.config('app.name') : config('app.name', 'Laravel') }}</title>
+            @isset($page['props']['social'])
+                <link data-inertia="canonical" rel="canonical" href="{{ $page['props']['social']['url'] }}">
+                @foreach($page['props']['social']['meta'] as $key => $value)
+                    @if(str_starts_with($key, 'og:'))
+                        <meta data-inertia="{{ $key }}" property="{{ $key }}" content="{{ $value }}">
+                    @else
+                        <meta data-inertia="{{ $key }}" name="{{ $key }}" content="{{ $value }}">
+                    @endif
+                @endforeach
+            @endisset
         </x-inertia::head>
     </head>
     <body class="font-sans antialiased">
