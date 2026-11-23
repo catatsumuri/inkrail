@@ -44,9 +44,10 @@ function formatSize(bytes: number): string {
 
 function RestoreDialog({ filename }: { filename: string }) {
     const { __ } = lang();
+    const [open, setOpen] = useState(false);
 
     return (
-        <Dialog>
+        <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
                 <Button type="button" variant="outline" size="sm">
                     <RotateCcw aria-hidden="true" />
@@ -68,6 +69,7 @@ function RestoreDialog({ filename }: { filename: string }) {
                 <Form
                     {...ArticleBackupController.restore.form(filename)}
                     options={{ preserveScroll: true }}
+                    onSuccess={() => setOpen(false)}
                     className="space-y-4"
                 >
                     {({ processing, errors }) => (
