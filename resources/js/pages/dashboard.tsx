@@ -1,4 +1,4 @@
-import { Head, Link, setLayoutProps, useForm } from '@inertiajs/react';
+import { Head, Link, router, setLayoutProps } from '@inertiajs/react';
 import { lang } from '@erag/lang-sync-inertia/react';
 import { CircleCheck, Download, LoaderCircle, PencilLine } from 'lucide-react';
 import { useRef, useState } from 'react';
@@ -30,6 +30,9 @@ type ImportStatus =
     | 'unchanged'
     | 'conflict'
     | 'invalid';
+type ImportResult = Record<ImportStatus, number> & {
+    items: { path: string; status: ImportStatus }[];
+};
 type Zenn = {
     repository: string | null;
     branch: string;
@@ -45,11 +48,7 @@ type Zenn = {
         next_page_url: string | null;
         total: number;
     };
-    result:
-        | (Record<ImportStatus, number> & {
-              items: { path: string; status: ImportStatus }[];
-          })
-        | null;
+    result: ImportResult | null;
 };
 
 const resultLabels: Record<ImportStatus, string> = {
@@ -63,8 +62,93 @@ const resultLabels: Record<ImportStatus, string> = {
 export default function Dashboard({ zenn }: { zenn: Zenn | null }) {
     const { __ } = lang();
     const [importDialogOpen, setImportDialogOpen] = useState(false);
-    const importForm = useForm({});
+    const [importing, setImporting] = useState(false);
+    const [importSucceeded, setImportSucceeded] = useState(false);
+    const [importLogs, setImportLogs] = useState<string[]>([]);
+    const [importResult, setImportResult] = useState<ImportResult | null>(null);
     const cancelImportRef = useRef<HTMLButtonElement>(null);
+
+    async function importFromGitHub() {
+        if (importing) return;
+        setImporting(true);
+        setImportLogs([]);
+        setImportSucceeded(false);
+        let complete = false;
+        let imported = false;
+        try {
+            const token = document.cookie
+                .split('; ')
+                .find((cookie) => cookie.startsWith('XSRF-TOKEN='))
+                ?.slice(11);
+            const response = await fetch(ZennImportController.url(), {
+                method: 'POST',
+                headers: {
+                    Accept: 'text/event-stream',
+                    'X-XSRF-TOKEN': decodeURIComponent(token ?? ''),
+                },
+            });
+            if (
+                !response.ok ||
+                !response.body ||
+                !response.headers
+                    .get('content-type')
+                    ?.includes('text/event-stream')
+            )
+                throw new Error();
+            const reader = response.body
+                .pipeThrough(new TextDecoderStream())
+                .getReader();
+            let buffer = '';
+            read: for (;;) {
+                const { value, done } = await reader.read();
+                if (done) break;
+                buffer += value;
+                let boundary;
+                while ((boundary = buffer.indexOf('\n\n')) >= 0) {
+                    const frame = buffer.slice(0, boundary);
+                    buffer = buffer.slice(boundary + 2);
+                    const data = frame
+                        .split('\n')
+                        .find((line) => line.startsWith('data: '));
+                    if (!data) continue;
+                    const entry = JSON.parse(data.slice(6)) as {
+                        message: string;
+                        time: string;
+                        replace?: Record<string, string | number>;
+                        status?: string;
+                        result?: ImportResult;
+                    };
+                    setImportLogs((logs) => [
+                        ...logs,
+                        `${new Date(entry.time).toLocaleTimeString()} ${__(entry.message, entry.replace)}`,
+                    ]);
+                    if (frame.startsWith('event: result')) {
+                        complete = true;
+                        if (entry.status === 'imported' && entry.result) {
+                            imported = true;
+                            setImportResult(entry.result);
+                            setImportSucceeded(true);
+                        }
+                        void reader.cancel();
+                        break read;
+                    }
+                }
+            }
+            if (!complete) throw new Error();
+        } catch {
+            setImportLogs((logs) => [
+                ...logs,
+                __('Could not confirm the import result.'),
+            ]);
+        } finally {
+            setImporting(false);
+            if (imported) {
+                router.reload({ only: ['zenn'] });
+            }
+        }
+    }
+
+    const result = importResult ?? zenn?.result ?? null;
 
     setLayoutProps({
         breadcrumbs: [
@@ -91,7 +175,7 @@ export default function Dashboard({ zenn }: { zenn: Zenn | null }) {
                     <>
                         <Card>
                             <CardHeader>
-                                <CardTitle>{__('Zenn integration')}</CardTitle>
+                                <CardTitle>{__('GitHub sync')}</CardTitle>
                                 <CardDescription>
                                     {__(
                                         'Import Japanese articles from GitHub. Articles edited locally are kept when changes conflict. Importing never writes to GitHub.',
@@ -105,32 +189,37 @@ export default function Dashboard({ zenn }: { zenn: Zenn | null }) {
                                     </p>
                                 ) : (
                                     <p className="text-sm text-muted-foreground">
-                                        {__(
-                                            'Zenn integration is not configured.',
-                                        )}
+                                        {__('GitHub sync is not configured.')}
                                     </p>
                                 )}
                                 <Dialog
                                     open={importDialogOpen}
                                     onOpenChange={(open) => {
-                                        if (!importForm.processing) {
-                                            setImportDialogOpen(open);
-                                        }
+                                        if (importing) return;
+                                        setImportDialogOpen(open);
+                                        if (!open) setImportLogs([]);
                                     }}
                                 >
                                     <DialogTrigger asChild>
                                         <Button
                                             type="button"
                                             disabled={
-                                                !zenn.configured ||
-                                                importForm.processing
+                                                !zenn.configured || importing
                                             }
                                         >
                                             <Download aria-hidden="true" />
-                                            {__('Import from Zenn repository')}
+                                            {__('Import from GitHub')}
                                         </Button>
                                     </DialogTrigger>
                                     <DialogContent
+                                        onEscapeKeyDown={(event) => {
+                                            if (importing)
+                                                event.preventDefault();
+                                        }}
+                                        onInteractOutside={(event) => {
+                                            if (importing)
+                                                event.preventDefault();
+                                        }}
                                         onOpenAutoFocus={(event) => {
                                             event.preventDefault();
                                             cancelImportRef.current?.focus();
@@ -159,65 +248,57 @@ export default function Dashboard({ zenn }: { zenn: Zenn | null }) {
                                                 </p>
                                             </div>
                                         </DialogDescription>
-                                        <form
-                                            onSubmit={(event) => {
-                                                event.preventDefault();
-                                                if (
-                                                    !zenn.configured ||
-                                                    importForm.processing
-                                                ) {
-                                                    return;
-                                                }
-                                                importForm.submit(
-                                                    ZennImportController(),
-                                                    {
-                                                        preserveScroll: true,
-                                                        onSuccess: () =>
-                                                            setImportDialogOpen(
-                                                                false,
-                                                            ),
-                                                    },
-                                                );
-                                            }}
+                                        <pre
+                                            role="log"
+                                            aria-live="polite"
+                                            className="max-h-72 overflow-auto text-xs whitespace-pre-wrap"
                                         >
-                                            <DialogFooter className="gap-2">
-                                                <DialogClose asChild>
-                                                    <Button
-                                                        ref={cancelImportRef}
-                                                        type="button"
-                                                        variant="secondary"
-                                                        disabled={
-                                                            importForm.processing
-                                                        }
-                                                    >
-                                                        {__('Cancel')}
-                                                    </Button>
-                                                </DialogClose>
+                                            {importLogs.join('\n')}
+                                        </pre>
+                                        <DialogFooter className="gap-2">
+                                            <DialogClose asChild>
                                                 <Button
-                                                    type="submit"
-                                                    disabled={
-                                                        importForm.processing
-                                                    }
+                                                    ref={cancelImportRef}
+                                                    type="button"
+                                                    variant="secondary"
+                                                    disabled={importing}
                                                 >
-                                                    {importForm.processing && (
-                                                        <LoaderCircle
-                                                            className="animate-spin"
-                                                            aria-hidden="true"
-                                                        />
-                                                    )}
                                                     {__(
-                                                        importForm.processing
-                                                            ? 'Importing articles…'
-                                                            : 'Start importing',
+                                                        importLogs.length > 0
+                                                            ? 'Close'
+                                                            : 'Cancel',
                                                     )}
                                                 </Button>
-                                            </DialogFooter>
-                                        </form>
+                                            </DialogClose>
+                                            <Button
+                                                type="button"
+                                                disabled={
+                                                    importing || importSucceeded
+                                                }
+                                                onClick={() =>
+                                                    void importFromGitHub()
+                                                }
+                                            >
+                                                {importing && (
+                                                    <LoaderCircle
+                                                        className="animate-spin"
+                                                        aria-hidden="true"
+                                                    />
+                                                )}
+                                                {__(
+                                                    importing
+                                                        ? 'Importing articles…'
+                                                        : importLogs.length > 0
+                                                          ? 'Retry importing'
+                                                          : 'Start importing',
+                                                )}
+                                            </Button>
+                                        </DialogFooter>
                                     </DialogContent>
                                 </Dialog>
                             </CardContent>
                         </Card>
-                        {zenn.result && (
+                        {result && (
                             <section
                                 className="space-y-4 rounded-xl border p-6"
                                 aria-live="polite"
@@ -229,16 +310,16 @@ export default function Dashboard({ zenn }: { zenn: Zenn | null }) {
                                     {__(
                                         'Imported: :created · Updated: :updated · GitHub unchanged: :unchanged · Conflicts: :conflict · Invalid: :invalid',
                                         {
-                                            created: zenn.result.created,
-                                            updated: zenn.result.updated,
-                                            unchanged: zenn.result.unchanged,
-                                            conflict: zenn.result.conflict,
-                                            invalid: zenn.result.invalid,
+                                            created: result.created,
+                                            updated: result.updated,
+                                            unchanged: result.unchanged,
+                                            conflict: result.conflict,
+                                            invalid: result.invalid,
                                         },
                                     )}
                                 </p>
-                                {(zenn.result.conflict > 0 ||
-                                    zenn.result.invalid > 0) && (
+                                {(result.conflict > 0 ||
+                                    result.invalid > 0) && (
                                     <p className="text-sm">
                                         {__(
                                             'Conflicting and invalid articles were skipped. Review them before retrying.',
@@ -246,7 +327,7 @@ export default function Dashboard({ zenn }: { zenn: Zenn | null }) {
                                     </p>
                                 )}
                                 <ul className="max-h-72 divide-y overflow-auto text-sm">
-                                    {zenn.result.items.map((item) => (
+                                    {result.items.map((item) => (
                                         <li
                                             key={item.path}
                                             className="flex flex-wrap justify-between gap-2 py-3"

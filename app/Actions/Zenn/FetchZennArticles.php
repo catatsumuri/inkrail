@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Http;
 class FetchZennArticles
 {
     /** @return array{repository: string, branch: string, files: list<RemoteArticle>} */
-    public function __invoke(Closure $checkLock): array
+    public function __invoke(Closure $checkLock, ?Closure $progress = null): array
     {
         $repository = config('services.github_zenn.repository');
         $branch = config('services.github_zenn.branch');
@@ -31,13 +31,14 @@ class FetchZennArticles
 
                     return null;
                 });
+            $progress?->__invoke('progress', ['message' => 'Reading the article list from GitHub.']);
             $tree = $client->get('/repos/'.$repository.'/git/trees/'.rawurlencode($branch), ['recursive' => 1])->throw()->json();
 
             if (! is_array($tree) || ($tree['truncated'] ?? true) !== false || ! is_array($tree['tree'] ?? null)) {
                 throw new ZennImportException('GitHub did not return a complete article tree.');
             }
 
-            $files = [];
+            $entries = [];
             foreach ($tree['tree'] as $entry) {
                 if (($entry['type'] ?? null) !== 'blob' || ! in_array($entry['mode'] ?? '', ['100644', '100755'], true)
                     || ! is_string($entry['path'] ?? null) || preg_match('/\Aarticles\/[a-z0-9_-]{12,50}\.md\z/', $entry['path']) !== 1) {
@@ -48,6 +49,12 @@ class FetchZennArticles
                     throw new ZennImportException('GitHub returned an invalid blob identity.');
                 }
 
+                $entries[] = $entry;
+            }
+
+            $files = [];
+            foreach ($entries as $index => $entry) {
+                $progress?->__invoke('progress', ['message' => 'Reading article :current of :total.', 'replace' => ['current' => $index + 1, 'total' => count($entries)]]);
                 $content = null;
                 if (($entry['size'] ?? PHP_INT_MAX) <= 2_000_000) {
                     $blob = $client->get("/repos/{$repository}/git/blobs/{$entry['sha']}")->throw();

@@ -31,20 +31,22 @@ class ImportZennArticles
     ) {}
 
     /** @return ImportResult */
-    public function __invoke(User $owner): array
+    public function __invoke(User $owner, ?Closure $progress = null): array
     {
         Gate::forUser($owner)->authorize('import-from-zenn');
+        $progress?->__invoke('progress', ['message' => 'Acquiring repository lock.']);
         try {
-            return ($this->syncLock)(fn (Closure $checkLock): array => $this->import($owner, $checkLock));
+            return ($this->syncLock)(fn (Closure $checkLock): array => $this->import($owner, $checkLock, $progress));
         } catch (LockTimeoutException $exception) {
             throw new ZennImportException('The repository is busy or the sync lock was lost. Try again shortly.', previous: $exception);
         }
     }
 
     /** @return ImportResult */
-    private function import(User $owner, Closure $checkLock): array
+    private function import(User $owner, Closure $checkLock, ?Closure $progress): array
     {
-        $remote = ($this->fetch)($checkLock);
+        $remote = ($this->fetch)($checkLock, $progress);
+        $progress?->__invoke('progress', ['message' => 'Saving articles.']);
         $documents = [];
         $identityCounts = [];
         foreach ($remote['files'] as $file) {
