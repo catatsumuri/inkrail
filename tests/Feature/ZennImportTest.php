@@ -427,3 +427,28 @@ test('does not overwrite a local namespace change during import', function () {
     expect($result['conflict'])->toBe(1);
     expect($article->fresh()->namespace->is($namespace))->toBeTrue();
 });
+
+test('streams import progress and the final result over server-sent events', function () {
+    $owner = User::factory()->create(['email' => 'publisher@example.com']);
+    fakeZennImport(['articles/original-article.md' => zennImportMarkdown()]);
+
+    $content = $this->actingAs($owner)->withHeader('Accept', 'text/event-stream')
+        ->post(route('zenn.import'))->assertOk()->streamedContent();
+
+    expect($content)->toContain('event: progress', 'Reading article :current of :total.', 'event: result', '"status":"imported"', '"created":1')
+        ->not->toContain('secret-token', 'Authorization');
+    expect($owner->articles()->count())->toBe(1);
+});
+
+test('streams a terminal failure when the import cannot read GitHub', function () {
+    $owner = User::factory()->create(['email' => 'publisher@example.com']);
+    Http::swap(new Factory);
+    Http::preventStrayRequests();
+    Http::fake(['api.github.com/*' => Http::response([], 403)]);
+
+    $content = $this->actingAs($owner)->withHeader('Accept', 'text/event-stream')
+        ->post(route('zenn.import'))->assertOk()->streamedContent();
+
+    expect($content)->toContain('"status":"failed"')->not->toContain('secret-token');
+    expect(Activity::inLog('security')->where('event', 'articles.zenn_import_failed')->count())->toBe(1);
+});
