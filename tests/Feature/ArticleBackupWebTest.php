@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Support\ArticleBackupStore;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -16,7 +17,7 @@ beforeEach(function () {
     config([
         'articles.backup_disk' => 'backups',
         'articles.backup_directory' => 'backups',
-        'articles.zenn_publishers' => ['owner'],
+        'articles.zenn_publishers' => [],
         'inertia.ssr.enabled' => false,
     ]);
     $this->owner = User::factory()->withUsername('owner')->create();
@@ -27,17 +28,15 @@ function storedBackup(): string
     return app(ArticleBackupStore::class)->create()['filename'];
 }
 
-test('only publishers see and can use backups', function () {
-    $stranger = User::factory()->create();
+test('guests cannot see or use backups', function () {
     $filename = storedBackup();
 
-    $this->actingAs($stranger)->get(route('dashboard'))
-        ->assertInertia(fn (Assert $page) => $page->where('backups', null));
-    $this->actingAs($stranger)->post(route('backups.store'))->assertForbidden();
-    $this->actingAs($stranger)->get(route('backups.download', $filename))->assertForbidden();
-    $this->actingAs($stranger)->post(route('backups.restore', $filename), ['confirmation' => 'restore'])->assertForbidden();
-    $this->actingAs($stranger)->delete(route('backups.destroy', $filename))->assertForbidden();
-    $this->actingAs($stranger)->post(route('backups.upload'), ['backup' => UploadedFile::fake()->create('b.zip')])->assertForbidden();
+    $this->get(route('dashboard'))->assertRedirect(route('login'));
+    $this->post(route('backups.store'))->assertRedirect(route('login'));
+    $this->get(route('backups.download', $filename))->assertRedirect(route('login'));
+    $this->post(route('backups.restore', $filename), ['confirmation' => 'restore'])->assertRedirect(route('login'));
+    $this->delete(route('backups.destroy', $filename))->assertRedirect(route('login'));
+    $this->post(route('backups.upload'), ['backup' => UploadedFile::fake()->create('b.zip')])->assertRedirect(route('login'));
 });
 
 test('the dashboard lists backups on the backup disk', function () {
@@ -48,6 +47,46 @@ test('the dashboard lists backups on the backup disk', function () {
             ->where('backups.disk', 'backups')
             ->where('backups.items.0.filename', $filename));
 });
+
+test('backup access is independent of github publishing', function () {
+    config(['articles.zenn_publishers' => ['publisher']]);
+    $publisher = User::factory()->withUsername('publisher')->create();
+
+    $this->actingAs($publisher)->post(route('backups.store'))->assertRedirect(route('dashboard'));
+    $this->actingAs($this->owner)->get(route('dashboard'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('zenn', null)
+            ->where('backups.disk', 'backups'));
+});
+
+test('all authenticated accounts can manage backups', function (string $account) {
+    $user = User::factory()->withUsername('visitor')->create();
+
+    if ($account === 'unverified') {
+        $user->email_verified_at = null;
+    }
+
+    if ($account === 'sandbox') {
+        $user->is_sandbox = true;
+    }
+
+    if ($account === 'no username') {
+        $user->username = null;
+    }
+
+    $user->save();
+
+    expect(Gate::forUser($user)->allows('manage-article-backups'))->toBeTrue();
+    $this->actingAs($user)->get(route('dashboard'))
+        ->assertInertia(fn (Assert $page) => $page->where('backups.disk', 'backups'));
+    $this->actingAs($user)->post(route('backups.store'))->assertRedirect(route('dashboard'));
+    expect(Storage::disk('backups')->files('backups'))->toHaveCount(1);
+})->with([
+    'ordinary user' => ['ordinary'],
+    'unverified' => ['unverified'],
+    'sandbox' => ['sandbox'],
+    'no username' => ['no username'],
+]);
 
 test('creating a backup stores it on the disk and is audited', function () {
     $this->owner->articles()->create(['slug' => 'one']);

@@ -51,6 +51,7 @@ class AppServiceProvider extends ServiceProvider
         $this->configureSecurityEventLogging();
         $this->configureSecurityEventAccess();
         $this->configureZennPublishing();
+        $this->configureArticleBackups();
     }
 
     /**
@@ -99,13 +100,15 @@ class AppServiceProvider extends ServiceProvider
 
         Gate::define('import-from-zenn', fn (Authenticatable $user): bool => $user instanceof User && ! $user->is_sandbox && $isPublisher($user));
 
-        /*
-         * Backups hold every article, so they are limited to the same trusted
-         * publishers, never to sandbox accounts.
-         */
-        Gate::define('manage-article-backups', fn (Authenticatable $user): bool => $user instanceof User && ! $user->is_sandbox && $isPublisher($user));
-
         Gate::define('push-to-zenn', fn (Authenticatable $user, Article $article): bool => $isPublisher($user) && $article->user_id === $user->getAuthIdentifier());
+    }
+
+    /**
+     * Allow every authenticated user to manage article backups.
+     */
+    protected function configureArticleBackups(): void
+    {
+        Gate::define('manage-article-backups', fn (Authenticatable $user): bool => $user instanceof User);
     }
 
     /**

@@ -25,6 +25,11 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { dashboard } from '@/routes';
 
 type ImportStatus =
@@ -450,9 +455,47 @@ export default function Dashboard({
                         </section>
                     </>
                 ) : (
-                    <p className="text-sm text-muted-foreground">
-                        {__('Open your articles to keep writing and editing.')}
-                    </p>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>{__('GitHub sync')}</CardTitle>
+                            <CardDescription>
+                                {__(
+                                    'GitHub sync is disabled for this account.',
+                                )}
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="flex flex-col items-start gap-4">
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <button
+                                        type="button"
+                                        className="cursor-help rounded-sm text-left text-sm text-muted-foreground underline decoration-dotted underline-offset-4 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                                    >
+                                        {__(
+                                            'GitHub sync requires a verified, non-sandbox account authorized by an administrator.',
+                                        )}
+                                    </button>
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-sm space-y-2">
+                                    <ul className="list-disc space-y-2 pl-4">
+                                        {[
+                                            'The user record must have a non-null email_verified_at value.',
+                                            'The user record must have is_sandbox set to false.',
+                                            'Set ZENN_PUBLISHERS in .env to a comma-separated list containing your username, not your email address. Matching is case-insensitive.',
+                                            'GitHub sync also requires ZENN_GITHUB_TOKEN, ZENN_GITHUB_REPOSITORY (owner/repository), and ZENN_GITHUB_BRANCH (defaults to main) in .env.',
+                                            'Refresh the configuration cache after changing environment settings if configuration caching is enabled.',
+                                        ].map((detail) => (
+                                            <li key={detail}>{__(detail)}</li>
+                                        ))}
+                                    </ul>
+                                </TooltipContent>
+                            </Tooltip>
+                            <Button type="button" disabled>
+                                <Download aria-hidden="true" />
+                                {__('Import from GitHub')}
+                            </Button>
+                        </CardContent>
+                    </Card>
                 )}
                 {backups && <ArticleBackupsCard backups={backups} />}
             </div>
