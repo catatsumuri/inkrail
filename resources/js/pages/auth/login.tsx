@@ -36,7 +36,7 @@ export default function Login({ status, canResetPassword }: Props) {
             <Head title={__('Log in')} />
 
             {/* @chisel-passkeys */}
-            <PasskeyVerify />
+            {features.passkeys && <PasskeyVerify />}
             {/* @end-chisel-passkeys */}
 
             <Form

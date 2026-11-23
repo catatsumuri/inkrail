@@ -24,4 +24,8 @@ return [
     // Public self-service registration (Fortify's register routes).
     'registration' => (bool) env('FEATURE_REGISTRATION', true),
 
+    // Passkey (WebAuthn) sign-in and management, including the
+    // /.well-known/passkey-endpoints discovery route.
+    'passkeys' => (bool) env('FEATURE_PASSKEYS', true),
+
 ];

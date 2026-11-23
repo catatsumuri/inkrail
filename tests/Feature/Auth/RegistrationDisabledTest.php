@@ -2,37 +2,16 @@
 
 namespace Tests\Feature\Auth;
 
-use Illuminate\Contracts\Console\Kernel;
-use Illuminate\Foundation\Application;
-use Illuminate\Foundation\Bootstrap\LoadConfiguration;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Route;
+use Tests\Concerns\BootsWithFeaturesDisabled;
 use Tests\TestCase;
 
-/**
- * The registration flag is evaluated while the application boots, because
- * Fortify decides which routes exist at that point. Changing config() in the
- * middle of a test cannot remove routes that are already registered, so the
- * flag is applied right after configuration loads and before service
- * providers register.
- */
 class RegistrationDisabledTest extends TestCase
 {
-    use RefreshDatabase;
+    use BootsWithFeaturesDisabled, RefreshDatabase;
 
-    public function createApplication()
-    {
-        $app = require Application::inferBasePath().'/bootstrap/app.php';
-
-        $app->afterBootstrapping(
-            LoadConfiguration::class,
-            fn ($app) => $app['config']->set('features.registration', false),
-        );
-
-        $app->make(Kernel::class)->bootstrap();
-
-        return $app;
-    }
+    protected array $disabledFeatures = ['registration'];
 
     public function test_registration_routes_do_not_exist_when_disabled(): void
     {

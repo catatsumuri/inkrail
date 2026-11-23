@@ -1,4 +1,4 @@
-import { Form, Head, setLayoutProps } from '@inertiajs/react';
+import { Form, Head, setLayoutProps, usePage } from '@inertiajs/react';
 import { lang } from '@erag/lang-sync-inertia/react';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
@@ -16,6 +16,7 @@ import PasskeyVerify from '@/components/passkey-verify';
 
 export default function ConfirmPassword() {
     const { __ } = lang();
+    const { features } = usePage().props;
 
     setLayoutProps({
         title: __('Confirm password'),
@@ -29,15 +30,17 @@ export default function ConfirmPassword() {
             <Head title={__('Confirm password')} />
 
             {/* @chisel-passkeys */}
-            <PasskeyVerify
-                routes={{
-                    options: confirmOptions(),
-                    submit: confirmStore(),
-                }}
-                label={__('Confirm with passkey')}
-                loadingLabel={__('Confirming...')}
-                separator={__('Or confirm with password')}
-            />
+            {features.passkeys && (
+                <PasskeyVerify
+                    routes={{
+                        options: confirmOptions(),
+                        submit: confirmStore(),
+                    }}
+                    label={__('Confirm with passkey')}
+                    loadingLabel={__('Confirming...')}
+                    separator={__('Or confirm with password')}
+                />
+            )}
             {/* @end-chisel-passkeys */}
 
             <Form {...store.form()} resetOnSuccess={['password']}>
