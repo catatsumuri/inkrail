@@ -44,7 +44,22 @@ class ExportArticleToZennCommand extends Command
             return self::FAILURE;
         }
 
-        $zennSlug = $resolveSlug($article->slug, array_map(basename(...), File::glob($repository.'/articles/*.md')));
+        $files = File::glob($repository.'/articles/*.md');
+        $linkedFiles = array_values(array_filter($files, function (string $file) use ($article): bool {
+            preg_match('/\A---\R(.*?)\R---(?:\R|\z)/s', File::get($file), $matches);
+
+            return isset($matches[1]) && preg_match('/^inkrail_id: "'.preg_quote($article->sync_id, '/').'"\r?$/m', $matches[1]) === 1;
+        }));
+
+        if (count($linkedFiles) > 1) {
+            $this->error('Multiple Zenn files have the same InkRail identity. Export was stopped.');
+
+            return self::FAILURE;
+        }
+
+        $zennSlug = $linkedFiles !== []
+            ? basename($linkedFiles[0], '.md')
+            : $resolveSlug($article->slug, array_map(basename(...), $files));
         $path = "{$repository}/articles/{$zennSlug}.md";
 
         File::put($path, $markdown);

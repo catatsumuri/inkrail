@@ -53,13 +53,37 @@ test('re-exporting updates the same Zenn file instead of creating a new one', fu
     $this->artisan('articles:export-zenn', ['slug' => 'inkrail-sync', '--path' => $this->zennRepository])->assertSuccessful();
     $firstFile = File::files($this->zennRepository.'/articles')[0]->getFilename();
     $article->replaceTranslations(['ja' => ['title' => '更新後', 'content' => '新しい本文']]);
+    $article->update(['slug' => 'renamed-article']);
 
-    $this->artisan('articles:export-zenn', ['slug' => 'inkrail-sync', '--path' => $this->zennRepository])->assertSuccessful();
+    $this->artisan('articles:export-zenn', ['slug' => 'renamed-article', '--path' => $this->zennRepository])->assertSuccessful();
 
     $files = File::files($this->zennRepository.'/articles');
     expect($files)->toHaveCount(1);
     expect($files[0]->getFilename())->toBe($firstFile);
     expect(File::get($files[0]->getPathname()))->toContain('title: "更新後"')->toContain('新しい本文');
+});
+
+test('does not overwrite an unlinked local export with the same filename prefix', function () {
+    createBilingualArticle('inkrail-sync', true);
+    $existingPath = $this->zennRepository.'/articles/inkrail-sync-0a1b2c3d.md';
+    File::put($existingPath, "---\ntitle: Old article\n---\n\nKeep this article\n");
+
+    $this->artisan('articles:export-zenn', ['slug' => 'inkrail-sync', '--path' => $this->zennRepository])->assertSuccessful();
+
+    expect(File::files($this->zennRepository.'/articles'))->toHaveCount(2);
+    expect(File::get($existingPath))->toBe("---\ntitle: Old article\n---\n\nKeep this article\n");
+});
+
+test('refuses to export when multiple local files carry the article identity', function () {
+    $article = createBilingualArticle('inkrail-sync', true);
+    $markdown = "---\ninkrail_id: \"{$article->sync_id}\"\n---\n\nKeep this content\n";
+    File::put($this->zennRepository.'/articles/first-article-12345678.md', $markdown);
+    File::put($this->zennRepository.'/articles/second-article-12345678.md', $markdown);
+
+    $this->artisan('articles:export-zenn', ['slug' => 'inkrail-sync', '--path' => $this->zennRepository])->assertFailed();
+
+    expect(File::get($this->zennRepository.'/articles/first-article-12345678.md'))->toBe($markdown);
+    expect(File::get($this->zennRepository.'/articles/second-article-12345678.md'))->toBe($markdown);
 });
 
 test('builds a Zenn slug that satisfies the length and character rules', function (string $slug) {

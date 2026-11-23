@@ -52,37 +52,23 @@ class PushArticleToZenn
                 ->connectTimeout(5)
                 ->timeout(15);
 
-            $existing = $this->existingFiles($client, $repository, $branch);
-            $zennSlug = $article->zenn_path !== null
-                ? basename($article->zenn_path, '.md')
-                : ($this->resolveSlug)($article->slug, array_keys($existing));
-            $filename = "{$zennSlug}.md";
-            $path = "articles/{$filename}";
-            $sha = $existing[$filename] ?? null;
-
-            if (Article::query()->where('zenn_repository', $repository)->where('zenn_branch', $branch)
-                ->where('zenn_path', $path)->whereKeyNot($article->id)->exists()) {
-                throw new ZennPushException('The Zenn file is already linked to another article.');
-            }
-
-            if ($sha !== null && $sha === $this->blobSha($markdown)) {
-                $this->rememberSync($article, $repository, $branch, $path, $sha);
-
-                return ['zennSlug' => $zennSlug, 'changed' => false];
-            }
-
             if ($article->zenn_path !== null) {
-                if ($sha === null || $article->zenn_sha === null || $sha !== $article->zenn_sha) {
-                    throw new ZennPushException('The Zenn file has changed or was deleted since the last sync. Import its latest version before sending.');
-                }
-            } elseif ($sha !== null) {
-                $legacyMarkdown = str_replace("inkrail_id: \"{$article->sync_id}\"\n", '', $markdown);
+                $path = $article->zenn_path;
+                $sha = $this->remoteSha($client, $repository, $branch, $path);
 
-                if ($sha !== $this->blobSha($legacyMarkdown)) {
-                    throw new ZennPushException('The existing Zenn file cannot be safely linked to this article.');
+                if ($sha === null || $article->zenn_sha === null || $sha !== $article->zenn_sha) {
+                    throw new ZennPushException('The Zenn file has changed or was deleted since the last sync. Sending was stopped to protect the remote article.');
                 }
+
+                if ($sha === $this->blobSha($markdown)) {
+                    return ['zennSlug' => basename($path, '.md'), 'changed' => false];
+                }
+            } else {
+                $path = $this->newPath($client, $article, $repository, $branch);
+                $sha = null;
             }
 
+            $zennSlug = basename($path, '.md');
             $client->put("/repos/{$repository}/contents/{$path}", array_filter([
                 'message' => "docs: sync {$article->slug} from InkRail",
                 'content' => base64_encode($markdown),
@@ -99,25 +85,41 @@ class PushArticleToZenn
     }
 
     /**
-     * @return array<string, string> Blob SHA by filename.
-     *
      * @throws RequestException
      */
-    private function existingFiles(PendingRequest $client, string $repository, string $branch): array
+    private function remoteSha(PendingRequest $client, string $repository, string $branch, string $path): ?string
     {
-        $response = $client->get("/repos/{$repository}/contents/articles", array_filter(['ref' => $branch]));
+        $response = $client->get("/repos/{$repository}/contents/{$path}", ['ref' => $branch]);
 
         if ($response->notFound()) {
-            return [];
+            return null;
         }
 
-        $files = [];
+        $sha = $response->throw()->json('sha');
 
-        foreach ($response->throw()->json() as $entry) {
-            $files[$entry['name']] = $entry['sha'];
+        if (! is_string($sha) || $sha === '') {
+            throw new ZennPushException('GitHub did not return a file SHA.');
         }
 
-        return $files;
+        return $sha;
+    }
+
+    private function newPath(PendingRequest $client, Article $article, string $repository, string $branch): string
+    {
+        for ($attempt = 0; $attempt < 10; $attempt++) {
+            $slug = ($this->resolveSlug)($article->slug, []);
+            $path = "articles/{$slug}.md";
+
+            if (Article::query()->where('zenn_repository', $repository)->where('zenn_branch', $branch)->where('zenn_path', $path)->exists()) {
+                continue;
+            }
+
+            if ($this->remoteSha($client, $repository, $branch, $path) === null) {
+                return $path;
+            }
+        }
+
+        throw new ZennPushException('A new Zenn filename could not be allocated.');
     }
 
     private function blobSha(string $content): string
