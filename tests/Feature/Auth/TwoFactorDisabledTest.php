@@ -59,7 +59,7 @@ class TwoFactorDisabledTest extends TestCase
         $user = User::factory()->create();
 
         $this->post(route('login.store'), [
-            'email' => $user->email,
+            'login' => $user->email,
             'password' => 'password',
         ]);
 
@@ -76,7 +76,7 @@ class TwoFactorDisabledTest extends TestCase
         $user = User::factory()->withTwoFactor()->create();
 
         $this->post(route('login.store'), [
-            'email' => $user->email,
+            'login' => $user->email,
             'password' => 'password',
         ]);
 

@@ -86,3 +86,36 @@ remove a helper the pages import and break the build.
    `Tests\Concerns\BootsWithFeaturesDisabled`. Changing `config()` inside a
    running test cannot remove routes that are already registered.
 6. Document the consequences of turning it off in this file.
+
+## Merging upstream into `extended`
+
+`extended` follows this repository's `main`. When `main` moves, merge it in and
+expect these conflicts. All are mechanical.
+
+Chisel was removed from `extended`, but `main` still ships it:
+
+- `chisel.php`, `chisel-paths.php`, `app/Console/Commands/InstallFeaturesCommand.php`
+  and `tests/Unit/FortifyServiceProviderChiselTest.php` report modify/delete
+  conflicts. **Keep the deletions.**
+- `composer.json` may bring back the `laravel/chisel` requirement, the
+  `php artisan install:features` call in `post-update-cmd` and
+  `extra.laravel.installer`. Remove them again, otherwise every
+  `composer update` runs Chisel and its formatter, and CI hides formatting
+  problems.
+- The `@chisel-*` marker comments are inert and merge normally. Do not remove
+  them.
+
+Places where `extended` changes lines that `main` also owns, and how to resolve
+a conflict:
+
+| File | What `extended` changed |
+|---|---|
+| `routes/settings.php` | The session-management block is wrapped in `if (config('features.password_confirmation', true))` and the security route's middleware is conditional. Re-apply the wrapper around upstream's version of the block. |
+| `config/fortify.php` | `'username' => 'login'` (the login field accepts a username or an email address). Keep it. |
+| `config/auth.php` | The users provider driver is `eloquent-login`. Keep it. |
+| `CreateNewUser`, `ProfileValidationRules`, `ProfileUpdateRequest`, `ProfileController` | Handle `username`, including lowercasing and the current-password requirement. Re-apply on top of upstream's version. |
+| `login.tsx`, `register.tsx`, `profile.tsx` | The login field is named `login`; the username field was added. |
+
+After resolving, run the whole suite, the formatter check (`npm run check`,
+ideally in a clean checkout so untracked files do not affect it) and
+`composer types:check`.

@@ -24,7 +24,7 @@ class AuthenticationTest extends TestCase
         $user = User::factory()->create();
 
         $response = $this->post(route('login.store'), [
-            'email' => $user->email,
+            'login' => $user->email,
             'password' => 'password',
         ]);
 
@@ -45,7 +45,7 @@ class AuthenticationTest extends TestCase
         $user = User::factory()->withTwoFactor()->create();
 
         $response = $this->post(route('login'), [
-            'email' => $user->email,
+            'login' => $user->email,
             'password' => 'password',
         ]);
 
@@ -60,7 +60,7 @@ class AuthenticationTest extends TestCase
         $user = User::factory()->create();
 
         $this->post(route('login.store'), [
-            'email' => $user->email,
+            'login' => $user->email,
             'password' => 'wrong-password',
         ]);
 
@@ -85,7 +85,7 @@ class AuthenticationTest extends TestCase
         RateLimiter::increment(md5('login'.implode('|', [$user->email, '127.0.0.1'])), amount: 5);
 
         $response = $this->post(route('login.store'), [
-            'email' => $user->email,
+            'login' => $user->email,
             'password' => 'wrong-password',
         ]);
 

@@ -63,7 +63,7 @@ class ProfileUpdateTest extends TestCase
         $this->post(route('logout'));
 
         $this->post(route('login.store'), [
-            'email' => 'Test@Example.com',
+            'login' => 'Test@Example.com',
             'password' => 'password',
         ]);
 
