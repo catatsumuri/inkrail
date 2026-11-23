@@ -20,6 +20,10 @@ class DatabaseSeeder extends Seeder
             'is_showcase_owner' => (bool) config('app.demo_mode'),
         ]);
 
+        if (! config('app.demo_mode')) {
+            return;
+        }
+
         $articles = [
             [
                 'title' => 'Welcome to InkRail',
@@ -33,16 +37,14 @@ class DatabaseSeeder extends Seeder
             ],
         ];
 
-        if (config('app.demo_mode')) {
-            $articles[] = [
-                'title' => 'Editing and managing articles',
-                'slug' => 'editing-and-managing-articles',
-                'legacy_title' => '記事の編集と管理',
-                'is_published' => false,
-                'legacy_content' => "作成した記事は、詳細画面から編集できます。\n\n不要になった記事は削除できます。確認ダイアログで内容を確認してから削除してください。",
-                'content' => "Open an article to edit its title and content.\n\nYou can delete articles you no longer need. Review the confirmation dialog before deleting.",
-            ];
-        }
+        $articles[] = [
+            'title' => 'Editing and managing articles',
+            'slug' => 'editing-and-managing-articles',
+            'legacy_title' => '記事の編集と管理',
+            'is_published' => false,
+            'legacy_content' => "作成した記事は、詳細画面から編集できます。\n\n不要になった記事は削除できます。確認ダイアログで内容を確認してから削除してください。",
+            'content' => "Open an article to edit its title and content.\n\nYou can delete articles you no longer need. Review the confirmation dialog before deleting.",
+        ];
 
         foreach ($articles as $article) {
             $seededArticle = $user->articles()->where(fn ($query) => $query
@@ -72,8 +74,6 @@ class DatabaseSeeder extends Seeder
             $created->replaceTranslations(['en' => ['title' => $article['title'], 'content' => $article['content']], 'ja' => ['title' => $article['legacy_title'], 'content' => $article['ja_content'] ?? $article['legacy_content']]]);
         }
 
-        if (config('app.demo_mode')) {
-            $this->call(ShowcaseSeeder::class);
-        }
+        $this->call(ShowcaseSeeder::class);
     }
 }

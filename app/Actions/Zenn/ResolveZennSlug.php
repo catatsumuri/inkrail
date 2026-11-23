@@ -16,7 +16,7 @@ class ResolveZennSlug
     private const MIN_LENGTH = 12;
 
     /**
-     * Reuse the slug of a previous export so repeated exports update the same Zenn article.
+     * Generate a new slug without adopting another article by its filename prefix.
      *
      * @param  iterable<string>  $existingFilenames  Filenames in the Zenn articles directory.
      */
@@ -26,14 +26,12 @@ class ResolveZennSlug
         $base = Str::limit($base, self::MAX_LENGTH - self::SUFFIX_LENGTH - 1, '');
         $base = strlen($base) + self::SUFFIX_LENGTH + 1 < self::MIN_LENGTH ? "article-{$base}" : $base;
 
-        $pattern = '/^'.preg_quote($base, '/').'-[0-9a-f]{'.self::SUFFIX_LENGTH.'}\.md$/';
+        $existingFilenames = is_array($existingFilenames) ? $existingFilenames : iterator_to_array($existingFilenames);
 
-        foreach ($existingFilenames as $filename) {
-            if (preg_match($pattern, $filename) === 1) {
-                return basename($filename, '.md');
-            }
-        }
+        do {
+            $slug = $base.'-'.bin2hex(random_bytes(self::SUFFIX_LENGTH / 2));
+        } while (in_array("{$slug}.md", $existingFilenames, true));
 
-        return $base.'-'.bin2hex(random_bytes(self::SUFFIX_LENGTH / 2));
+        return $slug;
     }
 }

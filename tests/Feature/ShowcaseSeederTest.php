@@ -6,8 +6,20 @@ use Inertia\Testing\AssertableInertia as Assert;
 
 uses(RefreshDatabase::class);
 
-test('reseeding refreshes unchanged welcome translations while preserving their URL and draft state', function () {
+test('normal seeding creates a login user without sample articles', function () {
     config(['app.demo_mode' => false]);
+
+    $this->seed();
+    $this->seed();
+
+    $this->assertDatabaseCount('users', 1);
+    $this->assertDatabaseHas('users', ['email' => 'test@example.com', 'is_showcase_owner' => false]);
+    $this->assertDatabaseCount('articles', 0);
+    $this->assertDatabaseCount('article_translations', 0);
+});
+
+test('reseeding refreshes unchanged welcome translations while preserving their URL and draft state', function () {
+    config(['app.demo_mode' => true]);
     $user = User::factory()->create(['email' => 'test@example.com']);
     $article = $user->articles()->create(['slug' => 'original-welcome', 'is_published' => false]);
     $article->replaceTranslations([
@@ -21,13 +33,13 @@ test('reseeding refreshes unchanged welcome translations while preserving their 
     expect($article->fresh())->slug->toBe('original-welcome')->is_published->toBeFalse();
     expect($article->fresh()->translations->firstWhere('locale', 'en')->content)->toBe("## What is this?\n\n`InkRail` is a place to capture your thoughts and ideas.\n\nCreate an article and write down something you learned today.");
     expect($article->fresh()->translations->firstWhere('locale', 'ja')->content)->toBe("## これは何ですか\n\n`InkRail`は、考えやアイデアを書き留めるための場所です。\n\nまずは新しい記事を作成して、今日の気づきを残してみましょう。");
-    $this->assertDatabaseCount('articles', 1);
+    $this->assertDatabaseCount('articles', 8);
 });
 
 test('reseeding preserves edited welcome bodies even when their titles are unchanged', function () {
-    config(['app.demo_mode' => false]);
+    config(['app.demo_mode' => true]);
     $this->seed();
-    $article = User::where('email', 'test@example.com')->sole()->articles()->sole();
+    $article = User::where('email', 'test@example.com')->sole()->articles()->where('slug', 'welcome-to-inkrail')->sole();
     $article->translations()->where('locale', 'en')->update(['content' => 'My English introduction']);
     $article->translations()->where('locale', 'ja')->update(['content' => '自分で編集した紹介文']);
 
@@ -35,11 +47,11 @@ test('reseeding preserves edited welcome bodies even when their titles are uncha
 
     expect($article->fresh()->translations->firstWhere('locale', 'en')->content)->toBe('My English introduction');
     expect($article->fresh()->translations->firstWhere('locale', 'ja')->content)->toBe('自分で編集した紹介文');
-    $this->assertDatabaseCount('articles', 1);
+    $this->assertDatabaseCount('articles', 8);
 });
 
 test('legacy welcome articles retain their URL and draft state when translated', function () {
-    config(['app.demo_mode' => false]);
+    config(['app.demo_mode' => true]);
     app()->setLocale('en');
     $user = User::factory()->create(['email' => 'test@example.com']);
     $article = $user->articles()->create([
@@ -52,7 +64,7 @@ test('legacy welcome articles retain their URL and draft state when translated',
     $this->seed();
 
     expect($article->fresh())->title->toBe('Welcome to InkRail')->slug->toBe('original-welcome')->is_published->toBeFalse();
-    expect($user->articles()->count())->toBe(1);
+    expect($user->articles()->count())->toBe(8);
 });
 
 test('syntax showcase articles are published at stable URLs', function (string $syntax, string $example) {

@@ -161,7 +161,7 @@ test('publication metadata does not allow other users to read or modify articles
     expect($article->fresh())->slug->toBe('owner-only')->is_published->toBeTrue();
 });
 
-test('article samples can be seeded repeatedly with valid publication metadata', function () {
+test('normal seeding preserves user articles without adding samples', function () {
     config(['app.demo_mode' => false]);
     app()->setLocale('en');
     $this->seed();
@@ -172,16 +172,10 @@ test('article samples can be seeded repeatedly with valid publication metadata',
     expect($user->hasVerifiedEmail())->toBeTrue();
     expect(Hash::check('password', $user->password))->toBeTrue();
 
-    $articles = $user->articles()->get();
-    expect($articles)->toHaveCount(1);
-    $this->assertDatabaseCount('articles', 1);
-    $this->assertDatabaseCount('article_translations', 2);
-    expect($articles->firstWhere('title', 'Welcome to InkRail')->is_published)->toBeTrue();
-    expect($articles->sole()->translations->pluck('locale')->all())->toEqualCanonicalizing(['en', 'ja']);
-    expect($articles->sole()->slug)->toBe('welcome-to-inkrail');
-    $this->get(route('public.articles.show', 'welcome-to-inkrail'))->assertOk();
+    $this->assertDatabaseCount('articles', 0);
+    $this->assertDatabaseCount('article_translations', 0);
 
-    $article = $articles->sole();
+    $article = $user->articles()->create(['slug' => 'welcome-to-inkrail', 'is_published' => false]);
     $article->replaceTranslations(['en' => ['title' => 'My introduction', 'content' => 'My own text']]);
 
     $this->seed();

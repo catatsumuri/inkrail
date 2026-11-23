@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -18,8 +19,14 @@ use Illuminate\Support\Str;
  * @property string $slug
  * @property bool $is_published
  * @property int $edit_version
+ * @property string $sync_id
+ * @property string|null $zenn_repository
+ * @property string|null $zenn_branch
+ * @property string|null $zenn_path
+ * @property string|null $zenn_sha
  */
 #[Fillable(['title', 'content', 'slug', 'is_published'])]
+#[Hidden(['sync_id', 'zenn_repository', 'zenn_branch', 'zenn_path', 'zenn_sha'])]
 class Article extends Model
 {
     /** @var array<string, string> */
@@ -145,6 +152,10 @@ class Article extends Model
             }
         });
         static::creating(function (Article $article): void {
+            if (blank($article->sync_id)) {
+                $article->sync_id = (string) Str::uuid();
+            }
+
             if (blank($article->slug)) {
                 $article->slug = Str::lower((string) Str::ulid());
             }
