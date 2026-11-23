@@ -148,8 +148,10 @@ class PushArticleToZenn
 
     private function newPath(PendingRequest $client, Article $article, string $repository, string $branch): string
     {
+        $attemptedFilenames = [];
         for ($attempt = 0; $attempt < 10; $attempt++) {
-            $slug = ($this->resolveSlug)($article->slug, []);
+            $slug = ($this->resolveSlug)($article->slug, $attemptedFilenames);
+            $attemptedFilenames[] = "{$slug}.md";
             $path = "articles/{$slug}.md";
 
             if (Article::query()->where('zenn_repository', $repository)->where('zenn_branch', $branch)->where('zenn_path', $path)->exists()) {
