@@ -133,6 +133,7 @@ class PushArticleToZenn
         $article->zenn_branch = $branch;
         $article->zenn_path = $path;
         $article->zenn_sha = $sha;
+        $article->zenn_local_sha = $sha;
         $article->save();
     }
 }

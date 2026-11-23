@@ -118,7 +118,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                         className="flex shrink-0 items-center space-x-2"
                     >
                         <AppLogoIcon className="size-8 sm:hidden" />
-                        <span className="hidden sm:flex">
+                        <span className="hidden items-center sm:flex">
                             <AppLogo />
                         </span>
                     </Link>

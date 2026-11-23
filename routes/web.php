@@ -4,11 +4,13 @@ use App\Http\Controllers\Admin\SecurityEventController;
 use App\Http\Controllers\ArticleController;
 use App\Http\Controllers\ArticleHistoryController;
 use App\Http\Controllers\ArticleImageController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeleteNotificationController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\MarkNotificationAsReadController;
 use App\Http\Controllers\PublicArticleController;
 use App\Http\Controllers\SandboxController;
+use App\Http\Controllers\ZennImportController;
 use App\Http\Controllers\ZennPushController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -51,7 +53,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('articles/{article}/zenn', ZennPushController::class)->name('articles.zenn.push');
     Route::resource('articles', ArticleController::class);
 
-    Route::inertia('dashboard', 'dashboard')->name('dashboard');
+    Route::get('dashboard', DashboardController::class)->name('dashboard');
+    Route::post('zenn/import', ZennImportController::class)->middleware('throttle:6,1')->name('zenn.import');
 
     Route::get('admin/security-events', SecurityEventController::class)
         ->middleware('can:view-security-events')

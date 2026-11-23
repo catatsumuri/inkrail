@@ -24,9 +24,11 @@ use Illuminate\Support\Str;
  * @property string|null $zenn_branch
  * @property string|null $zenn_path
  * @property string|null $zenn_sha
+ * @property string|null $zenn_local_sha
+ * @property array<string, mixed>|null $zenn_frontmatter
  */
 #[Fillable(['title', 'content', 'slug', 'is_published'])]
-#[Hidden(['sync_id', 'zenn_repository', 'zenn_branch', 'zenn_path', 'zenn_sha'])]
+#[Hidden(['sync_id', 'zenn_repository', 'zenn_branch', 'zenn_path', 'zenn_sha', 'zenn_local_sha', 'zenn_frontmatter'])]
 class Article extends Model
 {
     /** @var array<string, string> */
@@ -162,10 +164,10 @@ class Article extends Model
         });
     }
 
-    /** @return array{is_published: 'boolean'} */
+    /** @return array{is_published: 'boolean', zenn_frontmatter: 'array'} */
     protected function casts(): array
     {
-        return ['is_published' => 'boolean'];
+        return ['is_published' => 'boolean', 'zenn_frontmatter' => 'array'];
     }
 
     /** @return BelongsTo<User, $this> */
