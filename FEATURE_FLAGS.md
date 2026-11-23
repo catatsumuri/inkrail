@@ -137,6 +137,10 @@ a conflict:
 | `CreateNewUser`, `ProfileValidationRules`, `ProfileUpdateRequest`, `ProfileController` | Handle `username`, including lowercasing and the current-password requirement. Re-apply on top of upstream's version.                                                                                             |
 | `login.tsx`, `register.tsx`, `profile.tsx`                                             | The login field is named `login`; the username field was added.                                                                                                                                                   |
 
+`README.md` is rewritten on `extended` and links to `main`'s README for the base
+kit. When `main` changes its README, keep `extended`'s version and carry over
+only what concerns this branch.
+
 The optional email address also touches `bootstrap/app.php` (the `verified`
 alias), `User`, `SendGeneralNotification`, `ResolveSecurityUser`, the two
 Artisan commands that print a user, and `user-info.tsx`. Keep the

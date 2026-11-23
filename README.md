@@ -1,26 +1,45 @@
-# Laravel React Secure Starter Kit
+# Laravel React Secure Starter Kit: `extended`
 
-A Laravel + React starter kit with additional controls for account security, session management, and security event logging. Based on the multilingual [react-starter-kit-i18n](https://github.com/catatsumuri/react-starter-kit-i18n) project's `main` branch, which derives from Laravel's official [react-starter-kit](https://github.com/laravel/react-starter-kit), it extends the existing authentication flows with tools for users to spot account changes and end unwanted sessions, and for operators to investigate security events.
+This is the `extended` branch of the [Laravel React Secure Starter Kit](https://github.com/catatsumuri/laravel-react-secure-starter-kit). It builds on the [`main` branch](https://github.com/catatsumuri/laravel-react-secure-starter-kit/blob/main/README.md) and adds username sign-in, optional email addresses and deployment-time feature flags.
 
-Compared with that project's `main` branch, it adds:
+Everything the base kit provides is described in the [`main` README](https://github.com/catatsumuri/laravel-react-secure-starter-kit/blob/main/README.md) and is not repeated here: account change notifications, database session management, security event logging, rate limits, operational alerts, localization and the published documentation.
 
-- **Account change notifications** — email notices for password changes and resets, two-factor authentication changes, recovery code regeneration, passkey additions and removals, and account deletion. Email changes require the current password and notify the previous address.
-- **Database session management** — A settings page showing devices, IP addresses, and recent activity, with options to revoke one other session, all other sessions, or every session. **Session revocation requires `SESSION_DRIVER=database`.** The application can use other drivers, such as Redis or file, but this kit's revocation feature is unavailable with them. Revocation also invalidates existing remember-me logins. The settings page requires recent password confirmation.
-- **Operator session revocation (database only)** — an Artisan command to revoke a user's database sessions and reset remember-me logins by user ID or email.
-- **Security event logging** — records of sensitive account changes and rejected authentication attempts, with a read-only JSON endpoint restricted to explicitly configured users with verified email addresses. Security records reject updates and deletes through the application's activity model, and scheduled cleanup uses configurable retention periods.
-- **Rate limits for sensitive actions** — additional throttling for profile updates, password reset submissions, and session revocation.
-- **Notifications and operational alerts** — an in-app notification menu, shared delivery support for database, email, and optional Slack notifications, and throttled email alerts for reported exceptions and failed queue jobs.
+## What `extended` adds
 
-Regression tests cover account changes, security notifications and logs, access restrictions, session revocation, and failure handling.
+- **Sign in with a username or an email address.** One field accepts either. Usernames are lowercase, 3-30 characters of `a-z 0-9 . _ -`, start and end with a letter or digit, and never contain `@`. Failed attempts are throttled per account, so alternating between the two identifiers does not give extra guesses.
+- **Email address is optional.** Registration requires a username; the email address can be left out, added later, and changed, but not removed once set. Accounts without one skip email verification, receive security notices in the app instead of by mail, and cannot read the security log.
+- **Feature flags.** Registration, passkeys, two-factor authentication and password confirmation can be switched off with environment variables.
+- **No Chisel.** The install-time feature selection of the official starter kit was removed so this branch can keep merging `main`. The `@chisel-*` marker comments are left in place on purpose.
 
-On the `extended` line, authentication features can be switched off with deployment-time feature flags; see [FEATURE_FLAGS.md](FEATURE_FLAGS.md).
+## Feature flags
 
-For localization setup and adding locales, see the [upstream localization guide](https://github.com/catatsumuri/react-starter-kit-i18n#adding-a-locale).
+They are read when the application boots, so they are decisions to make before launch, not switches to flip while the application is in use. Turning two-factor authentication off, for example, lets accounts that already enrolled sign in with their password alone.
 
-The frontend requires `@erag/lang-sync-inertia` ^3.1.1, which fixes unreplaced placeholders in the session list when translation keys are missing. Existing installations should run `npm install '@erag/lang-sync-inertia@^3.1.1'` and `npm run build`. See the [upstream release notes](https://github.com/eramitgupta/lang-sync-inertia/releases/tag/v3.1.1).
+| Variable                        | Default | Turns off                                                                    |
+| ------------------------------- | ------- | ---------------------------------------------------------------------------- |
+| `FEATURE_REGISTRATION`          | `true`  | Self-service registration                                                    |
+| `FEATURE_PASSKEYS`              | `true`  | Passkey sign-in and management                                               |
+| `FEATURE_TWO_FACTOR`            | `true`  | Two-factor setup, recovery codes and the sign-in challenge                   |
+| `FEATURE_PASSWORD_CONFIRMATION` | `true`  | Password re-entry for sensitive settings, and the browser session management |
+
+See [FEATURE_FLAGS.md](FEATURE_FLAGS.md) for what each flag does, what to read before turning one off, accounts without an email address, how to add a flag, and how to merge `main` into this branch.
+
+## Getting started
+
+```bash
+git clone --branch extended https://github.com/catatsumuri/laravel-react-secure-starter-kit.git
+cd laravel-react-secure-starter-kit
+composer setup
+```
+
+`composer setup` installs dependencies, creates `.env`, generates the application key, runs the migrations and builds the frontend. `php artisan db:seed` creates a development account (username `test`, email `test@example.com`, password `password`); do not use it outside development.
+
+After pulling changes, run `php artisan migrate`. `composer install` and `composer update` regenerate the language files (`patch-vendor` and `lang:update`) on their own; run `composer patch-vendor` and `php artisan lang:update` by hand if only the translation sources changed.
+
+## Known limitation
+
+An account without an email address that forgets its password has no recovery path yet, because the self-service reset works by email only. An operator command for it is not implemented.
 
 ## Documentation
 
-Documentation is published on GitHub Pages in [English](https://catatsumuri.github.io/laravel-react-secure-starter-kit/about/) and [Japanese](https://catatsumuri.github.io/laravel-react-secure-starter-kit/ja/about/). Each language's root page redirects to its project overview.
-
-The Astro Starlight sources, editing instructions, and documentation publishing workflow live on the separate [`docs` branch](https://github.com/catatsumuri/laravel-react-secure-starter-kit/tree/docs). They are not included in the application starter kit.
+The documentation site and its sources describe the `main` branch. See the [`main` README](https://github.com/catatsumuri/laravel-react-secure-starter-kit/blob/main/README.md#documentation) for links.
