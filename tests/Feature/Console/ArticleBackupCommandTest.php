@@ -48,7 +48,7 @@ function wipeArticles(): void
     ArticleImage::query()->delete();
 }
 
-test('a backup restores articles with revision history, reviews, images and metadata', function () {
+test('a backup restores articles with revision history, reviews, images and metadata after the data is gone', function () {
     $owner = User::factory()->withUsername('writer')->create();
     $article = createBackedUpArticle($owner);
     $image = ArticleImage::factory()->for($owner)->create(['path' => hash('sha256', 'image-bytes').'.png']);
@@ -62,7 +62,8 @@ test('a backup restores articles with revision history, reviews, images and meta
 
     $this->artisan('articles:backup', ['--output' => $this->backupPath, '--description' => 'before fresh'])->assertSuccessful();
 
-    $this->artisan('migrate:fresh')->assertSuccessful();
+    wipeArticles();
+    User::query()->delete();
     Storage::disk('public')->deleteDirectory(ArticleImage::DIRECTORY);
     $newOwner = User::factory()->withUsername('writer')->create();
 
