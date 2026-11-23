@@ -91,12 +91,21 @@ class FeatureFlagServiceProviderTest extends TestCase
         $_SERVER['argv'] = ['artisan', 'wayfinder:generate'];
 
         try {
-            config(['features' => ['registration' => false, 'password_confirmation' => false]]);
+            config(['features' => [
+                'registration' => false,
+                'passkeys' => false,
+                'two_factor' => false,
+                'password_confirmation' => false,
+                'unrelated' => false,
+            ]]);
 
             (new FeatureFlagServiceProvider($this->app))->register();
 
             $this->assertTrue(config('features.registration'));
+            $this->assertTrue(config('features.passkeys'));
+            $this->assertTrue(config('features.two_factor'));
             $this->assertTrue(config('features.password_confirmation'));
+            $this->assertFalse(config('features.unrelated'));
         } finally {
             $_SERVER['argv'] = $argv;
         }

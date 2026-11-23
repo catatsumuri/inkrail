@@ -14,7 +14,12 @@ import { index as sessionsIndex } from '@/routes/sessions';
 /* @end-chisel-password-confirmation */
 import type { NavItem } from '@/types';
 
-const sidebarNavItems: NavItem[] = [
+type SettingsNavItem = NavItem & {
+    /** Hide the item unless this shared feature flag is enabled. */
+    requiresFeature?: 'password_confirmation';
+};
+
+const sidebarNavItems: SettingsNavItem[] = [
     {
         title: 'Profile',
         href: edit(),
@@ -30,6 +35,7 @@ const sidebarNavItems: NavItem[] = [
         title: 'Sessions',
         href: sessionsIndex(),
         icon: null,
+        requiresFeature: 'password_confirmation',
     },
     /* @end-chisel-password-confirmation */
     {
@@ -44,9 +50,8 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
     const { __ } = lang();
     const { features } = usePage().props;
 
-    // Session management relies on password confirmation.
     const navItems = sidebarNavItems.filter(
-        (item) => features.password_confirmation || item.title !== 'Sessions',
+        (item) => !item.requiresFeature || features[item.requiresFeature],
     );
 
     return (

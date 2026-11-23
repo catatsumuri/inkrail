@@ -20,7 +20,14 @@ class FeatureFlagServiceProvider extends ServiceProvider
         // the generated files must describe the full route set whatever the
         // flags say. HTTP requests still honour the flags.
         if ($this->isGeneratingFrontendRoutes()) {
-            config(['features' => array_map(fn () => true, config('features', []))]);
+            // Only the flags that add or remove routes. Unrelated flags added
+            // to config/features.php later must keep their configured value.
+            config([
+                'features.registration' => true,
+                'features.passkeys' => true,
+                'features.two_factor' => true,
+                'features.password_confirmation' => true,
+            ]);
 
             return;
         }
