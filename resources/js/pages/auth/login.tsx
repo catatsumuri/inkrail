@@ -1,4 +1,4 @@
-import { Form, Head, setLayoutProps } from '@inertiajs/react';
+import { Form, Head, setLayoutProps, usePage } from '@inertiajs/react';
 import { lang } from '@erag/lang-sync-inertia/react';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
@@ -24,6 +24,7 @@ type Props = {
 
 export default function Login({ status, canResetPassword }: Props) {
     const { __ } = lang();
+    const { features } = usePage().props;
 
     setLayoutProps({
         title: __('Log in to your account'),
@@ -113,12 +114,14 @@ export default function Login({ status, canResetPassword }: Props) {
                         </div>
 
                         {/* @chisel-registration */}
-                        <div className="text-center text-sm text-muted-foreground">
-                            {__("Don't have an account?")}{' '}
-                            <TextLink href={register()} tabIndex={5}>
-                                {__('Sign up')}
-                            </TextLink>
-                        </div>
+                        {features.registration && (
+                            <div className="text-center text-sm text-muted-foreground">
+                                {__("Don't have an account?")}{' '}
+                                <TextLink href={register()} tabIndex={5}>
+                                    {__('Sign up')}
+                                </TextLink>
+                            </div>
+                        )}
                         {/* @end-chisel-registration */}
                     </>
                 )}
