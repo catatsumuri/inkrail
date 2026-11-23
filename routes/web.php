@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\SecurityEventController;
+use App\Http\Controllers\ArticleBackupController;
 use App\Http\Controllers\ArticleController;
 use App\Http\Controllers\ArticleHistoryController;
 use App\Http\Controllers\ArticleImageController;
@@ -55,6 +56,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('dashboard', DashboardController::class)->name('dashboard');
     Route::post('zenn/import', ZennImportController::class)->middleware('throttle:6,1')->name('zenn.import');
+
+    Route::prefix('backups')->name('backups.')->middleware('throttle:10,1')->where(['filename' => 'inkrail-[0-9]{8}-[0-9]{6}(-[a-z0-9]{4})?\.zip'])->group(function () {
+        Route::post('/', [ArticleBackupController::class, 'store'])->name('store');
+        Route::post('upload', [ArticleBackupController::class, 'upload'])->name('upload');
+        Route::get('{filename}', [ArticleBackupController::class, 'download'])->name('download');
+        Route::post('{filename}/restore', [ArticleBackupController::class, 'restore'])->name('restore');
+        Route::delete('{filename}', [ArticleBackupController::class, 'destroy'])->name('destroy');
+    });
 
     Route::get('admin/security-events', SecurityEventController::class)
         ->middleware('can:view-security-events')

@@ -85,11 +85,24 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * Only configured publishers with a verified email may send their own articles to Zenn.
+     * Only configured publishers with a verified email may import from and send their own articles to Zenn.
      */
     protected function configureZennPublishing(): void
     {
         Gate::define('import-from-zenn', function (Authenticatable $user): bool {
+            if (! $user instanceof MustVerifyEmail || ! $user->hasVerifiedEmail()) {
+                return false;
+            }
+
+            return $user instanceof User && ! $user->is_sandbox
+                && in_array(Str::lower($user->getEmailForVerification()), array_map(Str::lower(...), config('articles.zenn_publishers')), true);
+        });
+
+        /*
+         * Backups hold every article, so they are limited to the same trusted
+         * publishers, never to sandbox accounts.
+         */
+        Gate::define('manage-article-backups', function (Authenticatable $user): bool {
             if (! $user instanceof MustVerifyEmail || ! $user->hasVerifiedEmail()) {
                 return false;
             }

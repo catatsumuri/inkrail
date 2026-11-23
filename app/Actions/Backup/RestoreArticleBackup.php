@@ -72,15 +72,45 @@ class RestoreArticleBackup
     }
 
     /**
+     * Read and check the manifest of an archive without restoring anything.
+     *
      * @return array<string, mixed>
      */
-    private function readData(ZipArchive $zip): array
+    public function manifest(string $path): array
+    {
+        $zip = new ZipArchive;
+
+        if (! is_file($path) || $zip->open($path) !== true) {
+            throw new RuntimeException('The file is not a valid backup archive.');
+        }
+
+        try {
+            return $this->readManifest($zip);
+        } finally {
+            $zip->close();
+        }
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function readManifest(ZipArchive $zip): array
     {
         $manifest = $this->readJson($zip, CreateArticleBackup::MANIFEST_FILE);
 
         if (($manifest['format'] ?? null) !== CreateArticleBackup::FORMAT) {
             throw new RuntimeException('Unsupported backup format.');
         }
+
+        return $manifest;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function readData(ZipArchive $zip): array
+    {
+        $this->readManifest($zip);
 
         return $this->readJson($zip, CreateArticleBackup::DATA_FILE);
     }

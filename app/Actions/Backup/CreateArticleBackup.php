@@ -24,16 +24,6 @@ class CreateArticleBackup
 
     public const FILES_DIRECTORY = '_files/';
 
-    public static function directory(): string
-    {
-        return rtrim((string) config('articles.backup_directory'), '/');
-    }
-
-    public static function defaultPath(): string
-    {
-        return self::directory().'/inkrail-'.now()->format('Ymd-His').'.zip';
-    }
-
     /**
      * @return array{articles: int, namespaces: int, images: int, missing_images: list<string>}
      */

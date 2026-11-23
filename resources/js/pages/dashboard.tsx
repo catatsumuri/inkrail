@@ -4,6 +4,9 @@ import { CircleCheck, Download, LoaderCircle, PencilLine } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { index, show } from '@/actions/App/Http/Controllers/ArticleController';
 import ZennImportController from '@/actions/App/Http/Controllers/ZennImportController';
+import ArticleBackupsCard, {
+    type ArticleBackups,
+} from '@/components/article-backups';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -59,7 +62,13 @@ const resultLabels: Record<ImportStatus, string> = {
     invalid: 'Invalid article — skipped',
 };
 
-export default function Dashboard({ zenn }: { zenn: Zenn | null }) {
+export default function Dashboard({
+    zenn,
+    backups,
+}: {
+    zenn: Zenn | null;
+    backups: ArticleBackups | null;
+}) {
     const { __ } = lang();
     const [importDialogOpen, setImportDialogOpen] = useState(false);
     const [importing, setImporting] = useState(false);
@@ -445,6 +454,7 @@ export default function Dashboard({ zenn }: { zenn: Zenn | null }) {
                         {__('Open your articles to keep writing and editing.')}
                     </p>
                 )}
+                {backups && <ArticleBackupsCard backups={backups} />}
             </div>
         </>
     );

@@ -23,8 +23,11 @@ return [
     'image_max_dimension' => 2048,
 
     /*
-    | Where articles:backup writes archives by default. Kept outside the
-    | database so migrate:fresh does not remove it.
+    | Where articles:backup and the dashboard keep backup archives: a disk from
+    | config/filesystems.php (use an S3 compatible one such as R2 when the app
+    | filesystem is not persistent) and a directory on it. Kept outside the
+    | database so migrate:fresh does not remove them.
     */
-    'backup_directory' => env('ARTICLES_BACKUP_DIR', storage_path('app/private/backups')),
+    'backup_disk' => env('ARTICLES_BACKUP_DISK', 'local'),
+    'backup_directory' => env('ARTICLES_BACKUP_DIR', 'backups'),
 ];
