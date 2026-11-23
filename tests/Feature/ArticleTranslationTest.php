@@ -3,26 +3,20 @@
 use App\Models\Article;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Inertia\Testing\AssertableInertia as Assert;
 use LaravelLang\Routes\Helpers\Name;
 
 uses(RefreshDatabase::class);
 
-test('migration preserves existing article identity and content as English', function () {
+test('the initial schema stores translated content separately from article identity', function () {
     $user = User::factory()->create();
-    $migration = require database_path('migrations/2026_11_10_145417_create_article_translations_table.php');
-    $migration->down();
-    $id = DB::table('articles')->insertGetId([
-        'user_id' => $user->id, 'title' => '既存の原稿', 'content' => 'Keep **original** content',
-        'slug' => 'keep-this-url', 'is_published' => true, 'created_at' => now(), 'updated_at' => now(),
-    ]);
+    $article = $user->articles()->create(['slug' => 'keep-this-url', 'is_published' => true]);
 
-    $migration->up();
+    $article->replaceTranslations(['en' => ['title' => '既存の原稿', 'content' => 'Keep **original** content']]);
 
-    $this->assertDatabaseHas('articles', ['id' => $id, 'user_id' => $user->id, 'slug' => 'keep-this-url', 'is_published' => true]);
-    $this->assertDatabaseHas('article_translations', ['article_id' => $id, 'locale' => 'en', 'title' => '既存の原稿', 'content' => 'Keep **original** content']);
+    $this->assertDatabaseHas('articles', ['id' => $article->id, 'user_id' => $user->id, 'slug' => 'keep-this-url', 'is_published' => true]);
+    $this->assertDatabaseHas('article_translations', ['article_id' => $article->id, 'locale' => 'en', 'title' => '既存の原稿', 'content' => 'Keep **original** content']);
     expect(Schema::hasColumn('articles', 'title'))->toBeFalse();
     expect(Schema::hasColumn('articles', 'content'))->toBeFalse();
 });

@@ -112,19 +112,18 @@ test('revision and review models reject mutation', function () {
     expect(fn () => ArticleTranslationReview::latest('id')->first()->delete())->toThrow(LogicException::class);
 });
 
-test('history migration preserves article identity public state and both translation bodies', function () {
+test('the initial schema records revisions for both languages without changing article identity', function () {
     $article = bilingualHistoryArticle();
-    $migration = require database_path('migrations/2026_11_22_132254_add_translation_history_to_articles.php');
-    $migration->down();
 
-    $migration->up();
+    $article->replaceTranslations(['en' => ['title' => 'English', 'content' => 'New revision']]);
 
     $this->assertDatabaseHas('articles', ['id' => $article->id, 'slug' => 'history', 'is_published' => true]);
     $this->assertDatabaseHas('article_revisions', ['article_id' => $article->id, 'locale' => 'en', 'title' => 'English', 'content' => 'Before']);
+    $this->assertDatabaseHas('article_revisions', ['article_id' => $article->id, 'locale' => 'en', 'title' => 'English', 'content' => 'New revision']);
     $this->assertDatabaseHas('article_revisions', ['article_id' => $article->id, 'locale' => 'ja', 'title' => '日本語', 'content' => '変更前']);
     expect($article->fresh()->translations->every(fn ($translation): bool => $translation->current_revision_id !== null))->toBeTrue();
-    expect($article->fresh()->translationStatus()['en']['state'])->toBe('other_changed');
-    $this->assertDatabaseCount('article_translation_reviews', 0);
+    expect($article->fresh()->translationStatus()['ja']['state'])->toBe('other_changed');
+    $this->assertDatabaseCount('article_translation_reviews', 1);
 });
 
 test('saving without an edit version and clearing an existing language are rejected', function () {
