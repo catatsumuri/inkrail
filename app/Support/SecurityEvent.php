@@ -5,6 +5,7 @@ namespace App\Support;
 enum SecurityEvent
 {
     case EmailChanged;
+    case UsernameChanged;
     case PasswordChanged;
     case PasswordReset;
     case TwoFactorEnabled;
@@ -21,6 +22,7 @@ enum SecurityEvent
     {
         return match ($this) {
             self::EmailChanged => __('The email address for your account was changed'),
+            self::UsernameChanged => __('The username for your account was changed'),
             self::PasswordChanged => __('Your password was changed'),
             self::PasswordReset => __('Your password was reset'),
             self::TwoFactorEnabled => __('Two-factor authentication was enabled'),
@@ -39,6 +41,7 @@ enum SecurityEvent
     {
         return match ($this) {
             self::EmailChanged => __('The email address for your account was changed. This notice was sent to your previous address.'),
+            self::UsernameChanged => __('The username for your account was changed.'),
             self::PasswordChanged => __('The password for your account was changed.'),
             self::PasswordReset => __('The password for your account was reset using a password reset link.'),
             self::TwoFactorEnabled => __('Two-factor authentication was enabled for your account.'),

@@ -41,6 +41,7 @@ class ProfileController extends Controller
         $request->user()->fill($request->profileData());
 
         $isEmailChanged = $request->user()->isDirty('email');
+        $isUsernameChanged = $request->user()->isDirty('username');
 
         if ($isEmailChanged) {
             $request->user()->email_verified_at = null;
@@ -67,6 +68,17 @@ class ProfileController extends Controller
                 SecurityEvent::EmailChanged->mailBody(),
             );
             $logSecurityEvent('email.changed', $request->user());
+        }
+
+        if ($isUsernameChanged) {
+            $logSecurityEvent('username.changed', $request->user());
+            $sendGeneralNotification->handle(
+                $request->user(),
+                SecurityEvent::UsernameChanged->subject(),
+                SecurityEvent::UsernameChanged->mailBody(),
+                channels: ['mail'],
+                deferred: true,
+            );
         }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Profile updated.')]);

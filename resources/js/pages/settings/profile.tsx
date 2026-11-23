@@ -36,6 +36,8 @@ export default function Profile(
     const { auth } = usePage<PageProps>().props;
     const { __ } = lang();
     const [isEmailChanged, setIsEmailChanged] = useState(false);
+    const [isUsernameChanged, setIsUsernameChanged] = useState(false);
+    const requiresPassword = isEmailChanged || isUsernameChanged;
     const [passwordInputKey, setPasswordInputKey] = useState(0);
 
     setLayoutProps({
@@ -57,7 +59,9 @@ export default function Profile(
                 <Heading
                     variant="small"
                     title={__('Profile')}
-                    description={__('Update your name and email address')}
+                    description={__(
+                        'Update your name, username and email address',
+                    )}
                 />
 
                 <Form
@@ -67,7 +71,10 @@ export default function Profile(
                     }}
                     resetOnSuccess={['current_password']}
                     resetOnError={['current_password']}
-                    onSuccess={() => setIsEmailChanged(false)}
+                    onSuccess={() => {
+                        setIsEmailChanged(false);
+                        setIsUsernameChanged(false);
+                    }}
                     onError={() => setPasswordInputKey((key) => key + 1)}
                     className="space-y-6"
                 >
@@ -89,6 +96,34 @@ export default function Profile(
                                 <InputError
                                     className="mt-2"
                                     message={errors.name}
+                                />
+                            </div>
+
+                            <div className="grid gap-2">
+                                <Label htmlFor="username">
+                                    {__('Username')}
+                                </Label>
+
+                                <Input
+                                    id="username"
+                                    className="mt-1 block w-full"
+                                    defaultValue={auth.user.username ?? ''}
+                                    onChange={(event) =>
+                                        setIsUsernameChanged(
+                                            event.target.value.toLowerCase() !==
+                                                (auth.user.username ?? ''),
+                                        )
+                                    }
+                                    name="username"
+                                    required={Boolean(auth.user.username)}
+                                    autoComplete="off"
+                                    autoCapitalize="none"
+                                    placeholder={__('Username')}
+                                />
+
+                                <InputError
+                                    className="mt-2"
+                                    message={errors.username}
                                 />
                             </div>
 
@@ -120,7 +155,7 @@ export default function Profile(
                                 />
                             </div>
 
-                            {isEmailChanged && (
+                            {requiresPassword && (
                                 <div className="grid gap-2">
                                     <Label htmlFor="current_password">
                                         {__('Current password')}
@@ -138,7 +173,7 @@ export default function Profile(
 
                                     <p className="text-sm text-muted-foreground">
                                         {__(
-                                            'Enter your current password to confirm the email address change.',
+                                            'Enter your current password to confirm the change to your email address or username.',
                                         )}
                                     </p>
 

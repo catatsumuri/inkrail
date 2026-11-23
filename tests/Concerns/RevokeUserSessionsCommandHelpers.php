@@ -24,7 +24,7 @@ trait RevokeUserSessionsCommandHelpers
         $this->startNewClient();
 
         $response = $this->post(route('login.store'), [
-            'email' => $user->email,
+            'login' => $user->email,
             'password' => 'password',
         ]);
 
@@ -42,7 +42,7 @@ trait RevokeUserSessionsCommandHelpers
         $this->startNewClient();
 
         $response = $this->post(route('login.store'), [
-            'email' => $user->email,
+            'login' => $user->email,
             'password' => 'password',
             'remember' => true,
         ]);

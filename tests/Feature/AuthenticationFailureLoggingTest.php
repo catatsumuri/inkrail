@@ -17,7 +17,7 @@ class AuthenticationFailureLoggingTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $this->post(route('login.store'), ['email' => $user->email, 'password' => 'wrong-password']);
+        $this->post(route('login.store'), ['login' => $user->email, 'password' => 'wrong-password']);
 
         $event = Activity::inLog('security')->sole();
 
@@ -31,7 +31,7 @@ class AuthenticationFailureLoggingTest extends TestCase
 
     public function test_an_unknown_account_records_a_failed_login_without_a_subject(): void
     {
-        $this->post(route('login.store'), ['email' => 'nobody@example.com', 'password' => 'wrong-password']);
+        $this->post(route('login.store'), ['login' => 'nobody@example.com', 'password' => 'wrong-password']);
 
         $event = Activity::inLog('security')->sole();
 
@@ -44,7 +44,7 @@ class AuthenticationFailureLoggingTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $this->post(route('login.store'), ['email' => $user->email, 'password' => 'password']);
+        $this->post(route('login.store'), ['login' => $user->email, 'password' => 'password']);
 
         $this->assertSame(0, Activity::inLog('security')->count());
     }

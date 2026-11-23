@@ -46,7 +46,9 @@ return [
     |
     */
 
-    'username' => 'email',
+    // The login form field. It accepts a username or an email address; see
+    // App\Auth\UsernameOrEmailUserProvider. Password resets keep using 'email'.
+    'username' => 'login',
 
     'email' => 'email',
 
