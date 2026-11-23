@@ -21,6 +21,7 @@ class ResolveSecurityUser
         return match ($type) {
             'id' => $this->byId($value),
             'email' => $this->byEmail($value),
+            'username' => $this->byUsername($value),
             default => throw new InvalidArgumentException($this->formatMessage()),
         };
     }
@@ -47,8 +48,13 @@ class ResolveSecurityUser
         return $users->first();
     }
 
+    private function byUsername(string $value): ?User
+    {
+        return User::query()->where('username', $value)->first();
+    }
+
     private function formatMessage(): string
     {
-        return 'Use id:123 or email:user@example.com.';
+        return 'Use id:123, email:user@example.com or username:alice.';
     }
 }

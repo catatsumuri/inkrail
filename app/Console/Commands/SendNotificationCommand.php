@@ -6,6 +6,7 @@ use App\Actions\Notifications\SendGeneralNotification;
 use App\Actions\Notifications\SendThrowableAlert;
 use App\Models\User;
 use Illuminate\Console\Command;
+use Illuminate\Support\Str;
 use InvalidArgumentException;
 use RuntimeException;
 
@@ -17,7 +18,7 @@ class SendNotificationCommand extends Command
      * @var string
      */
     protected $signature = 'notifications:send
-        {user? : User ID or email address}
+        {user? : User ID, email address or username}
         {--alert : Send to the shared alert mailbox and Slack channel instead of a user}
         {--exception : Report a test exception through the same path as real errors (implies --alert)}
         {--no-throttle : With --exception, skip the five-minute duplicate suppression}
@@ -74,7 +75,9 @@ class SendNotificationCommand extends Command
             return self::FAILURE;
         }
 
-        $this->info("Notification sent to {$user->name} ({$user->email}).");
+        $identifier = $user->email ?? $user->username;
+
+        $this->info("Notification sent to {$user->name} ({$identifier}).");
 
         return self::SUCCESS;
     }
@@ -133,7 +136,12 @@ class SendNotificationCommand extends Command
             return User::query()->find((int) $identifier);
         }
 
-        return User::query()->where('email', $identifier)->first();
+        $identifier = Str::lower($identifier);
+
+        return User::query()
+            ->where('email', $identifier)
+            ->orWhere('username', $identifier)
+            ->first();
     }
 
     protected function requiredValue(string $option, string $question): ?string

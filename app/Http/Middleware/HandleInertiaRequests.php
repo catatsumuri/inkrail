@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\DatabaseNotification;
 use Inertia\Middleware;
+use Laravel\Fortify\Features;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -49,6 +50,11 @@ class HandleInertiaRequests extends Middleware
             'notifications' => fn (): array => $this->notificationFeed($request),
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'lang' => $this->loadLangJson(),
+            'features' => [
+                'registration' => Features::enabled(Features::registration()),
+                'passkeys' => Features::enabled(Features::passkeys()),
+                'password_confirmation' => (bool) config('features.password_confirmation', true),
+            ],
         ];
     }
 

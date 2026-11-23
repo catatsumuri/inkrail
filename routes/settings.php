@@ -7,6 +7,7 @@ use App\Http\Controllers\Settings\SessionController;
 use Illuminate\Auth\Middleware\RequirePassword;
 /* @end-chisel-password-confirmation */
 use Illuminate\Support\Facades\Route;
+use Laravel\Fortify\Features;
 
 Route::middleware(['auth'])->group(function () {
     Route::redirect('settings', '/settings/profile');
@@ -22,24 +23,26 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('settings/security', [SecurityController::class, 'edit'])
         /* @chisel-password-confirmation */
-        ->middleware(RequirePassword::class)
+        ->middleware(config('features.password_confirmation', true) ? RequirePassword::class : [])
         /* @end-chisel-password-confirmation */
         ->name('security.edit');
 
     /* @chisel-password-confirmation */
-    Route::middleware(RequirePassword::using(passwordTimeoutSeconds: 900))->group(function () {
-        Route::get('settings/sessions', [SessionController::class, 'index'])
-            ->name('sessions.index');
+    if (config('features.password_confirmation', true)) {
+        Route::middleware(RequirePassword::using(passwordTimeoutSeconds: 900))->group(function () {
+            Route::get('settings/sessions', [SessionController::class, 'index'])
+                ->name('sessions.index');
 
-        Route::middleware('throttle:session-revocation')->group(function () {
-            Route::delete('settings/sessions/all', [SessionController::class, 'destroyAll'])
-                ->name('sessions.destroy-all');
-            Route::delete('settings/sessions', [SessionController::class, 'destroyOthers'])
-                ->name('sessions.destroy-others');
-            Route::delete('settings/sessions/{fingerprint}', [SessionController::class, 'destroy'])
-                ->name('sessions.destroy');
+            Route::middleware('throttle:session-revocation')->group(function () {
+                Route::delete('settings/sessions/all', [SessionController::class, 'destroyAll'])
+                    ->name('sessions.destroy-all');
+                Route::delete('settings/sessions', [SessionController::class, 'destroyOthers'])
+                    ->name('sessions.destroy-others');
+                Route::delete('settings/sessions/{fingerprint}', [SessionController::class, 'destroy'])
+                    ->name('sessions.destroy');
+            });
         });
-    });
+    }
     /* @end-chisel-password-confirmation */
 
     Route::put('settings/password', [SecurityController::class, 'update'])
@@ -50,10 +53,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 /* @chisel-passkeys */
-Route::get('.well-known/passkey-endpoints', function () {
-    return response()->json([
-        'enroll' => route('security.edit'),
-        'manage' => route('security.edit'),
-    ]);
-})->name('well-known.passkeys');
+if (Features::enabled(Features::passkeys())) {
+    Route::get('.well-known/passkey-endpoints', function () {
+        return response()->json([
+            'enroll' => route('security.edit'),
+            'manage' => route('security.edit'),
+        ]);
+    })->name('well-known.passkeys');
+}
 /* @end-chisel-passkeys */

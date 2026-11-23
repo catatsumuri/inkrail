@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
             'email_verified_at' => now(),
             'password' => config('app.demo_mode') ? Str::random(64) : 'password',
             'is_showcase_owner' => (bool) config('app.demo_mode'),
+            'username' => 'test',
         ]);
 
         if (! config('app.demo_mode')) {

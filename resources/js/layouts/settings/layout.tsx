@@ -1,4 +1,4 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import type { PropsWithChildren } from 'react';
 import { lang } from '@erag/lang-sync-inertia/react';
 import Heading from '@/components/heading';
@@ -14,7 +14,12 @@ import { index as sessionsIndex } from '@/routes/sessions';
 /* @end-chisel-password-confirmation */
 import type { NavItem } from '@/types';
 
-const sidebarNavItems: NavItem[] = [
+type SettingsNavItem = NavItem & {
+    /** Hide the item unless this shared feature flag is enabled. */
+    requiresFeature?: 'password_confirmation';
+};
+
+const sidebarNavItems: SettingsNavItem[] = [
     {
         title: 'Profile',
         href: edit(),
@@ -30,6 +35,7 @@ const sidebarNavItems: NavItem[] = [
         title: 'Sessions',
         href: sessionsIndex(),
         icon: null,
+        requiresFeature: 'password_confirmation',
     },
     /* @end-chisel-password-confirmation */
     {
@@ -42,6 +48,11 @@ const sidebarNavItems: NavItem[] = [
 export default function SettingsLayout({ children }: PropsWithChildren) {
     const { isCurrentOrParentUrl } = useCurrentUrl();
     const { __ } = lang();
+    const { features } = usePage().props;
+
+    const navItems = sidebarNavItems.filter(
+        (item) => !item.requiresFeature || features[item.requiresFeature],
+    );
 
     return (
         <div className="px-4 py-6">
@@ -56,7 +67,7 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
                         className="flex flex-col space-y-1 space-x-0"
                         aria-label={__('Settings')}
                     >
-                        {sidebarNavItems.map((item, index) => (
+                        {navItems.map((item, index) => (
                             <Button
                                 key={`${toUrl(item.href)}-${index}`}
                                 size="sm"

@@ -11,7 +11,7 @@ uses(RefreshDatabase::class);
 test('a wrong password records a failed login for the account', function () {
     $user = User::factory()->create();
 
-    $this->post(route('login.store'), ['email' => $user->email, 'password' => 'wrong-password']);
+    $this->post(route('login.store'), ['login' => $user->email, 'password' => 'wrong-password']);
 
     $event = Activity::inLog('security')->sole();
 
@@ -24,7 +24,7 @@ test('a wrong password records a failed login for the account', function () {
 });
 
 test('an unknown account records a failed login without a subject', function () {
-    $this->post(route('login.store'), ['email' => 'nobody@example.com', 'password' => 'wrong-password']);
+    $this->post(route('login.store'), ['login' => 'nobody@example.com', 'password' => 'wrong-password']);
 
     $event = Activity::inLog('security')->sole();
 
@@ -36,7 +36,7 @@ test('an unknown account records a failed login without a subject', function () 
 test('a successful login does not record a failure', function () {
     $user = User::factory()->create();
 
-    $this->post(route('login.store'), ['email' => $user->email, 'password' => 'password']);
+    $this->post(route('login.store'), ['login' => $user->email, 'password' => 'password']);
 
     expect(Activity::inLog('security')->count())->toBe(0);
 });

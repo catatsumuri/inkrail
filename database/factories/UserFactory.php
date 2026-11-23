@@ -26,6 +26,7 @@ class UserFactory extends Factory
     {
         return [
             'name' => fake()->name(),
+            'username' => null,
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
@@ -36,6 +37,28 @@ class UserFactory extends Factory
             'two_factor_confirmed_at' => null,
             /* @end-chisel-2fa */
         ];
+    }
+
+    /**
+     * Give the model a username (accounts created before usernames existed have none).
+     */
+    public function withUsername(string $username = 'tester'): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'username' => $username,
+        ]);
+    }
+
+    /**
+     * An account that has no email address (it signs in with its username).
+     */
+    public function withoutEmail(string $username = 'tester'): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'username' => $username,
+            'email' => null,
+            'email_verified_at' => null,
+        ]);
     }
 
     /**

@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
+use App\Auth\LoginThrottleKey;
 use App\Http\Middleware\ThrottlePasswordReset;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -105,9 +106,7 @@ class FortifyServiceProvider extends ServiceProvider
         /* @end-chisel-2fa */
 
         RateLimiter::for('login', function (Request $request) {
-            $throttleKey = Str::transliterate(Str::lower($request->input(Fortify::username())).'|'.$request->ip());
-
-            return Limit::perMinute(5)->by($throttleKey);
+            return Limit::perMinute(5)->by(LoginThrottleKey::for($request));
         });
 
         /* @chisel-password-confirmation */
