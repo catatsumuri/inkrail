@@ -71,12 +71,11 @@ export default function Register({ passwordRules }: Props) {
 
                             <div className="grid gap-2">
                                 <Label htmlFor="email">
-                                    {__('Email address')}
+                                    {__('Email address (optional)')}
                                 </Label>
                                 <Input
                                     id="email"
                                     type="email"
-                                    required
                                     tabIndex={2}
                                     autoComplete="email"
                                     name="email"

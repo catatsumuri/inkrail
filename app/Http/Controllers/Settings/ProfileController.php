@@ -72,13 +72,25 @@ class ProfileController extends Controller
 
         if ($isUsernameChanged) {
             $logSecurityEvent('username.changed', $request->user());
-            $sendGeneralNotification->handle(
-                $request->user(),
-                SecurityEvent::UsernameChanged->subject(),
-                SecurityEvent::UsernameChanged->mailBody(),
-                channels: ['mail'],
-                deferred: true,
-            );
+
+            if ($isEmailChanged && $previousEmail !== null) {
+                // Both changed: tell the address that was on the account before.
+                $sendGeneralNotification->toEmailAddress(
+                    $previousEmail,
+                    SecurityEvent::UsernameChanged->subject(),
+                    SecurityEvent::UsernameChanged->mailBody(),
+                );
+            } else {
+                // An address that was only just added is not verified, so with no
+                // earlier address the notice stays in the app.
+                $sendGeneralNotification->handle(
+                    $request->user(),
+                    SecurityEvent::UsernameChanged->subject(),
+                    SecurityEvent::UsernameChanged->mailBody(),
+                    channels: $isEmailChanged ? ['database'] : ['mail'],
+                    deferred: true,
+                );
+            }
         }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Profile updated.')]);

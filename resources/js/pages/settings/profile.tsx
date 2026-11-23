@@ -136,16 +136,16 @@ export default function Profile(
                                     id="email"
                                     type="email"
                                     className="mt-1 block w-full"
-                                    defaultValue={auth.user.email}
+                                    defaultValue={auth.user.email ?? ''}
                                     onChange={(event) =>
                                         setIsEmailChanged(
-                                            event.target.value !==
-                                                auth.user.email,
+                                            event.target.value.toLowerCase() !==
+                                                (auth.user.email ?? ''),
                                         )
                                     }
                                     name="email"
-                                    required
-                                    autoComplete="username"
+                                    required={Boolean(auth.user.email)}
+                                    autoComplete="email"
                                     placeholder={__('Email address')}
                                 />
 
@@ -186,6 +186,7 @@ export default function Profile(
 
                             {/* @chisel-email-verification */}
                             {mustVerifyEmail &&
+                                auth.user.email !== null &&
                                 auth.user.email_verified_at === null && (
                                     <div>
                                         <p className="-mt-4 text-sm text-muted-foreground">

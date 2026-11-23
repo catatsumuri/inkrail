@@ -52,7 +52,7 @@ class RevokeUserSessionsCommandTest extends TestCase
         $this->storeSession('session-one', $user);
 
         $this->artisan('security:revoke-sessions', ['selector' => $selector, '--force' => true])
-            ->expectsOutputToContain('Use id:123 or email:user@example.com.')
+            ->expectsOutputToContain('Use id:123, email:user@example.com or username:alice.')
             ->assertFailed();
 
         $this->assertDatabaseHas('sessions', ['id' => 'session-one']);
@@ -72,6 +72,38 @@ class RevokeUserSessionsCommandTest extends TestCase
             ->assertFailed();
 
         $this->assertDatabaseHas('sessions', ['id' => 'session-one']);
+    }
+
+    public function test_a_user_can_be_selected_by_username(): void
+    {
+        $user = User::factory()->withUsername('alice')->create(['email' => null]);
+        $other = User::factory()->create();
+        $this->storeSession('session-one', $user);
+        $this->storeSession('other-session', $other);
+
+        $this->artisan('security:revoke-sessions', ['selector' => 'username:ALICE', '--force' => true])
+            ->expectsOutputToContain('Revoked 1 session(s) for user ID '.$user->getKey().'.')
+            ->assertSuccessful();
+
+        $this->assertDatabaseMissing('sessions', ['user_id' => $user->id]);
+        $this->assertDatabaseHas('sessions', ['id' => 'other-session']);
+    }
+
+    public function test_an_unknown_username_fails(): void
+    {
+        $this->artisan('security:revoke-sessions', ['selector' => 'username:nobody', '--force' => true])
+            ->expectsOutputToContain('The specified user was not found.')
+            ->assertFailed();
+    }
+
+    public function test_an_account_without_an_email_is_shown_by_username_in_the_prompt(): void
+    {
+        $user = User::factory()->withUsername('alice')->create(['email' => null]);
+        $this->storeSession('session-one', $user);
+
+        $this->artisan('security:revoke-sessions', ['selector' => 'id:'.$user->getKey()])
+            ->expectsConfirmation("Revoke 1 session(s) for {$user->name} (alice, ID {$user->getKey()})?", 'no')
+            ->assertSuccessful();
     }
 
     public function test_declining_the_confirmation_preserves_every_session(): void
