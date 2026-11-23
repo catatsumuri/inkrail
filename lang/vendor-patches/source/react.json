@@ -214,5 +214,6 @@
     "Reading article :current of :total.": "Reading article :current of :total.",
     "Saving articles.": "Saving articles.",
     "Import finished.": "Import finished.",
-    "Could not confirm the import result.": "Could not confirm the import result."
+    "Could not confirm the import result.": "Could not confirm the import result.",
+    "Retry importing": "Retry importing"
 }

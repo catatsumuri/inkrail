@@ -213,5 +213,6 @@
     "Reading article :current of :total.": ":total件中:current件目の記事を読み込んでいます。",
     "Saving articles.": "記事を保存しています。",
     "Import finished.": "取り込みが完了しました。",
-    "Could not confirm the import result.": "取り込み結果を確認できませんでした。"
+    "Could not confirm the import result.": "取り込み結果を確認できませんでした。",
+    "Retry importing": "取り込みを再試行する"
 }

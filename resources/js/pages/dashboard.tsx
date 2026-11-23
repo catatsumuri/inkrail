@@ -63,6 +63,7 @@ export default function Dashboard({ zenn }: { zenn: Zenn | null }) {
     const { __ } = lang();
     const [importDialogOpen, setImportDialogOpen] = useState(false);
     const [importing, setImporting] = useState(false);
+    const [importSucceeded, setImportSucceeded] = useState(false);
     const [importLogs, setImportLogs] = useState<string[]>([]);
     const [importResult, setImportResult] = useState<ImportResult | null>(null);
     const cancelImportRef = useRef<HTMLButtonElement>(null);
@@ -71,6 +72,7 @@ export default function Dashboard({ zenn }: { zenn: Zenn | null }) {
         if (importing) return;
         setImporting(true);
         setImportLogs([]);
+        setImportSucceeded(false);
         let complete = false;
         let imported = false;
         try {
@@ -97,7 +99,7 @@ export default function Dashboard({ zenn }: { zenn: Zenn | null }) {
                 .pipeThrough(new TextDecoderStream())
                 .getReader();
             let buffer = '';
-            for (;;) {
+            read: for (;;) {
                 const { value, done } = await reader.read();
                 if (done) break;
                 buffer += value;
@@ -125,7 +127,10 @@ export default function Dashboard({ zenn }: { zenn: Zenn | null }) {
                         if (entry.status === 'imported' && entry.result) {
                             imported = true;
                             setImportResult(entry.result);
+                            setImportSucceeded(true);
                         }
+                        void reader.cancel();
+                        break read;
                     }
                 }
             }
@@ -268,8 +273,7 @@ export default function Dashboard({ zenn }: { zenn: Zenn | null }) {
                                             <Button
                                                 type="button"
                                                 disabled={
-                                                    importing ||
-                                                    importLogs.length > 0
+                                                    importing || importSucceeded
                                                 }
                                                 onClick={() =>
                                                     void importFromGitHub()
@@ -284,7 +288,9 @@ export default function Dashboard({ zenn }: { zenn: Zenn | null }) {
                                                 {__(
                                                     importing
                                                         ? 'Importing articles…'
-                                                        : 'Start importing',
+                                                        : importLogs.length > 0
+                                                          ? 'Retry importing'
+                                                          : 'Start importing',
                                                 )}
                                             </Button>
                                         </DialogFooter>
