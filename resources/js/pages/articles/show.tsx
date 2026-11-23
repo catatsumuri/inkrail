@@ -1,12 +1,13 @@
+import { useState } from 'react';
 import ArticleLanguageNotice from '@/components/article-language-notice';
 import { lang } from '@erag/lang-sync-inertia/react';
 import { Form, Head, Link, router, setLayoutProps } from '@inertiajs/react';
 import {
     ArrowLeft,
+    CloudUpload,
     ExternalLink,
     Link2,
     Pencil,
-    Send,
     Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -50,6 +51,71 @@ export default function Show({
     canPushToZenn: boolean;
 }) {
     const { __ } = lang();
+    const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [saveLogs, setSaveLogs] = useState<string[]>([]);
+    async function saveToGitHub() {
+        if (saving) return;
+        setSaving(true);
+        setSaveLogs([]);
+        let complete = false;
+        try {
+            const token = document.cookie
+                .split('; ')
+                .find((cookie) => cookie.startsWith('XSRF-TOKEN='))
+                ?.slice(11);
+            const response = await fetch(ZennPushController.url(article.id), {
+                method: 'POST',
+                headers: {
+                    Accept: 'text/event-stream',
+                    'X-XSRF-TOKEN': decodeURIComponent(token ?? ''),
+                },
+            });
+            if (
+                !response.ok ||
+                !response.body ||
+                !response.headers
+                    .get('content-type')
+                    ?.includes('text/event-stream')
+            )
+                throw new Error();
+            const reader = response.body
+                .pipeThrough(new TextDecoderStream())
+                .getReader();
+            let buffer = '';
+            for (;;) {
+                const { value, done } = await reader.read();
+                if (done) break;
+                buffer += value;
+                let boundary;
+                while ((boundary = buffer.indexOf('\n\n')) >= 0) {
+                    const frame = buffer.slice(0, boundary);
+                    buffer = buffer.slice(boundary + 2);
+                    const data = frame
+                        .split('\n')
+                        .find((line) => line.startsWith('data: '));
+                    if (!data) continue;
+                    const entry = JSON.parse(data.slice(6)) as {
+                        message: string;
+                        time: string;
+                    };
+                    setSaveLogs((logs) => [
+                        ...logs,
+                        `${new Date(entry.time).toLocaleTimeString()} ${__(entry.message)}`,
+                    ]);
+                    if (frame.startsWith('event: result')) complete = true;
+                }
+            }
+            if (!complete) throw new Error();
+        } catch {
+            setSaveLogs((logs) => [
+                ...logs,
+                __('Could not confirm the save result.'),
+            ]);
+        } finally {
+            setSaving(false);
+        }
+    }
     const [, copy] = useClipboard();
 
     async function copyPublicUrl() {
@@ -156,7 +222,14 @@ export default function Show({
                             </>
                         )}
                         {canPushToZenn && (
-                            <Dialog>
+                            <Dialog
+                                open={saveDialogOpen}
+                                onOpenChange={(open) => {
+                                    if (saving) return;
+                                    setSaveDialogOpen(open);
+                                    if (!open) setSaveLogs([]);
+                                }}
+                            >
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <DialogTrigger asChild>
@@ -164,49 +237,61 @@ export default function Show({
                                                 type="button"
                                                 variant="ghost"
                                                 size="icon"
-                                                aria-label={__('Send to Zenn')}
+                                                aria-label={__(
+                                                    'Save to GitHub',
+                                                )}
                                             >
-                                                <Send aria-hidden="true" />
+                                                <CloudUpload aria-hidden="true" />
                                             </Button>
                                         </DialogTrigger>
                                     </TooltipTrigger>
                                     <TooltipContent>
-                                        {__('Send to Zenn')}
+                                        {__('Save to GitHub')}
                                     </TooltipContent>
                                 </Tooltip>
-                                <DialogContent>
+                                <DialogContent
+                                    onEscapeKeyDown={(event) => {
+                                        if (saving) event.preventDefault();
+                                    }}
+                                    onInteractOutside={(event) => {
+                                        if (saving) event.preventDefault();
+                                    }}
+                                >
                                     <DialogTitle>
-                                        {__('Send this article to Zenn?')}
+                                        {__('Save this article to GitHub?')}
                                     </DialogTitle>
                                     <DialogDescription>
                                         {__(
                                             article.is_published
-                                                ? 'The Japanese version will be committed to the Zenn repository and published on Zenn.'
-                                                : 'The Japanese version will be committed to the Zenn repository as a draft.',
+                                                ? 'The Japanese version will be saved to the configured GitHub repository with published status. If the repository is connected to Zenn, this may publish or update the article on Zenn.'
+                                                : 'The Japanese version will be saved to the configured GitHub repository with draft status. If the repository is connected to Zenn, this status will also be reflected on Zenn.',
                                         )}
                                     </DialogDescription>
-                                    <Form
-                                        {...ZennPushController.form(article.id)}
+                                    <pre
+                                        role="log"
+                                        aria-live="polite"
+                                        className="max-h-72 overflow-auto text-xs whitespace-pre-wrap"
                                     >
-                                        {({ processing }) => (
-                                            <DialogFooter className="gap-2">
-                                                <DialogClose asChild>
-                                                    <Button
-                                                        type="button"
-                                                        variant="secondary"
-                                                    >
-                                                        {__('Cancel')}
-                                                    </Button>
-                                                </DialogClose>
-                                                <Button
-                                                    type="submit"
-                                                    disabled={processing}
-                                                >
-                                                    {__('Send to Zenn')}
-                                                </Button>
-                                            </DialogFooter>
-                                        )}
-                                    </Form>
+                                        {saveLogs.join('\n')}
+                                    </pre>
+                                    <DialogFooter>
+                                        <DialogClose asChild>
+                                            <Button
+                                                disabled={saving}
+                                                variant="secondary"
+                                            >
+                                                {__('Close')}
+                                            </Button>
+                                        </DialogClose>
+                                        <Button
+                                            disabled={
+                                                saving || saveLogs.length > 0
+                                            }
+                                            onClick={saveToGitHub}
+                                        >
+                                            {__('Save to GitHub')}
+                                        </Button>
+                                    </DialogFooter>
                                 </DialogContent>
                             </Dialog>
                         )}

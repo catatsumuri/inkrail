@@ -8,6 +8,7 @@ use Closure;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\Request;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
@@ -28,11 +29,14 @@ class PushArticleToZenn
      *
      * @throws ZennPushException
      */
-    public function __invoke(Article $article): array
+    public function __invoke(Article $article, ?Closure $progress = null): array
     {
+        $progress?->__invoke('progress', ['message' => 'Acquiring repository lock.']);
         try {
-            return ($this->syncLock)(function (Closure $checkLock) use ($article): array {
-                return $this->push($article->refresh(), $checkLock);
+            return ($this->syncLock)(function (Closure $checkLock) use ($article, $progress): array {
+                $progress?->__invoke('progress', ['message' => 'Preparing article.']);
+
+                return $this->push($article->refresh(), $checkLock, $progress);
             });
         } catch (LockTimeoutException $exception) {
             throw new ZennPushException('The repository is busy or the sync lock was lost. Try again shortly.', previous: $exception);
@@ -40,7 +44,7 @@ class PushArticleToZenn
     }
 
     /** @return array{zennSlug: string, changed: bool} */
-    private function push(Article $article, Closure $checkLock): array
+    private function push(Article $article, Closure $checkLock, ?Closure $progress): array
     {
         $repository = config('services.github_zenn.repository');
         $token = config('services.github_zenn.token');
@@ -61,14 +65,20 @@ class PushArticleToZenn
         }
 
         try {
+            $started = microtime(true);
             $client = Http::baseUrl('https://api.github.com')
                 ->withToken($token)
                 ->acceptJson()
                 ->withHeaders(['X-GitHub-Api-Version' => '2022-11-28'])
                 ->connectTimeout(5)
                 ->timeout(15)
-                ->beforeSending($checkLock)
-                ->afterResponse(function () use ($checkLock): ?Response {
+                ->beforeSending(function (Request $request) use ($checkLock, $progress, &$started): void {
+                    $checkLock();
+                    $started = microtime(true);
+                    $progress?->__invoke('request', ['message' => $request->method().' '.parse_url($request->url(), PHP_URL_PATH)]);
+                })
+                ->afterResponse(function (Response $response) use ($checkLock, $progress, &$started): ?Response {
+                    $progress?->__invoke('request', ['message' => 'HTTP '.$response->status().' · '.round((microtime(true) - $started) * 1000).' ms']);
                     $checkLock();
 
                     return null;
@@ -90,6 +100,7 @@ class PushArticleToZenn
                 $sha = null;
             }
 
+            $progress?->__invoke('progress', ['message' => 'Committing article.']);
             $zennSlug = basename($path, '.md');
             $client->put("/repos/{$repository}/contents/{$path}", array_filter([
                 'message' => "docs: sync {$article->slug} from InkRail",
@@ -99,6 +110,7 @@ class PushArticleToZenn
             ], fn (mixed $value): bool => $value !== null))->throw();
 
             $checkLock();
+            $progress?->__invoke('progress', ['message' => 'Saving sync state.']);
             $this->rememberSync($article, $repository, $branch, $path, $this->blobSha($markdown));
         } catch (ConnectionException|RequestException $exception) {
             throw new ZennPushException('GitHub rejected the request or could not be reached.', previous: $exception);

@@ -1,6 +1,6 @@
 import { Head, Link, setLayoutProps, useForm } from '@inertiajs/react';
 import { lang } from '@erag/lang-sync-inertia/react';
-import { Download, LoaderCircle } from 'lucide-react';
+import { CircleCheck, Download, LoaderCircle, PencilLine } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { index, show } from '@/actions/App/Http/Controllers/ArticleController';
 import ZennImportController from '@/actions/App/Http/Controllers/ZennImportController';
@@ -299,12 +299,18 @@ export default function Dashboard({ zenn }: { zenn: Zenn | null }) {
                                                 </p>
                                             </div>
                                             <Badge
-                                                variant={
+                                                variant="outline"
+                                                className={
                                                     article.locallyChanged
-                                                        ? 'outline'
-                                                        : 'secondary'
+                                                        ? 'gap-1.5 border-amber-300 bg-amber-50 px-3 py-1 text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200'
+                                                        : 'gap-1.5 border-emerald-300 bg-emerald-50 px-3 py-1 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
                                                 }
                                             >
+                                                {article.locallyChanged ? (
+                                                    <PencilLine aria-hidden="true" />
+                                                ) : (
+                                                    <CircleCheck aria-hidden="true" />
+                                                )}
                                                 {__(
                                                     article.locallyChanged
                                                         ? 'Local changes'

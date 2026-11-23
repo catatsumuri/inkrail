@@ -121,7 +121,7 @@ test('does not commit when the Zenn file already has the same content', function
 
     $this->actingAs($this->publisher)->post(route('articles.zenn.push', $article))
         ->assertRedirect()
-        ->assertSessionHas('inertia.flash_data.toast.message', __('Zenn is already up to date.'));
+        ->assertSessionHas('inertia.flash_data.toast.message', __('The GitHub repository is already up to date.'));
 
     expect(pushedRequests())->toBeEmpty();
     $this->assertDatabaseHas('articles', ['id' => $article->id, 'zenn_path' => 'articles/inkrail-sync-0a1b2c3d.md', 'zenn_sha' => sha1('blob '.strlen($markdown)."\0".$markdown)]);
@@ -353,4 +353,39 @@ test('shows the send action only to publishers', function () {
     $strangerArticle->replaceTranslations(['ja' => ['title' => 'x', 'content' => 'y']]);
     $this->actingAs($stranger)->get(route('articles.show', $strangerArticle))
         ->assertInertia(fn (Assert $page) => $page->where('canPushToZenn', false));
+});
+
+test('streams github save progress without exposing credentials or content', function () {
+    $article = createZennArticle($this->publisher);
+    Http::fake([ZENN_READ => Http::response([], 404), ZENN_FILE => Http::response([], 201)]);
+
+    $response = $this->actingAs($this->publisher)->withHeader('Accept', 'text/event-stream')
+        ->post(route('articles.zenn.push', $article))->assertOk();
+    $content = $response->streamedContent();
+
+    expect($content)->toContain('event: request', 'HTTP 201', 'event: result', 'Saved to GitHub.')
+        ->not->toContain('secret-token', '日本語の本文', 'Authorization');
+    expect(Activity::inLog('security')->where('event', 'article.zenn_pushed')->count())->toBe(1);
+});
+
+test('streams a terminal failure when github rejects a save', function () {
+    $article = createZennArticle($this->publisher);
+    Http::fake([ZENN_READ => Http::response([], 403)]);
+
+    $response = $this->actingAs($this->publisher)->withHeader('Accept', 'text/event-stream')
+        ->post(route('articles.zenn.push', $article))->assertOk();
+
+    expect($response->streamedContent())->toContain('HTTP 403', '"status":"failed"')
+        ->not->toContain('secret-token');
+    expect(Activity::inLog('security')->where('event', 'article.zenn_push_failed')->count())->toBe(1);
+});
+
+test('does not stream github details to another article owner', function () {
+    $article = createZennArticle(User::factory()->create());
+    Http::fake();
+
+    $this->actingAs($this->publisher)->withHeader('Accept', 'text/event-stream')
+        ->post(route('articles.zenn.push', $article))->assertForbidden();
+
+    Http::assertNothingSent();
 });
