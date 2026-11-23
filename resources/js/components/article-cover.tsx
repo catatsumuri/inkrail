@@ -6,10 +6,12 @@ export default function ArticleCover({
     src,
     title,
     className,
+    presentation = 'image',
 }: {
     src?: string | null;
     title: string;
     className?: string;
+    presentation?: 'image' | 'backdrop';
 }) {
     const [failedSrc, setFailedSrc] = useState<string | null>(null);
 
@@ -24,10 +26,15 @@ export default function ArticleCover({
                 <img
                     src={src}
                     alt=""
-                    loading="lazy"
+                    loading={presentation === 'backdrop' ? 'eager' : 'lazy'}
                     decoding="async"
                     onError={() => setFailedSrc(src)}
-                    className="absolute inset-0 size-full object-cover transition-transform duration-500 group-hover:scale-[1.025]"
+                    className={cn(
+                        'absolute inset-0 size-full object-cover',
+                        presentation === 'backdrop'
+                            ? 'scale-110 opacity-70 blur-[2px] saturate-50 dark:opacity-40'
+                            : 'transition-transform duration-500 group-hover:scale-[1.025]',
+                    )}
                 />
             ) : (
                 <div
