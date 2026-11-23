@@ -6,7 +6,7 @@ import { register } from '@/routes';
 /* @end-chisel-registration */
 
 export default function Welcome() {
-    const { auth } = usePage().props;
+    const { auth, features } = usePage().props;
     const { __ } = lang();
 
     return (
@@ -31,12 +31,14 @@ export default function Welcome() {
                                     {__('Log in')}
                                 </Link>
                                 {/* @chisel-registration */}
-                                <Link
-                                    href={register()}
-                                    className="inline-block rounded-sm border border-[#19140035] px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#1915014a] dark:border-[#3E3E3A] dark:text-[#EDEDEC] dark:hover:border-[#62605b]"
-                                >
-                                    {__('Register')}
-                                </Link>
+                                {features.registration && (
+                                    <Link
+                                        href={register()}
+                                        className="inline-block rounded-sm border border-[#19140035] px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#1915014a] dark:border-[#3E3E3A] dark:text-[#EDEDEC] dark:hover:border-[#62605b]"
+                                    >
+                                        {__('Register')}
+                                    </Link>
+                                )}
                                 {/* @end-chisel-registration */}
                             </>
                         )}
