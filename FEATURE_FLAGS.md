@@ -40,7 +40,7 @@ convenient in development and a risk in production. Treat the flags as
 
 ## The flags
 
-All flags default to `true`. They are defined in `config/features.php`.
+Registration defaults to `false` for single-user installations. Set `FEATURE_REGISTRATION=true` to allow public sign-ups. All other flags default to `true`. They are defined in `config/features.php`.
 
 | Variable                        | When `false`                                                                                                                 |
 | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
