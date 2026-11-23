@@ -53,8 +53,15 @@ test('commits the Japanese version to the Zenn repository and records the action
     expect($requests[0]['branch'])->toBe('main');
     expect($requests[0]->data())->not->toHaveKey('sha');
     expect(base64_decode($requests[0]['content']))->toBe(
-        "---\ntitle: \"日本語の題名\"\nemoji: \"📝\"\ntype: \"tech\"\ntopics: []\npublished: true\n---\n\n日本語の本文\n"
+        "---\ntitle: \"日本語の題名\"\nemoji: \"📝\"\ntype: \"tech\"\ntopics: []\npublished: true\ninkrail_id: \"{$article->sync_id}\"\n---\n\n日本語の本文\n"
     );
+    $this->assertDatabaseHas('articles', [
+        'id' => $article->id,
+        'zenn_repository' => 'owner/zenn',
+        'zenn_branch' => 'main',
+        'zenn_path' => str_replace('https://api.github.com/repos/owner/zenn/contents/', '', $requests[0]->url()),
+        'zenn_sha' => sha1('blob '.strlen(base64_decode($requests[0]['content']))."\0".base64_decode($requests[0]['content'])),
+    ]);
     $event = Activity::inLog('security')->where('event', 'article.zenn_pushed')->sole();
     expect($event->subject_id)->toBe($article->id);
     expect($event->properties->all())->not->toHaveKey('content');
@@ -62,6 +69,10 @@ test('commits the Japanese version to the Zenn repository and records the action
 
 test('updates the existing Zenn file with its blob sha', function () {
     $article = createZennArticle($this->publisher);
+    $article->forceFill([
+        'zenn_repository' => 'owner/zenn', 'zenn_branch' => 'main',
+        'zenn_path' => 'articles/inkrail-sync-0a1b2c3d.md', 'zenn_sha' => 'old-sha',
+    ])->save();
     Http::fake([
         ZENN_LISTING => Http::response([['name' => 'inkrail-sync-0a1b2c3d.md', 'sha' => 'old-sha'], ['name' => 'other-article-ffffffff.md', 'sha' => 'x']]),
         ZENN_FILE => Http::response([], 200),
@@ -77,7 +88,7 @@ test('updates the existing Zenn file with its blob sha', function () {
 
 test('does not commit when the Zenn file already has the same content', function () {
     $article = createZennArticle($this->publisher);
-    $markdown = "---\ntitle: \"日本語の題名\"\nemoji: \"📝\"\ntype: \"tech\"\ntopics: []\npublished: true\n---\n\n日本語の本文\n";
+    $markdown = "---\ntitle: \"日本語の題名\"\nemoji: \"📝\"\ntype: \"tech\"\ntopics: []\npublished: true\ninkrail_id: \"{$article->sync_id}\"\n---\n\n日本語の本文\n";
     Http::fake([
         ZENN_LISTING => Http::response([['name' => 'inkrail-sync-0a1b2c3d.md', 'sha' => sha1('blob '.strlen($markdown)."\0".$markdown)]]),
     ]);
@@ -87,6 +98,7 @@ test('does not commit when the Zenn file already has the same content', function
         ->assertSessionHas('inertia.flash_data.toast.message', __('Zenn is already up to date.'));
 
     expect(pushedRequests())->toBeEmpty();
+    $this->assertDatabaseHas('articles', ['id' => $article->id, 'zenn_path' => 'articles/inkrail-sync-0a1b2c3d.md', 'zenn_sha' => sha1('blob '.strlen($markdown)."\0".$markdown)]);
 });
 
 test('sends an unpublished article as a Zenn draft', function () {
@@ -96,6 +108,116 @@ test('sends an unpublished article as a Zenn draft', function () {
     $this->actingAs($this->publisher)->post(route('articles.zenn.push', $article))->assertRedirect();
 
     expect(base64_decode(pushedRequests()[0]['content']))->toContain("published: false\n");
+});
+
+test('keeps the linked file and identity after the local slug changes', function () {
+    $article = createZennArticle($this->publisher);
+    $identity = $article->sync_id;
+    Http::fake([
+        ZENN_LISTING => Http::sequence()->push([], 404)->pushResponse(fn () => Http::response([
+            ['name' => basename($article->fresh()->zenn_path), 'sha' => $article->fresh()->zenn_sha],
+        ])),
+        ZENN_FILE => Http::response([], 200),
+    ]);
+
+    $this->actingAs($this->publisher)->post(route('articles.zenn.push', $article))
+        ->assertSessionHas('inertia.flash_data.toast.type', 'success');
+    $article->refresh();
+    $originalPath = $article->zenn_path;
+    $originalSha = $article->zenn_sha;
+    $article->update(['slug' => 'renamed-local-article']);
+    $article->replaceTranslations(['ja' => ['title' => '更新した題名', 'content' => '更新した本文']]);
+
+    $this->post(route('articles.zenn.push', $article))
+        ->assertSessionHas('inertia.flash_data.toast.type', 'success');
+
+    $requests = pushedRequests();
+    expect($requests)->toHaveCount(2);
+    expect($requests[1]->url())->toBe($requests[0]->url());
+    expect($requests[1]['sha'])->toBe($originalSha);
+    expect(base64_decode($requests[1]['content']))->toContain("inkrail_id: \"{$identity}\"", '更新した本文');
+    $this->assertDatabaseHas('articles', ['id' => $article->id, 'sync_id' => $identity, 'zenn_path' => $originalPath]);
+});
+
+test('refuses to overwrite a linked file changed or deleted on GitHub', function (?string $remoteSha) {
+    $article = createZennArticle($this->publisher);
+    $article->forceFill([
+        'zenn_repository' => 'owner/zenn', 'zenn_branch' => 'main',
+        'zenn_path' => 'articles/inkrail-sync-0a1b2c3d.md', 'zenn_sha' => 'last-synced-sha',
+    ])->save();
+    Http::fake([ZENN_LISTING => Http::response($remoteSha === null ? [] : [
+        ['name' => 'inkrail-sync-0a1b2c3d.md', 'sha' => $remoteSha],
+    ])]);
+
+    $this->actingAs($this->publisher)->post(route('articles.zenn.push', $article))
+        ->assertSessionHas('inertia.flash_data.toast.type', 'error');
+
+    expect(pushedRequests())->toBeEmpty();
+    $this->assertDatabaseHas('articles', ['id' => $article->id, 'zenn_sha' => 'last-synced-sha']);
+    expect(Activity::inLog('security')->where('event', 'article.zenn_pushed')->exists())->toBeFalse();
+    expect(Activity::inLog('security')->where('event', 'article.zenn_push_failed')->count())->toBe(1);
+})->with(['changed' => 'externally-edited-sha', 'deleted' => null]);
+
+test('refuses to send a linked article to a different repository or branch', function (string $setting, string $value) {
+    $article = createZennArticle($this->publisher);
+    $article->forceFill([
+        'zenn_repository' => 'owner/zenn', 'zenn_branch' => 'main',
+        'zenn_path' => 'articles/inkrail-sync-0a1b2c3d.md', 'zenn_sha' => 'old-sha',
+    ])->save();
+    config(["services.github_zenn.{$setting}" => $value]);
+
+    $this->actingAs($this->publisher)->post(route('articles.zenn.push', $article))
+        ->assertSessionHas('inertia.flash_data.toast.type', 'error');
+
+    Http::assertNothingSent();
+    $this->assertDatabaseHas('articles', ['id' => $article->id, 'zenn_repository' => 'owner/zenn', 'zenn_branch' => 'main', 'zenn_sha' => 'old-sha']);
+})->with(['repository' => ['repository', 'owner/another-repo'], 'branch' => ['branch', 'develop']]);
+
+test('links an unchanged legacy export before adding its identity', function () {
+    $article = createZennArticle($this->publisher);
+    $legacyMarkdown = "---\ntitle: \"日本語の題名\"\nemoji: \"📝\"\ntype: \"tech\"\ntopics: []\npublished: true\n---\n\n日本語の本文\n";
+    $legacySha = sha1('blob '.strlen($legacyMarkdown)."\0".$legacyMarkdown);
+    Http::fake([
+        ZENN_LISTING => Http::response([['name' => 'inkrail-sync-0a1b2c3d.md', 'sha' => $legacySha]]),
+        ZENN_FILE => Http::response([], 200),
+    ]);
+
+    $this->actingAs($this->publisher)->post(route('articles.zenn.push', $article))
+        ->assertSessionHas('inertia.flash_data.toast.type', 'success');
+
+    $requests = pushedRequests();
+    expect($requests)->toHaveCount(1);
+    expect($requests[0]['sha'])->toBe($legacySha);
+    expect(base64_decode($requests[0]['content']))->toContain("inkrail_id: \"{$article->sync_id}\"");
+    $this->assertDatabaseHas('articles', ['id' => $article->id, 'zenn_path' => 'articles/inkrail-sync-0a1b2c3d.md']);
+});
+
+test('refuses to adopt an unlinked file with different contents', function () {
+    $article = createZennArticle($this->publisher);
+    Http::fake([ZENN_LISTING => Http::response([['name' => 'inkrail-sync-0a1b2c3d.md', 'sha' => 'unknown-content-sha']])]);
+
+    $this->actingAs($this->publisher)->post(route('articles.zenn.push', $article))
+        ->assertSessionHas('inertia.flash_data.toast.type', 'error');
+
+    expect(pushedRequests())->toBeEmpty();
+    $this->assertDatabaseHas('articles', ['id' => $article->id, 'zenn_path' => null, 'zenn_sha' => null]);
+});
+
+test('refuses to adopt a file linked to another local article', function () {
+    $existingArticle = $this->publisher->articles()->create(['slug' => 'another-local-article']);
+    $existingArticle->forceFill([
+        'zenn_repository' => 'owner/zenn', 'zenn_branch' => 'main',
+        'zenn_path' => 'articles/inkrail-sync-0a1b2c3d.md', 'zenn_sha' => 'old-sha',
+    ])->save();
+    $article = createZennArticle($this->publisher);
+    Http::fake([ZENN_LISTING => Http::response([['name' => 'inkrail-sync-0a1b2c3d.md', 'sha' => 'old-sha']])]);
+
+    $this->actingAs($this->publisher)->post(route('articles.zenn.push', $article))
+        ->assertSessionHas('inertia.flash_data.toast.type', 'error');
+
+    expect(pushedRequests())->toBeEmpty();
+    $this->assertDatabaseHas('articles', ['id' => $article->id, 'zenn_path' => null]);
+    expect($article->sync_id)->not->toBe($existingArticle->sync_id);
 });
 
 test('forbids a user who is not a configured publisher', function () {
@@ -134,6 +256,7 @@ test('reports an error and records the failure when GitHub rejects the commit', 
     expect(Activity::inLog('security')->where('event', 'article.zenn_pushed')->exists())->toBeFalse();
     $failure = Activity::inLog('security')->where('event', 'article.zenn_push_failed')->sole();
     expect(json_encode($failure->properties))->not->toContain('secret-token');
+    $this->assertDatabaseHas('articles', ['id' => $article->id, 'zenn_path' => null, 'zenn_sha' => null]);
 });
 
 test('reports an error without calling GitHub when the article has no Japanese version', function () {

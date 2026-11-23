@@ -28,7 +28,7 @@ function createBilingualArticle(string $slug, bool $isPublished): Article
 }
 
 test('exports only the Japanese version with Zenn frontmatter', function () {
-    createBilingualArticle('inkrail-sync', true);
+    $article = createBilingualArticle('inkrail-sync', true);
 
     $this->artisan('articles:export-zenn', ['slug' => 'inkrail-sync', '--path' => $this->zennRepository])->assertSuccessful();
 
@@ -36,7 +36,7 @@ test('exports only the Japanese version with Zenn frontmatter', function () {
     expect($files)->toHaveCount(1);
     expect($files[0]->getFilename())->toMatch('/^inkrail-sync-[0-9a-f]{8}\.md$/');
     expect(File::get($files[0]->getPathname()))->toBe(
-        "---\ntitle: \"日本語の \\\"題名\\\"\"\nemoji: \"📝\"\ntype: \"tech\"\ntopics: []\npublished: true\n---\n\n日本語の本文\n\n:::message\n補足\n:::\n"
+        "---\ntitle: \"日本語の \\\"題名\\\"\"\nemoji: \"📝\"\ntype: \"tech\"\ntopics: []\npublished: true\ninkrail_id: \"{$article->sync_id}\"\n---\n\n日本語の本文\n\n:::message\n補足\n:::\n"
     );
 });
 

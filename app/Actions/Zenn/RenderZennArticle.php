@@ -25,6 +25,6 @@ class RenderZennArticle
         $title = json_encode($translation->title, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
         $published = $article->is_published ? 'true' : 'false';
 
-        return "---\ntitle: {$title}\nemoji: \"📝\"\ntype: \"tech\"\ntopics: []\npublished: {$published}\n---\n\n{$translation->content}\n";
+        return "---\ntitle: {$title}\nemoji: \"📝\"\ntype: \"tech\"\ntopics: []\npublished: {$published}\ninkrail_id: \"{$article->sync_id}\"\n---\n\n{$translation->content}\n";
     }
 }
