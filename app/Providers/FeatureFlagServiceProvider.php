@@ -26,6 +26,7 @@ class FeatureFlagServiceProvider extends ServiceProvider
         $fortifyFeatures = [
             'registration' => Features::registration(),
             'passkeys' => Features::passkeys(),
+            'two_factor' => Features::twoFactorAuthentication(),
         ];
 
         foreach ($fortifyFeatures as $flag => $feature) {
