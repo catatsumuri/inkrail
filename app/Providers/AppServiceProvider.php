@@ -89,6 +89,15 @@ class AppServiceProvider extends ServiceProvider
      */
     protected function configureZennPublishing(): void
     {
+        Gate::define('import-from-zenn', function (Authenticatable $user): bool {
+            if (! $user instanceof MustVerifyEmail || ! $user->hasVerifiedEmail()) {
+                return false;
+            }
+
+            return $user instanceof User && ! $user->is_sandbox
+                && in_array(Str::lower($user->getEmailForVerification()), array_map(Str::lower(...), config('articles.zenn_publishers')), true);
+        });
+
         Gate::define('push-to-zenn', function (Authenticatable $user, Article $article): bool {
             if (! $user instanceof MustVerifyEmail || ! $user->hasVerifiedEmail() || $article->user_id !== $user->getAuthIdentifier()) {
                 return false;
