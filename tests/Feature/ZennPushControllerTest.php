@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\Zenn\PushArticleToZenn;
 use App\Models\Activity;
 use App\Models\Article;
 use App\Models\User;
@@ -84,6 +85,26 @@ test('updates the existing Zenn file with its blob sha', function () {
     expect($requests)->toHaveCount(1);
     expect($requests[0]->url())->toEndWith('/contents/articles/inkrail-sync-0a1b2c3d.md');
     expect($requests[0]['sha'])->toBe('old-sha');
+});
+
+test('reloads the destination and baseline before pushing a stale article instance', function () {
+    $article = createZennArticle($this->publisher);
+    $stale = $article->fresh();
+    $article->forceFill([
+        'zenn_repository' => 'owner/zenn', 'zenn_branch' => 'main',
+        'zenn_path' => 'articles/inkrail-sync-0a1b2c3d.md', 'zenn_sha' => 'latest-baseline-sha',
+    ])->save();
+    Http::fake([
+        ZENN_READ => Http::response(['sha' => 'latest-baseline-sha']),
+        ZENN_FILE => Http::response([], 200),
+    ]);
+
+    app(PushArticleToZenn::class)($stale);
+
+    $requests = pushedRequests();
+    expect($requests)->toHaveCount(1);
+    expect($requests[0]->url())->toEndWith('/contents/articles/inkrail-sync-0a1b2c3d.md');
+    expect($requests[0]['sha'])->toBe('latest-baseline-sha');
 });
 
 test('does not commit when the Zenn file already has the same content', function () {

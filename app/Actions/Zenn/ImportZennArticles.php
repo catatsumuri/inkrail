@@ -6,12 +6,16 @@ use App\Actions\LogSecurityEvent;
 use App\Exceptions\ZennImportException;
 use App\Models\Article;
 use App\Models\User;
+use Closure;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 
 /**
  * @phpstan-import-type ParsedArticle from ParseZennArticle
+ *
+ * The unchanged count means the remote blob has not changed; local edits may remain.
  *
  * @phpstan-type ImportResult array{created: int, updated: int, unchanged: int, conflict: int, invalid: int, items: list<array{path: string, status: string}>}
  */
@@ -22,13 +26,24 @@ class ImportZennArticles
         private ParseZennArticle $parse,
         private RenderZennArticle $render,
         private LogSecurityEvent $logSecurityEvent,
+        private WithZennSyncLock $syncLock,
     ) {}
 
     /** @return ImportResult */
     public function __invoke(User $owner): array
     {
         Gate::forUser($owner)->authorize('import-from-zenn');
-        $remote = ($this->fetch)();
+        try {
+            return ($this->syncLock)(fn (Closure $checkLock): array => $this->import($owner, $checkLock));
+        } catch (LockTimeoutException $exception) {
+            throw new ZennImportException('The repository is busy or the sync lock was lost. Try again shortly.', previous: $exception);
+        }
+    }
+
+    /** @return ImportResult */
+    private function import(User $owner, Closure $checkLock): array
+    {
+        $remote = ($this->fetch)($checkLock);
         $documents = [];
         $identityCounts = [];
         foreach ($remote['files'] as $file) {
@@ -43,11 +58,13 @@ class ImportZennArticles
             }
         }
 
-        $result = DB::transaction(function () use ($owner, $remote, $documents, $identityCounts): array {
+        $result = DB::transaction(function () use ($owner, $remote, $documents, $identityCounts, $checkLock): array {
+            $checkLock();
             User::query()->whereKey($owner->id)->lockForUpdate()->firstOrFail();
             $result = ['created' => 0, 'updated' => 0, 'unchanged' => 0, 'conflict' => 0, 'invalid' => 0, 'items' => []];
             $paths = array_column($documents, 'path');
             foreach ($documents as $document) {
+                $checkLock();
                 $parsed = $document['parsed'];
                 $status = $parsed === null || ($parsed['sync_id'] !== null && $identityCounts[$parsed['sync_id']] > 1)
                     ? 'invalid'
@@ -55,6 +72,8 @@ class ImportZennArticles
                 $result[$status]++;
                 $result['items'][] = ['path' => $document['path'], 'status' => $status];
             }
+
+            $checkLock();
 
             return $result;
         });

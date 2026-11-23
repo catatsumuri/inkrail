@@ -4,9 +4,12 @@ namespace App\Actions\Zenn;
 
 use App\Exceptions\ZennPushException;
 use App\Models\Article;
+use Closure;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\RequestException;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 
 /**
@@ -17,6 +20,7 @@ class PushArticleToZenn
     public function __construct(
         private RenderZennArticle $render,
         private ResolveZennSlug $resolveSlug,
+        private WithZennSyncLock $syncLock,
     ) {}
 
     /**
@@ -25,6 +29,18 @@ class PushArticleToZenn
      * @throws ZennPushException
      */
     public function __invoke(Article $article): array
+    {
+        try {
+            return ($this->syncLock)(function (Closure $checkLock) use ($article): array {
+                return $this->push($article->refresh(), $checkLock);
+            });
+        } catch (LockTimeoutException $exception) {
+            throw new ZennPushException('The repository is busy or the sync lock was lost. Try again shortly.', previous: $exception);
+        }
+    }
+
+    /** @return array{zennSlug: string, changed: bool} */
+    private function push(Article $article, Closure $checkLock): array
     {
         $repository = config('services.github_zenn.repository');
         $token = config('services.github_zenn.token');
@@ -50,7 +66,13 @@ class PushArticleToZenn
                 ->acceptJson()
                 ->withHeaders(['X-GitHub-Api-Version' => '2022-11-28'])
                 ->connectTimeout(5)
-                ->timeout(15);
+                ->timeout(15)
+                ->beforeSending($checkLock)
+                ->afterResponse(function () use ($checkLock): ?Response {
+                    $checkLock();
+
+                    return null;
+                });
 
             if ($article->zenn_path !== null) {
                 $path = $article->zenn_path;
@@ -76,6 +98,7 @@ class PushArticleToZenn
                 'sha' => $sha,
             ], fn (mixed $value): bool => $value !== null))->throw();
 
+            $checkLock();
             $this->rememberSync($article, $repository, $branch, $path, $this->blobSha($markdown));
         } catch (ConnectionException|RequestException $exception) {
             throw new ZennPushException('GitHub rejected the request or could not be reached.', previous: $exception);

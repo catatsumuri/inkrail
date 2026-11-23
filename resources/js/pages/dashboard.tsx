@@ -55,7 +55,7 @@ type Zenn = {
 const resultLabels: Record<ImportStatus, string> = {
     created: 'Imported',
     updated: 'Updated',
-    unchanged: 'Unchanged',
+    unchanged: 'GitHub unchanged',
     conflict: 'Conflict — kept local article',
     invalid: 'Invalid article — skipped',
 };
@@ -227,7 +227,7 @@ export default function Dashboard({ zenn }: { zenn: Zenn | null }) {
                                 </h2>
                                 <p className="text-sm text-muted-foreground">
                                     {__(
-                                        'Imported: :created · Updated: :updated · Unchanged: :unchanged · Conflicts: :conflict · Invalid: :invalid',
+                                        'Imported: :created · Updated: :updated · GitHub unchanged: :unchanged · Conflicts: :conflict · Invalid: :invalid',
                                         {
                                             created: zenn.result.created,
                                             updated: zenn.result.updated,

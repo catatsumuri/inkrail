@@ -23,8 +23,8 @@ use Illuminate\Support\Str;
  * @property string|null $zenn_repository
  * @property string|null $zenn_branch
  * @property string|null $zenn_path
- * @property string|null $zenn_sha
- * @property string|null $zenn_local_sha
+ * @property string|null $zenn_sha SHA of the exact remote blob at the last sync.
+ * @property string|null $zenn_local_sha SHA of the locally rendered article at the last sync; formatting may differ from the remote blob.
  * @property array<string, mixed>|null $zenn_frontmatter
  */
 #[Fillable(['title', 'content', 'slug', 'is_published'])]

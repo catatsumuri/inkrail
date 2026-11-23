@@ -34,8 +34,8 @@ class ImportArticlesFromZennCommand extends Command
             return self::FAILURE;
         }
 
-        $this->table(['Path', 'Result'], array_map(fn (array $item): array => [$item['path'], $item['status']], $result['items']));
-        $this->info("Created: {$result['created']}; updated: {$result['updated']}; unchanged: {$result['unchanged']}; conflicts: {$result['conflict']}; invalid: {$result['invalid']}.");
+        $this->table(['Path', 'Result'], array_map(fn (array $item): array => [$item['path'], $item['status'] === 'unchanged' ? 'remote_unchanged' : $item['status']], $result['items']));
+        $this->info("Created: {$result['created']}; updated: {$result['updated']}; remote unchanged: {$result['unchanged']}; conflicts: {$result['conflict']}; invalid: {$result['invalid']}.");
 
         return $result['conflict'] > 0 || $result['invalid'] > 0 ? self::FAILURE : self::SUCCESS;
     }

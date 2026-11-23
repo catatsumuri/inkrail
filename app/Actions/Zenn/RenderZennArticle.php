@@ -6,6 +6,7 @@ use App\Models\Article;
 
 /**
  * Render the Japanese version of an article as a Zenn article file.
+ * Frontmatter values are preserved semantically; source YAML formatting is not retained.
  */
 class RenderZennArticle
 {

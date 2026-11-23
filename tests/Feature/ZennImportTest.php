@@ -1,9 +1,14 @@
 <?php
 
 use App\Actions\Zenn\ImportZennArticles;
+use App\Actions\Zenn\PushArticleToZenn;
 use App\Actions\Zenn\RenderZennArticle;
+use App\Actions\Zenn\WithZennSyncLock;
+use App\Exceptions\ZennImportException;
+use App\Exceptions\ZennPushException;
 use App\Models\Activity;
 use App\Models\User;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Http\Client\Factory;
 use Illuminate\Http\Client\Request;
@@ -125,9 +130,64 @@ test('an unchanged remote article does not reset local edits or mark them as syn
     $result = app(ImportZennArticles::class)($owner);
 
     expect($result['unchanged'])->toBe(1);
+    expect($result['items'][0]['status'])->toBe('unchanged');
     expect($article->fresh()->zenn_local_sha)->toBe($baseline);
     $this->actingAs($owner)->get(route('dashboard'))->assertInertia(fn (Assert $page) => $page
         ->where('zenn.articles.data.0.locallyChanged', true)->missing('zenn.token'));
+});
+
+test('the same repository cannot be pushed or imported while a sync is running', function () {
+    $owner = User::factory()->create(['email' => 'publisher@example.com']);
+    $article = $owner->articles()->create(['slug' => 'local-article']);
+    $article->replaceTranslations(['ja' => ['title' => 'Title', 'content' => 'Body']]);
+
+    app(WithZennSyncLock::class)(function () use ($owner, $article): void {
+        expect(fn () => app(ImportZennArticles::class)($owner))->toThrow(ZennImportException::class);
+        expect(fn () => app(PushArticleToZenn::class)($article))->toThrow(ZennPushException::class);
+    });
+
+    Http::assertNothingSent();
+    $this->assertDatabaseHas('articles', ['id' => $article->id, 'zenn_path' => null, 'zenn_sha' => null]);
+});
+
+test('long syncs renew their lease and continue excluding another sync', function () {
+    $this->freezeTime();
+
+    $result = app(WithZennSyncLock::class)(function (Closure $checkLock): string {
+        for ($step = 0; $step < 4; $step++) {
+            $this->travel(50)->seconds();
+            $checkLock();
+            expect(fn () => app(WithZennSyncLock::class)(fn (): bool => true))->toThrow(LockTimeoutException::class);
+        }
+
+        return 'completed';
+    });
+
+    expect($result)->toBe('completed');
+    expect(app(WithZennSyncLock::class)(fn (): bool => true))->toBeTrue();
+});
+
+test('a failed sync releases its repository lock', function () {
+    expect(fn () => app(WithZennSyncLock::class)(function (): void {
+        throw new RuntimeException('Operation failed');
+    }))->toThrow(RuntimeException::class, 'Operation failed');
+
+    expect(app(WithZennSyncLock::class)(fn (): bool => true))->toBeTrue();
+});
+
+test('an import whose lease expires during a GitHub request stops before saving', function () {
+    $owner = User::factory()->create(['email' => 'publisher@example.com']);
+    $this->freezeTime();
+    Http::fake(['api.github.com/repos/owner/zenn/git/trees/main?recursive=1' => function () {
+        $this->travel(121)->seconds();
+
+        return Http::response(['truncated' => false, 'tree' => []]);
+    }]);
+
+    $this->actingAs($owner)->post(route('zenn.import'))->assertSessionHas('inertia.flash_data.toast.message', __('The repository is busy or the sync lock was lost. Try again shortly.'));
+
+    $this->assertDatabaseCount('articles', 0);
+    expect(Activity::inLog('security')->where('event', 'articles.zenn_imported')->exists())->toBeFalse();
 });
 
 test('does not claim an identity belonging to another user', function () {

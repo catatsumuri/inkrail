@@ -1,4 +1,7 @@
 {
+    "GitHub unchanged": "GitHub側に変更なし",
+    "Imported: :created · Updated: :updated · GitHub unchanged: :unchanged · Conflicts: :conflict · Invalid: :invalid": "新規: :created件 · 更新: :updated件 · GitHub側に変更なし: :unchanged件 · 競合: :conflict件 · 不正: :invalid件",
+    "The repository is busy or the sync lock was lost. Try again shortly.": "別の同期処理が実行中か、同期ロックの有効期限が切れました。少し待ってから再実行してください。",
     "Import articles from this repository?": "このリポジトリから記事を取り込みますか？",
     "New articles will be added to your account. Linked articles without local changes may be updated. Conflicting articles will be skipped.": "新しい記事を自分のアカウントに追加します。連携済みでローカルに変更がない記事は更新される場合があります。変更が競合する記事はスキップします。",
     "Published articles will also be public in InkRail. This operation does not write to GitHub.": "公開済みの記事はInkRailでも公開されます。この操作でGitHubへの書き込みは行いません。",

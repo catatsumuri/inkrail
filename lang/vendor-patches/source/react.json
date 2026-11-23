@@ -1,4 +1,7 @@
 {
+    "GitHub unchanged": "GitHub unchanged",
+    "Imported: :created · Updated: :updated · GitHub unchanged: :unchanged · Conflicts: :conflict · Invalid: :invalid": "Imported: :created · Updated: :updated · GitHub unchanged: :unchanged · Conflicts: :conflict · Invalid: :invalid",
+    "The repository is busy or the sync lock was lost. Try again shortly.": "The repository is busy or the sync lock was lost. Try again shortly.",
     "Import articles from this repository?": "Import articles from this repository?",
     "New articles will be added to your account. Linked articles without local changes may be updated. Conflicting articles will be skipped.": "New articles will be added to your account. Linked articles without local changes may be updated. Conflicting articles will be skipped.",
     "Published articles will also be public in InkRail. This operation does not write to GitHub.": "Published articles will also be public in InkRail. This operation does not write to GitHub.",
