@@ -1,4 +1,4 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import type { PropsWithChildren } from 'react';
 import { lang } from '@erag/lang-sync-inertia/react';
 import Heading from '@/components/heading';
@@ -42,6 +42,12 @@ const sidebarNavItems: NavItem[] = [
 export default function SettingsLayout({ children }: PropsWithChildren) {
     const { isCurrentOrParentUrl } = useCurrentUrl();
     const { __ } = lang();
+    const { features } = usePage().props;
+
+    // Session management relies on password confirmation.
+    const navItems = sidebarNavItems.filter(
+        (item) => features.password_confirmation || item.title !== 'Sessions',
+    );
 
     return (
         <div className="px-4 py-6">
@@ -56,7 +62,7 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
                         className="flex flex-col space-y-1 space-x-0"
                         aria-label={__('Settings')}
                     >
-                        {sidebarNavItems.map((item, index) => (
+                        {navItems.map((item, index) => (
                             <Button
                                 key={`${toUrl(item.href)}-${index}`}
                                 size="sm"

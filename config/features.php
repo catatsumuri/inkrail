@@ -36,4 +36,10 @@ return [
     // with their password alone. Only disable it deliberately.
     'two_factor' => (bool) env('FEATURE_TWO_FACTOR', true),
 
+    // Re-entering the password before sensitive settings (security page,
+    // enabling two-factor or passkeys). When off, none of those screens ask
+    // for it, and the browser session-management pages are removed too, since
+    // revoking sessions relies on a recent password confirmation.
+    'password_confirmation' => (bool) env('FEATURE_PASSWORD_CONFIRMATION', true),
+
 ];

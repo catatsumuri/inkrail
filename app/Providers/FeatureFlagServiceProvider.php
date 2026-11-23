@@ -20,6 +20,8 @@ class FeatureFlagServiceProvider extends ServiceProvider
         // the generated files must describe the full route set whatever the
         // flags say. HTTP requests still honour the flags.
         if ($this->isGeneratingFrontendRoutes()) {
+            config(['features' => array_map(fn () => true, config('features', []))]);
+
             return;
         }
 
@@ -34,6 +36,23 @@ class FeatureFlagServiceProvider extends ServiceProvider
                 $this->disableFortifyFeature($feature);
             }
         }
+
+        if (! config('features.password_confirmation', true)) {
+            $this->disablePasswordConfirmation();
+        }
+    }
+
+    /**
+     * Stop Fortify from guarding two-factor and passkey management behind a
+     * recent password confirmation. The routes that use RequirePassword
+     * directly (routes/settings.php) read the flag themselves.
+     */
+    private function disablePasswordConfirmation(): void
+    {
+        config([
+            'fortify-options.two-factor-authentication.confirmPassword' => false,
+            'fortify-options.passkeys.confirmPassword' => false,
+        ]);
     }
 
     private function disableFortifyFeature(string $feature): void
