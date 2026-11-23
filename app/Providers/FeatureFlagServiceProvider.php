@@ -16,8 +16,22 @@ class FeatureFlagServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        if (! config('features.registration', true)) {
-            $this->disableFortifyFeature(Features::registration());
+        // The frontend imports generated route helpers for every feature, so
+        // the generated files must describe the full route set whatever the
+        // flags say. HTTP requests still honour the flags.
+        if ($this->isGeneratingFrontendRoutes()) {
+            return;
+        }
+
+        $fortifyFeatures = [
+            'registration' => Features::registration(),
+            'passkeys' => Features::passkeys(),
+        ];
+
+        foreach ($fortifyFeatures as $flag => $feature) {
+            if (! config("features.{$flag}", true)) {
+                $this->disableFortifyFeature($feature);
+            }
         }
     }
 
@@ -29,5 +43,11 @@ class FeatureFlagServiceProvider extends ServiceProvider
                 fn ($entry) => $entry !== $feature,
             )),
         ]);
+    }
+
+    private function isGeneratingFrontendRoutes(): bool
+    {
+        return $this->app->runningInConsole()
+            && ($_SERVER['argv'][1] ?? null) === 'wayfinder:generate';
     }
 }

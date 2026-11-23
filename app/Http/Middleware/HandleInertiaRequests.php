@@ -49,6 +49,7 @@ class HandleInertiaRequests extends Middleware
             'lang' => $this->loadLangJson(),
             'features' => [
                 'registration' => Features::enabled(Features::registration()),
+                'passkeys' => Features::enabled(Features::passkeys()),
             ],
         ];
     }

@@ -14,7 +14,7 @@ declare module '@inertiajs/core' {
             notifications: NotificationFeed;
             sidebarOpen: boolean;
             lang: Record<string, string>;
-            features: { registration: boolean };
+            features: { registration: boolean; passkeys: boolean };
             [key: string]: unknown;
         };
     }

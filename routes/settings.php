@@ -7,6 +7,7 @@ use App\Http\Controllers\Settings\SessionController;
 use Illuminate\Auth\Middleware\RequirePassword;
 /* @end-chisel-password-confirmation */
 use Illuminate\Support\Facades\Route;
+use Laravel\Fortify\Features;
 
 Route::middleware(['auth'])->group(function () {
     Route::redirect('settings', '/settings/profile');
@@ -50,10 +51,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 /* @chisel-passkeys */
-Route::get('.well-known/passkey-endpoints', function () {
-    return response()->json([
-        'enroll' => route('security.edit'),
-        'manage' => route('security.edit'),
-    ]);
-})->name('well-known.passkeys');
+if (Features::enabled(Features::passkeys())) {
+    Route::get('.well-known/passkey-endpoints', function () {
+        return response()->json([
+            'enroll' => route('security.edit'),
+            'manage' => route('security.edit'),
+        ]);
+    })->name('well-known.passkeys');
+}
 /* @end-chisel-passkeys */
