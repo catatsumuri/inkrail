@@ -1,6 +1,7 @@
 <?php
 
 use App\Actions\Notifications\SendThrowableAlert;
+use App\Http\Middleware\EnsureEmailIsVerifiedWhenPresent;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\ProtectShowcaseOwner;
@@ -19,6 +20,9 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
+
+        // Accounts without an email address have nothing to verify.
+        $middleware->alias(['verified' => EnsureEmailIsVerifiedWhenPresent::class]);
 
         $middleware->web(append: [
             LocalizationBySession::class,

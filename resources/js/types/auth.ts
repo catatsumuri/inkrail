@@ -1,7 +1,8 @@
 export type User = {
     id: number;
     name: string;
-    email: string;
+    email: string | null;
+    username: string | null;
     is_sandbox: boolean;
     is_showcase_owner: boolean;
     avatar?: string;

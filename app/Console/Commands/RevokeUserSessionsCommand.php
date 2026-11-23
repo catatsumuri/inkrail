@@ -13,7 +13,7 @@ class RevokeUserSessionsCommand extends Command
 {
     /** @var string */
     protected $signature = 'security:revoke-sessions
-        {selector : User selector: id:123 or email:user@example.com}
+        {selector : User selector: id:123, email:user@example.com or username:alice}
         {--force : Revoke sessions without interactive confirmation}';
 
     /** @var string */
@@ -42,7 +42,7 @@ class RevokeUserSessionsCommand extends Command
             return self::FAILURE;
         }
 
-        $subject = "{$user->name} ({$user->email}, ID {$user->getKey()})";
+        $subject = $this->describe($user);
         $message = $storedSessionCount === 0
             ? "Revoke 0 stored sessions and reset remember me logins for {$subject}?"
             : "Revoke {$storedSessionCount} session(s) for {$subject}?";
@@ -91,9 +91,19 @@ class RevokeUserSessionsCommand extends Command
             return self::FAILURE;
         }
 
-        $this->info("No sessions are stored for {$user->name} ({$user->email}, ID {$user->getKey()}). Remember me logins were reset.");
+        $this->info('No sessions are stored for '.$this->describe($user).'. Remember me logins were reset.');
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Name the user the way operators see them: by email, or by username when there is none.
+     */
+    private function describe(User $user): string
+    {
+        $identifier = $user->email ?? $user->username;
+
+        return "{$user->name} ({$identifier}, ID {$user->getKey()})";
     }
 
     private function resolveUser(ResolveSecurityUser $users): ?User

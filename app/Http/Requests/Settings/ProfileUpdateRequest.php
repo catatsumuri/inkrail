@@ -24,6 +24,10 @@ class ProfileUpdateRequest extends FormRequest
         if (config('fortify.lowercase_usernames') && is_string($this->input('email'))) {
             $this->merge(['email' => Str::lower($this->input('email'))]);
         }
+
+        if (is_string($this->input('username'))) {
+            $this->merge(['username' => Str::lower($this->input('username'))]);
+        }
     }
 
     /**
@@ -35,7 +39,12 @@ class ProfileUpdateRequest extends FormRequest
     {
         return [
             ...$this->profileRules($this->user()->id),
-            'current_password' => $this->isChangingEmail()
+            // Accounts created before usernames existed may leave it empty,
+            // but a username that has been set can be changed, never removed.
+            'username' => $this->usernameRules($this->user()->id, required: $this->user()->username !== null),
+            // Same for the email address: it may be added or changed, never removed.
+            'email' => $this->emailRules($this->user()->id, required: $this->user()->email !== null),
+            'current_password' => $this->isChangingEmail() || $this->isChangingUsername()
                 ? ['bail', ...$this->currentPasswordRules()]
                 : ['nullable'],
         ];
@@ -46,8 +55,14 @@ class ProfileUpdateRequest extends FormRequest
      */
     protected function failedValidation(Validator $validator): void
     {
-        if ($this->isChangingEmail() && $validator->errors()->has('current_password')) {
-            app(LogSecurityEvent::class)->failure('email.change_failed', $this->user());
+        if ($validator->errors()->has('current_password')) {
+            if ($this->isChangingEmail()) {
+                app(LogSecurityEvent::class)->failure('email.change_failed', $this->user());
+            }
+
+            if ($this->isChangingUsername()) {
+                app(LogSecurityEvent::class)->failure('username.change_failed', $this->user());
+            }
         }
 
         parent::failedValidation($validator);
@@ -60,7 +75,17 @@ class ProfileUpdateRequest extends FormRequest
     {
         $email = $this->input('email');
 
-        return ! is_string($email) || $email !== $this->user()->email;
+        return (is_string($email) ? $email : null) !== $this->user()->email;
+    }
+
+    /**
+     * Determine whether the request changes the user's username.
+     */
+    protected function isChangingUsername(): bool
+    {
+        $username = $this->input('username');
+
+        return (is_string($username) ? $username : null) !== $this->user()->username;
     }
 
     /**
@@ -70,6 +95,6 @@ class ProfileUpdateRequest extends FormRequest
      */
     public function profileData(): array
     {
-        return Arr::only($this->validated(), ['name', 'email']);
+        return Arr::only($this->validated(), ['name', 'username', 'email']);
     }
 }

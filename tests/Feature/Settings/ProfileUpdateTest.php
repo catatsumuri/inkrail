@@ -55,7 +55,7 @@ test('email is stored in lowercase so the user can still log in', function () {
     $this->post(route('logout'));
 
     $this->post(route('login.store'), [
-        'email' => 'Test@Example.com',
+        'login' => 'Test@Example.com',
         'password' => 'password',
     ]);
 

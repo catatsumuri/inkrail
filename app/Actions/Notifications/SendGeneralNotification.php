@@ -35,6 +35,8 @@ class SendGeneralNotification
             );
         }
 
+        $channels = $this->deliverableChannels($user, $channels);
+
         $send = fn () => $user->notify(new GeneralNotification($title, $body, $actionUrl, $channels));
 
         $deferred ? $this->deliver($send) : $send();
@@ -46,8 +48,14 @@ class SendGeneralNotification
      * For recipients with no user account to notify through, such as an email change's
      * previous address or a deleted account's last known address.
      */
-    public function toEmailAddress(string $email, string $title, string $body, ?string $actionUrl = null): void
+    public function toEmailAddress(?string $email, string $title, string $body, ?string $actionUrl = null): void
     {
+        // Accounts may have no email address (for example no previous address
+        // when one is added, or none to say goodbye to after deletion).
+        if ($email === null || $email === '') {
+            return;
+        }
+
         if (! $this->isValidActionUrl($actionUrl)) {
             throw new InvalidArgumentException(
                 'The URL must be an application-relative path or a valid HTTPS URL.',
@@ -93,6 +101,24 @@ class SendGeneralNotification
         $notifiable->notify(new GeneralNotification($title, $body, $actionUrl, $deliverable));
 
         return $deliverable;
+    }
+
+    /**
+     * Replace the mail channel with the in-app one for an account that has no email address.
+     *
+     * @param  array<int, string>  $channels
+     * @return array<int, string>
+     */
+    private function deliverableChannels(User $user, array $channels): array
+    {
+        if (! in_array('mail', $channels, true) || ($user->email !== null && $user->email !== '')) {
+            return $channels;
+        }
+
+        return array_values(array_unique(array_map(
+            fn (string $channel) => $channel === 'mail' ? 'database' : $channel,
+            $channels,
+        )));
     }
 
     /**

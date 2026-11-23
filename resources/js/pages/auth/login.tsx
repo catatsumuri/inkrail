@@ -1,4 +1,4 @@
-import { Form, Head, setLayoutProps } from '@inertiajs/react';
+import { Form, Head, setLayoutProps, usePage } from '@inertiajs/react';
 import { lang } from '@erag/lang-sync-inertia/react';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
@@ -24,10 +24,13 @@ type Props = {
 
 export default function Login({ status, canResetPassword }: Props) {
     const { __ } = lang();
+    const { features } = usePage().props;
 
     setLayoutProps({
         title: __('Log in to your account'),
-        description: __('Enter your email and password below to log in'),
+        description: __(
+            'Enter your email or username and password below to log in',
+        ),
     });
 
     return (
@@ -35,7 +38,7 @@ export default function Login({ status, canResetPassword }: Props) {
             <Head title={__('Log in')} />
 
             {/* @chisel-passkeys */}
-            <PasskeyVerify />
+            {features.passkeys && <PasskeyVerify />}
             {/* @end-chisel-passkeys */}
 
             <Form
@@ -47,20 +50,21 @@ export default function Login({ status, canResetPassword }: Props) {
                     <>
                         <div className="grid gap-6">
                             <div className="grid gap-2">
-                                <Label htmlFor="email">
-                                    {__('Email address')}
+                                <Label htmlFor="login">
+                                    {__('Email or username')}
                                 </Label>
                                 <Input
-                                    id="email"
-                                    type="email"
-                                    name="email"
+                                    id="login"
+                                    type="text"
+                                    name="login"
                                     required
                                     autoFocus
                                     tabIndex={1}
-                                    autoComplete="email"
-                                    placeholder="email@example.com"
+                                    autoComplete="username"
+                                    autoCapitalize="none"
+                                    placeholder={__('Email or username')}
                                 />
-                                <InputError message={errors.email} />
+                                <InputError message={errors.login} />
                             </div>
 
                             <div className="grid gap-2">
@@ -113,12 +117,14 @@ export default function Login({ status, canResetPassword }: Props) {
                         </div>
 
                         {/* @chisel-registration */}
-                        <div className="text-center text-sm text-muted-foreground">
-                            {__("Don't have an account?")}{' '}
-                            <TextLink href={register()} tabIndex={5}>
-                                {__('Sign up')}
-                            </TextLink>
-                        </div>
+                        {features.registration && (
+                            <div className="text-center text-sm text-muted-foreground">
+                                {__("Don't have an account?")}{' '}
+                                <TextLink href={register()} tabIndex={5}>
+                                    {__('Sign up')}
+                                </TextLink>
+                            </div>
+                        )}
                         {/* @end-chisel-registration */}
                     </>
                 )}

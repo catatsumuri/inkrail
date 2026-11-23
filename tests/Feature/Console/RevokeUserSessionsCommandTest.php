@@ -40,7 +40,7 @@ test('a selector must state its type and a valid value', function (string $selec
     $this->storeSession('session-one', $user);
 
     $this->artisan('security:revoke-sessions', ['selector' => $selector, '--force' => true])
-        ->expectsOutputToContain('Use id:123 or email:user@example.com.')
+        ->expectsOutputToContain('Use id:123, email:user@example.com or username:alice.')
         ->assertFailed();
 
     $this->assertDatabaseHas('sessions', ['id' => 'session-one']);

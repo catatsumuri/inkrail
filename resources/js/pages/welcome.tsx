@@ -17,7 +17,7 @@ export default function Welcome({
 }: {
     publicIndexEnabled: boolean;
 }) {
-    const { auth } = usePage().props;
+    const { auth, features } = usePage().props;
     const { __ } = lang();
 
     return (
@@ -53,11 +53,13 @@ export default function Welcome({
                                     <Link href={login()}>{__('Log in')}</Link>
                                 </Button>
                                 {/* @chisel-registration */}
-                                <Button asChild variant="ghost">
-                                    <Link href={register()}>
-                                        {__('Register')}
-                                    </Link>
-                                </Button>
+                                {features.registration && (
+                                    <Button asChild variant="ghost">
+                                        <Link href={register()}>
+                                            {__('Register')}
+                                        </Link>
+                                    </Button>
+                                )}
                                 {/* @end-chisel-registration */}
                             </>
                         )}
