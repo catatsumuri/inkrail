@@ -50,6 +50,7 @@ class HandleInertiaRequests extends Middleware
             'features' => [
                 'registration' => Features::enabled(Features::registration()),
                 'passkeys' => Features::enabled(Features::passkeys()),
+                'password_confirmation' => (bool) config('features.password_confirmation', true),
             ],
         ];
     }

@@ -23,24 +23,26 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('settings/security', [SecurityController::class, 'edit'])
         /* @chisel-password-confirmation */
-        ->middleware(RequirePassword::class)
+        ->middleware(config('features.password_confirmation', true) ? RequirePassword::class : [])
         /* @end-chisel-password-confirmation */
         ->name('security.edit');
 
     /* @chisel-password-confirmation */
-    Route::middleware(RequirePassword::using(passwordTimeoutSeconds: 900))->group(function () {
-        Route::get('settings/sessions', [SessionController::class, 'index'])
-            ->name('sessions.index');
+    if (config('features.password_confirmation', true)) {
+        Route::middleware(RequirePassword::using(passwordTimeoutSeconds: 900))->group(function () {
+            Route::get('settings/sessions', [SessionController::class, 'index'])
+                ->name('sessions.index');
 
-        Route::middleware('throttle:session-revocation')->group(function () {
-            Route::delete('settings/sessions/all', [SessionController::class, 'destroyAll'])
-                ->name('sessions.destroy-all');
-            Route::delete('settings/sessions', [SessionController::class, 'destroyOthers'])
-                ->name('sessions.destroy-others');
-            Route::delete('settings/sessions/{fingerprint}', [SessionController::class, 'destroy'])
-                ->name('sessions.destroy');
+            Route::middleware('throttle:session-revocation')->group(function () {
+                Route::delete('settings/sessions/all', [SessionController::class, 'destroyAll'])
+                    ->name('sessions.destroy-all');
+                Route::delete('settings/sessions', [SessionController::class, 'destroyOthers'])
+                    ->name('sessions.destroy-others');
+                Route::delete('settings/sessions/{fingerprint}', [SessionController::class, 'destroy'])
+                    ->name('sessions.destroy');
+            });
         });
-    });
+    }
     /* @end-chisel-password-confirmation */
 
     Route::put('settings/password', [SecurityController::class, 'update'])
