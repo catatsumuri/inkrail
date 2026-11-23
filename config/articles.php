@@ -21,4 +21,10 @@ return [
     */
     'image_disk' => env('ARTICLE_IMAGE_DISK', 'public'),
     'image_max_dimension' => 2048,
+
+    /*
+    | Where articles:backup writes archives by default. Kept outside the
+    | database so migrate:fresh does not remove it.
+    */
+    'backup_directory' => env('ARTICLES_BACKUP_DIR', storage_path('app/private/backups')),
 ];
