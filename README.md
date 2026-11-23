@@ -13,6 +13,8 @@ Compared with that project's `main` branch, it adds:
 
 Regression tests cover account changes, security notifications and logs, access restrictions, session revocation, and failure handling.
 
+On the `extended` line, authentication features can be switched off with deployment-time feature flags; see [FEATURE_FLAGS.md](FEATURE_FLAGS.md).
+
 For localization setup and adding locales, see the [upstream localization guide](https://github.com/catatsumuri/react-starter-kit-i18n#adding-a-locale).
 
 The frontend requires `@erag/lang-sync-inertia` ^3.1.1, which fixes unreplaced placeholders in the session list when translation keys are missing. Existing installations should run `npm install '@erag/lang-sync-inertia@^3.1.1'` and `npm run build`. See the [upstream release notes](https://github.com/eramitgupta/lang-sync-inertia/releases/tag/v3.1.1).
