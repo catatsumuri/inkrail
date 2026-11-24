@@ -42,14 +42,14 @@ class HandleInertiaRequests extends Middleware
             ...parent::share($request),
             'name' => config('app.name'),
             'demoMode' => (bool) config('app.demo_mode'),
-            'locale' => app()->getLocale(),
+            'locale' => fn (): string => app()->getLocale(),
             'articleLocales' => config('articles.locales'),
             'auth' => [
                 'user' => $request->user(),
             ],
             'notifications' => fn (): array => $this->notificationFeed($request),
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
-            'lang' => $this->loadLangJson(),
+            'lang' => fn (): array => $this->loadLangJson(),
             'features' => [
                 'registration' => Features::enabled(Features::registration()),
                 'passkeys' => Features::enabled(Features::passkeys()),

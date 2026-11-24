@@ -198,9 +198,9 @@ test('the lang query string forces the displayed translation without changing th
     ]);
 
     $this->get(route('public.articles.show', ['article' => 'bilingual', 'lang' => 'ja']))->assertOk()
-        ->assertInertia(fn (Assert $page) => $page->where('article.title', '日本語タイトル')->where('article.resolvedLocale', 'ja')
+        ->assertInertia(fn (Assert $page) => $page->where('article.title', '日本語タイトル')->where('article.resolvedLocale', 'ja')->where('locale', 'ja')
             ->where('social.url', route('public.articles.show', ['article' => 'bilingual', 'lang' => 'ja'])));
     $this->get(route('public.articles.show', ['article' => 'bilingual', 'lang' => 'en']))->assertOk()
-        ->assertInertia(fn (Assert $page) => $page->where('article.title', 'English title')->where('article.resolvedLocale', 'en'));
+        ->assertInertia(fn (Assert $page) => $page->where('article.title', 'English title')->where('article.resolvedLocale', 'en')->where('locale', 'en'));
     $this->get(route('public.articles.show', ['article' => 'bilingual', 'lang' => 'fr']))->assertSessionHasErrors('lang');
 });
