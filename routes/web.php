@@ -7,6 +7,7 @@ use App\Http\Controllers\ArticleHistoryController;
 use App\Http\Controllers\ArticleImageController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeleteNotificationController;
+use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\MarkNotificationAsReadController;
 use App\Http\Controllers\PublicArticleController;
@@ -14,11 +15,8 @@ use App\Http\Controllers\SandboxController;
 use App\Http\Controllers\ZennImportController;
 use App\Http\Controllers\ZennPushController;
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
 
-Route::get('/', fn () => Inertia::render('welcome', [
-    'publicIndexEnabled' => (bool) config('articles.public_index_enabled'),
-]))->name('home');
+Route::get('/', HomeController::class)->name('home');
 
 Route::post('sandbox', SandboxController::class)
     ->middleware('throttle:6,1')

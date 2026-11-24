@@ -3,6 +3,13 @@
 return [
     'locales' => ['en', 'ja'],
     'public_index_enabled' => env('ARTICLES_PUBLIC_INDEX_ENABLED', true),
+
+    /*
+    | What the root URL (/) shows: the "welcome" landing page, or the "articles"
+    | public index rendered in place (no redirect). "articles" needs the public
+    | index to be enabled; otherwise the welcome page is shown.
+    */
+    'home_page' => env('ARTICLES_HOME_PAGE', 'welcome'),
     'zenn_repository_path' => env('ZENN_REPOSITORY_PATH'),
 
     /*

@@ -7,7 +7,7 @@ InkRail is an application for writing, managing, and publishing Markdown article
 - Create, edit, and delete your own articles.
 - Keep articles as private drafts, publish them, or unpublish them at any time.
 - Set an article slug and copy its public URL to share it with readers who do not need an account.
-- Browse published articles through an optional public index, controlled by `ARTICLES_PUBLIC_INDEX_ENABLED`.
+- Browse published articles through an optional public index, controlled by `ARTICLES_PUBLIC_INDEX_ENABLED`. Set `ARTICLES_HOME_PAGE=articles` to show that index at `/` instead of the welcome page.
 - Render Markdown with [Inkstream](https://github.com/catatsumuri/inkstream), including supported GitHub, Zenn, and Mintlify syntax, diagrams, and charts.
 
 The application uses Laravel, Inertia, React, and Tailwind CSS.
