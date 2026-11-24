@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { slugify } from '@catatsumuri/inkstream/advanced';
+import { EditorView } from '@codemirror/view';
 import {
     useDeferredValue,
     useEffect,
@@ -20,6 +21,7 @@ import {
 } from 'react';
 import { store as storeImage } from '@/actions/App/Http/Controllers/ArticleImageController';
 import ArticleContent from '@/components/article-content';
+import CodeEditor from '@/components/code-editor';
 import { Button } from '@/components/ui/button';
 import { listFencedBlocks, listHeadings } from '@/lib/heading-offset';
 import { buildAnchors, mapScroll, type ScrollAnchor } from '@/lib/scroll-sync';
@@ -118,7 +120,7 @@ export default function MarkdownEditor({
         image: null,
     });
 
-    const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const viewRef = useRef<EditorView | null>(null);
     const previewRef = useRef<HTMLDivElement>(null);
 
     const anchorCache = useRef<{
@@ -129,12 +131,6 @@ export default function MarkdownEditor({
     useEffect(() => {
         anchorCache.current = null;
     }, [preview]);
-
-    function imageFrom(files: FileList | null | undefined): File | undefined {
-        return Array.from(files ?? []).find((file) =>
-            file.type.startsWith('image/'),
-        );
-    }
 
     async function uploadImage(file: File) {
         let reported = false;
@@ -151,24 +147,22 @@ export default function MarkdownEditor({
                     );
                 },
             });
-            const textarea = textareaRef.current;
+            const view = viewRef.current;
 
-            if (textarea) {
+            if (view) {
                 const alt =
                     file.name
                         .replace(/\.[^.]+$/, '')
                         .replace(/[[\]]/g, '')
                         .trim() || 'image';
                 const markdown = `![${alt}](${url})\n`;
+                const { from, to } = view.state.selection.main;
 
-                textarea.setRangeText(
-                    markdown,
-                    textarea.selectionStart,
-                    textarea.selectionEnd,
-                    'end',
-                );
-                setContent(textarea.value);
-                textarea.focus();
+                view.dispatch({
+                    changes: { from, to, insert: markdown },
+                    selection: { anchor: from + markdown.length },
+                });
+                view.focus();
             }
         } catch {
             if (!reported) {
@@ -179,43 +173,25 @@ export default function MarkdownEditor({
         }
     }
 
-    function handleDrop(event: React.DragEvent<HTMLTextAreaElement>) {
-        setDragging(false);
-
-        const file = imageFrom(event.dataTransfer.files);
-
-        if (file) {
-            event.preventDefault();
-            void uploadImage(file);
-        }
-    }
-
-    function handlePaste(event: React.ClipboardEvent<HTMLTextAreaElement>) {
-        const file = imageFrom(event.clipboardData.files);
-
-        if (file) {
-            event.preventDefault();
-            void uploadImage(file);
-        }
-    }
-
     function measureAnchors(
-        textarea: HTMLTextAreaElement,
+        view: EditorView,
         pane: HTMLDivElement,
     ): ScrollAnchor[] {
-        const maxFrom = textarea.scrollHeight - textarea.clientHeight;
+        const scroller = view.scrollDOM;
+        const maxFrom = scroller.scrollHeight - scroller.clientHeight;
         const maxTo = pane.scrollHeight - pane.clientHeight;
-        const key = `${textarea.value.length}:${textarea.clientWidth}:${pane.scrollHeight}`;
+        const value = view.state.doc.toString();
+        const key = `${value.length}:${view.contentHeight}:${scroller.clientWidth}:${pane.scrollHeight}`;
 
         if (anchorCache.current?.key === key) {
             return anchorCache.current.anchors;
         }
 
-        const source = listHeadings(textarea.value).filter(
+        const source = listHeadings(value).filter(
             (heading) => heading.level <= 4,
         );
         const rendered = pane.querySelectorAll('.ink-heading');
-        const embeds = listFencedBlocks(textarea.value, 'html-embed');
+        const embeds = listFencedBlocks(value, 'html-embed');
         const renderedEmbeds = pane.querySelectorAll('.ink-html-embed');
         const useHeadings =
             source.length > 0 && source.length === rendered.length;
@@ -224,21 +200,13 @@ export default function MarkdownEditor({
         let headings: ScrollAnchor[] = [];
 
         if (useHeadings || useEmbeds) {
-            const style = window.getComputedStyle(textarea);
-            const mirror = document.createElement('div');
-            mirror.style.cssText = `position:fixed;visibility:hidden;left:-200%;top:0;height:auto;white-space:pre-wrap;overflow-wrap:break-word;box-sizing:${style.boxSizing};font:${style.font};line-height:${style.lineHeight};padding:${style.padding};width:${textarea.clientWidth}px`;
-            const paddingBottom = Number.parseFloat(style.paddingBottom) || 0;
             const paneTop = pane.getBoundingClientRect().top;
-            const sourceTop = (offset: number): number => {
-                mirror.textContent = textarea.value.slice(0, offset);
-
-                return mirror.scrollHeight - paddingBottom;
-            };
+            const sourceTop = (offset: number): number =>
+                view.lineBlockAt(Math.min(offset, value.length)).top;
             const renderedTop = (element: Element, edge: 'top' | 'bottom') =>
                 pane.scrollTop +
                 element.getBoundingClientRect()[edge] -
                 paneTop;
-            document.body.appendChild(mirror);
 
             if (useHeadings) {
                 headings = source.map((heading, index) => ({
@@ -263,8 +231,6 @@ export default function MarkdownEditor({
 
                 headings.sort((left, right) => left.from - right.from);
             }
-
-            document.body.removeChild(mirror);
         }
 
         const anchors = buildAnchors(headings, maxFrom, maxTo);
@@ -274,56 +240,50 @@ export default function MarkdownEditor({
     }
 
     function syncPreview() {
-        const textarea = textareaRef.current;
+        const view = viewRef.current;
         const pane = previewRef.current;
 
         if (
-            !textarea ||
+            !view ||
             !pane ||
             visiblePanel !== 'both' ||
             (!maximized && !window.matchMedia('(min-width: 1024px)').matches) ||
-            textarea.scrollHeight <= textarea.clientHeight
+            view.scrollDOM.scrollHeight <= view.scrollDOM.clientHeight
         ) {
             return;
         }
 
-        const anchors = measureAnchors(textarea, pane);
+        const scroller = view.scrollDOM;
+        const anchors = measureAnchors(view, pane);
 
         pane.scrollTop =
             anchors.length > 1
-                ? mapScroll(anchors, textarea.scrollTop)
-                : (textarea.scrollTop /
-                      (textarea.scrollHeight - textarea.clientHeight)) *
+                ? mapScroll(anchors, scroller.scrollTop)
+                : (scroller.scrollTop /
+                      (scroller.scrollHeight - scroller.clientHeight)) *
                   (pane.scrollHeight - pane.clientHeight);
     }
 
     useEffect(() => {
-        const textarea = textareaRef.current;
+        const view = viewRef.current;
 
-        if (!textarea || jumpTo === undefined || !Number.isFinite(jumpTo)) {
+        if (!view || jumpTo === undefined || !Number.isFinite(jumpTo)) {
             return;
         }
 
-        const start = Math.max(0, Math.min(jumpTo, textarea.value.length));
-        const lineEnd = textarea.value.indexOf('\n', start);
-        const end = lineEnd === -1 ? textarea.value.length : lineEnd;
+        const start = Math.max(0, Math.min(jumpTo, view.state.doc.length));
+        const line = view.state.doc.lineAt(start);
 
-        textarea.focus({ preventScroll: true });
-        textarea.setSelectionRange(start, end);
+        view.dispatch({
+            selection: { anchor: line.from, head: line.to },
+            effects: EditorView.scrollIntoView(line.from, {
+                y: 'start',
+                yMargin: view.defaultLineHeight * 2,
+            }),
+        });
+        view.focus();
 
-        const style = window.getComputedStyle(textarea);
-        const lineHeight = Number.parseFloat(style.lineHeight) || 24;
-        const mirror = document.createElement('div');
-        mirror.style.cssText = `position:fixed;visibility:hidden;left:-200%;top:0;height:auto;white-space:pre-wrap;overflow-wrap:break-word;box-sizing:${style.boxSizing};font:${style.font};line-height:${style.lineHeight};padding:${style.padding};width:${textarea.clientWidth}px`;
-        mirror.textContent = textarea.value.slice(0, start);
-        document.body.appendChild(mirror);
-        const top = mirror.scrollHeight;
-        document.body.removeChild(mirror);
-        textarea.scrollTo({ top: Math.max(0, top - lineHeight * 2) });
-
-        const heading = /^#{1,6}\s+(.+?)(?:\s+#+\s*)?$/.exec(
-            textarea.value.slice(start, end),
-        );
+        const heading = /^#{1,6}\s+(.+?)(?:\s+#+\s*)?$/.exec(line.text);
         const preview = previewRef.current;
         const target = heading
             ? preview?.querySelector(`#${CSS.escape(slugify(heading[1]))}`)
@@ -472,27 +432,19 @@ export default function MarkdownEditor({
                             )}
                         </div>
                     </div>
-                    <textarea
+                    <input type="hidden" name={name} value={content} />
+                    <CodeEditor
                         id={id}
-                        ref={textareaRef}
-                        onScroll={syncPreview}
-                        name={name}
                         defaultValue={defaultValue}
-                        onChange={(event) => setContent(event.target.value)}
-                        onDrop={handleDrop}
-                        onDragOver={(event) => {
-                            if (event.dataTransfer.types.includes('Files')) {
-                                event.preventDefault();
-                                setDragging(true);
-                            }
-                        }}
-                        onDragLeave={() => setDragging(false)}
-                        onPaste={handlePaste}
-                        aria-invalid={invalid}
-                        aria-describedby={describedBy}
-                        spellCheck={false}
+                        viewRef={viewRef}
+                        onChange={setContent}
+                        onScroll={syncPreview}
+                        onImageFile={(file) => void uploadImage(file)}
+                        onDraggingChange={setDragging}
+                        invalid={invalid}
+                        describedBy={describedBy}
                         className={cn(
-                            'block h-[60vh] min-h-80 w-full resize-none bg-transparent p-5 font-mono text-sm leading-7 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset sm:p-6',
+                            'h-[60vh] min-h-80 w-full',
                             maximized && 'h-auto min-h-0 flex-1',
                             dragging &&
                                 'bg-muted/50 ring-2 ring-ring ring-inset',
