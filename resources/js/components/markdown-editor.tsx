@@ -1,6 +1,14 @@
 import { lang } from '@erag/lang-sync-inertia/react';
 import { useHttp } from '@inertiajs/react';
-import { Code2, Eye, ImagePlus, Maximize2, Minimize2, X } from 'lucide-react';
+import {
+    Code2,
+    Columns2,
+    Eye,
+    ImagePlus,
+    Maximize2,
+    Minimize2,
+    X,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { slugify } from '@catatsumuri/inkstream/advanced';
 import {
@@ -39,9 +47,6 @@ export default function MarkdownEditor({
     const { __ } = lang();
     const [content, setContent] = useState(defaultValue);
     const preview = useDeferredValue(content);
-    const [activePanel, setActivePanel] = useState<'write' | 'preview'>(
-        'write',
-    );
 
     const [layout, setLayout] = useState<'both' | 'write' | 'preview'>('both');
     const [maximized, setMaximized] = useState<
@@ -92,18 +97,17 @@ export default function MarkdownEditor({
             if (document.fullscreenElement !== editorRef.current) {
                 await editorRef.current?.requestFullscreen();
             }
-            setMaximized('both');
+            setMaximized(layout);
         } catch {
             toast.error(__('Could not enter full screen.'));
         }
     }
 
-    function selectPanel(panel: 'write' | 'preview') {
-        setActivePanel(panel);
+    function selectPanel(panel: 'both' | 'write' | 'preview') {
         if (maximized) {
-            setMaximized((current) => (current === panel ? 'both' : panel));
+            setMaximized(panel);
         } else {
-            setLayout((current) => (current === panel ? 'both' : panel));
+            setLayout(panel);
         }
         anchorCache.current = null;
     }
@@ -316,28 +320,53 @@ export default function MarkdownEditor({
             )}
         >
             <div className="flex shrink-0 flex-wrap items-center gap-1 border-b p-2">
-                <Button
-                    type="button"
-                    variant={visiblePanel !== 'preview' ? 'secondary' : 'ghost'}
-                    size="sm"
-                    aria-pressed={visiblePanel !== 'preview'}
-                    aria-controls={`${id}-write`}
-                    onClick={() => selectPanel('write')}
-                >
-                    <Code2 aria-hidden="true" />
-                    {__('Markdown')}
-                </Button>
-                <Button
-                    type="button"
-                    variant={visiblePanel !== 'write' ? 'secondary' : 'ghost'}
-                    size="sm"
-                    aria-pressed={visiblePanel !== 'write'}
-                    aria-controls={`${id}-preview`}
-                    onClick={() => selectPanel('preview')}
-                >
-                    <Eye aria-hidden="true" />
-                    {__('Preview')}
-                </Button>
+                {(['both', 'write', 'preview'] as const).map((panel) => {
+                    const Icon =
+                        panel === 'write'
+                            ? Code2
+                            : panel === 'preview'
+                              ? Eye
+                              : Columns2;
+                    const label =
+                        panel === 'write'
+                            ? __('Markdown')
+                            : panel === 'preview'
+                              ? __('Preview')
+                              : __('Side by side');
+
+                    return (
+                        <Button
+                            key={panel}
+                            type="button"
+                            variant={
+                                visiblePanel === panel ? 'secondary' : 'ghost'
+                            }
+                            size="sm"
+                            aria-pressed={visiblePanel === panel}
+                            aria-controls={
+                                panel === 'both'
+                                    ? `${id}-write ${id}-preview`
+                                    : `${id}-${panel}`
+                            }
+                            onClick={() => selectPanel(panel)}
+                        >
+                            <Icon aria-hidden="true" />
+                            {label}
+                        </Button>
+                    );
+                })}
+                {!maximized && (
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="ml-auto"
+                        onClick={() => void maximize()}
+                    >
+                        <Maximize2 aria-hidden="true" />
+                        {__('Full screen')}
+                    </Button>
+                )}
                 {maximized && (
                     <Button
                         type="button"
@@ -377,9 +406,7 @@ export default function MarkdownEditor({
                             ? 'hidden'
                             : visiblePanel === 'write'
                               ? 'flex'
-                              : !maximized && activePanel !== 'write'
-                                ? 'hidden lg:flex'
-                                : 'flex',
+                              : 'flex',
                     )}
                 >
                     <div className="flex shrink-0 items-center gap-2 border-b bg-muted/30 px-5 py-2 text-xs font-medium text-muted-foreground">
@@ -396,16 +423,6 @@ export default function MarkdownEditor({
                         </span>
 
                         <div className="ml-auto flex items-center gap-1">
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                aria-label={__('Maximize Markdown')}
-                                title={__('Maximize Markdown')}
-                                onClick={() => void maximize()}
-                            >
-                                <Maximize2 aria-hidden="true" />
-                            </Button>
                             {visiblePanel === 'both' && (
                                 <Button
                                     type="button"
@@ -419,7 +436,6 @@ export default function MarkdownEditor({
                                         } else {
                                             setLayout('preview');
                                         }
-                                        setActivePanel('preview');
                                     }}
                                 >
                                     <X aria-hidden="true" />
@@ -528,9 +544,7 @@ export default function MarkdownEditor({
                             ? 'hidden'
                             : visiblePanel === 'preview'
                               ? 'flex'
-                              : !maximized && activePanel !== 'preview'
-                                ? 'hidden lg:flex'
-                                : 'flex',
+                              : 'flex',
                     )}
                 >
                     <div className="flex shrink-0 items-center gap-2 border-b bg-muted/30 px-5 py-2 text-xs font-medium text-muted-foreground">
@@ -538,16 +552,6 @@ export default function MarkdownEditor({
                         {__('Preview')}
 
                         <div className="ml-auto flex items-center gap-1">
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                aria-label={__('Maximize Preview')}
-                                title={__('Maximize Preview')}
-                                onClick={() => void maximize()}
-                            >
-                                <Maximize2 aria-hidden="true" />
-                            </Button>
                             {visiblePanel === 'both' && (
                                 <Button
                                     type="button"
@@ -561,7 +565,6 @@ export default function MarkdownEditor({
                                         } else {
                                             setLayout('write');
                                         }
-                                        setActivePanel('write');
                                     }}
                                 >
                                     <X aria-hidden="true" />
