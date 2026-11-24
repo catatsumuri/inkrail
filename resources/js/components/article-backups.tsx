@@ -227,7 +227,7 @@ export default function ArticleBackupsCard({
                 <CardTitle>{__('Backups')}</CardTitle>
                 <CardDescription>
                     {__(
-                        'Back up every article with its translations, history and images. Backups are stored on the ":disk" disk, so they survive migrate:fresh and redeploys.',
+                        'Back up every article with its translations, history and images. Backups are stored on the ":disk" disk, outside the database. They survive migrate:fresh, but surviving redeploys requires persistent storage such as R2. Local files may be lost on redeploy.',
                         { disk: backups.disk },
                     )}
                 </CardDescription>

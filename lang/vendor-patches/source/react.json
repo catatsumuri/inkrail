@@ -234,7 +234,6 @@
     "Could not confirm the import result.": "Could not confirm the import result.",
     "Retry importing": "Retry importing",
     "Backups": "Backups",
-    "Back up every article with its translations, history and images. Backups are stored on the \":disk\" disk, so they survive migrate:fresh and redeploys.": "Back up every article with its translations, history and images. Backups are stored on the \":disk\" disk, so they survive migrate:fresh and redeploys.",
     "Create backup": "Create backup",
     "Upload backup": "Upload backup",
     "Backup file": "Backup file",
@@ -280,5 +279,6 @@
     "Changing a published article to a future date hides it until that date.": "Changing a published article to a future date hides it until that date.",
     "Publication dates are sent to Zenn in Japan time. Zenn may restrict changes to an existing publication date.": "Publication dates are sent to Zenn in Japan time. Zenn may restrict changes to an existing publication date.",
     "Scheduled publication:": "Scheduled publication:",
-    "Published at:": "Published at:"
+    "Published at:": "Published at:",
+    "Back up every article with its translations, history and images. Backups are stored on the \":disk\" disk, outside the database. They survive migrate:fresh, but surviving redeploys requires persistent storage such as R2. Local files may be lost on redeploy.": "Back up every article with its translations, history and images. Backups are stored on the \":disk\" disk, outside the database. They survive migrate:fresh, but surviving redeploys requires persistent storage such as R2. Local files may be lost on redeploy."
 }
