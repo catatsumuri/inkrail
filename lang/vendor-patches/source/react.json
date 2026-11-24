@@ -254,6 +254,7 @@
     "The backup file :filename will be permanently removed.": "The backup file :filename will be permanently removed.",
     "The backup could not be created.": "The backup could not be created.",
     "Backup created.": "Backup created.",
+    "Backup created, but :count image file(s) were missing and left out.": "Backup created, but :count image file(s) were missing and left out.",
     "The file is not a valid InkRail backup.": "The file is not a valid InkRail backup.",
     "Backup uploaded.": "Backup uploaded.",
     "The backup could not be restored.": "The backup could not be restored.",

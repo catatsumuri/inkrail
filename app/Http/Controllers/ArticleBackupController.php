@@ -39,6 +39,13 @@ class ArticleBackupController extends Controller
         }
 
         ($this->logSecurityEvent)('articles.backup_created', $request->user(), ['filename' => $result['filename']]);
+
+        if ($result['missing_images'] !== []) {
+            Inertia::flash('toast', ['type' => 'warning', 'message' => __('Backup created, but :count image file(s) were missing and left out.', ['count' => count($result['missing_images'])])]);
+
+            return to_route('dashboard');
+        }
+
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Backup created.')]);
 
         return to_route('dashboard');
