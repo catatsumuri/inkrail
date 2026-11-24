@@ -9,7 +9,7 @@ import {
     foldService,
     syntaxHighlighting,
 } from '@codemirror/language';
-import { EditorState } from '@codemirror/state';
+import { EditorState, type Text } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
 import { tags } from '@lezer/highlight';
 import { useEffect, useRef, type RefObject } from 'react';
@@ -29,49 +29,61 @@ type Props = {
 
 const fencePattern = /^\s*(`{3,}|~{3,})\s*(\S*)/;
 
-/**
- * Finds the range between a fenced block's opening line and its closing
- * fence so the body can be folded while both fence lines stay visible.
- */
-function fencedBodyRange(
-    state: EditorState,
-    lineNumber: number,
-): { from: number; to: number; info: string } | null {
-    const open = state.doc.line(lineNumber);
-    const match = fencePattern.exec(open.text);
+type FencedBody = { from: number; to: number; info: string };
 
-    if (!match) {
-        return null;
+const fencedBodies = new WeakMap<Text, Map<number, FencedBody>>();
+
+/**
+ * Pairs opening and closing fences in one pass, keyed by the opening line
+ * number, so a closing fence is never mistaken for an opening one. The range
+ * covers the body only, leaving both fence lines visible when folded.
+ */
+function fencedBodiesOf(doc: Text): Map<number, FencedBody> {
+    const cached = fencedBodies.get(doc);
+
+    if (cached) {
+        return cached;
     }
 
-    for (let next = lineNumber + 1; next <= state.doc.lines; next++) {
-        const line = state.doc.line(next);
-        const close = fencePattern.exec(line.text);
+    const bodies = new Map<number, FencedBody>();
+    let open: { number: number; marker: string; info: string } | null = null;
 
-        if (
-            close &&
-            close[1][0] === match[1][0] &&
-            close[1].length >= match[1].length &&
-            line.text.trim() === close[1]
+    for (let number = 1; number <= doc.lines; number++) {
+        const line = doc.line(number);
+        const match = fencePattern.exec(line.text);
+
+        if (!match) {
+            continue;
+        }
+
+        if (open === null) {
+            open = { number, marker: match[1], info: match[2] };
+        } else if (
+            match[1][0] === open.marker[0] &&
+            match[1].length >= open.marker.length &&
+            line.text.trim() === match[1]
         ) {
-            return next > lineNumber + 1
-                ? {
-                      from: open.to,
-                      to: state.doc.line(next - 1).to,
-                      info: match[2],
-                  }
-                : null;
+            if (number > open.number + 1) {
+                bodies.set(open.number, {
+                    from: doc.line(open.number).to,
+                    to: doc.line(number - 1).to,
+                    info: open.info,
+                });
+            }
+            open = null;
         }
     }
 
-    return null;
+    fencedBodies.set(doc, bodies);
+
+    return bodies;
 }
 
 const fenceFolding = foldService.of((state, lineStart) => {
     const line = state.doc.lineAt(lineStart);
-    const range = fencedBodyRange(state, line.number);
+    const body = fencedBodiesOf(state.doc).get(line.number);
 
-    return range ? { from: range.from, to: range.to } : null;
+    return body ? { from: body.from, to: body.to } : null;
 });
 
 const highlightStyle = HighlightStyle.define([
@@ -255,11 +267,9 @@ export default function CodeEditor({
 
         const folds = [];
 
-        for (let line = 1; line <= view.state.doc.lines; line++) {
-            const range = fencedBodyRange(view.state, line);
-
-            if (range?.info === 'html-embed') {
-                folds.push(foldEffect.of({ from: range.from, to: range.to }));
+        for (const body of fencedBodiesOf(view.state.doc).values()) {
+            if (body.info === 'html-embed') {
+                folds.push(foldEffect.of({ from: body.from, to: body.to }));
             }
         }
 
