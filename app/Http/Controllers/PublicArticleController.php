@@ -15,14 +15,22 @@ class PublicArticleController extends Controller
     {
         abort_unless(config('articles.public_index_enabled'), 404);
 
+        $topic = $request->validate(['topic' => ['nullable', 'string', 'max:255']])['topic'] ?? null;
+        $articles = Article::query()->publiclyVisible()
+            ->when(config('app.demo_mode'), fn (Builder $query): Builder => $query->whereRelation('user', 'is_showcase_owner', true));
+        $topics = (clone $articles)->without('translations')->select('zenn_frontmatter')->get()
+            ->flatMap(fn (Article $article): array => $article->topics)->unique()->sort()->values()->all();
+
         return Inertia::render('articles/public-index', [
+            'topics' => $topics,
+            'selectedTopic' => $topic,
             'social' => $this->socialMetadata(
                 __('Public articles'), __('Ideas, notes, and things worth sharing.'), 'website',
-                route('public.articles.index', $request->integer('page', 1) > 1 ? ['page' => $request->integer('page')] : []),
+                route('public.articles.index', array_filter(['topic' => $topic, 'page' => $request->integer('page', 1) > 1 ? $request->integer('page') : null], fn (mixed $value): bool => $value !== null)),
             ),
-            'articles' => Article::query()->publiclyVisible()
-                ->when(config('app.demo_mode'), fn (Builder $query): Builder => $query->whereRelation('user', 'is_showcase_owner', true))
-                ->select(['id', 'slug', 'zenn_frontmatter', 'published_at', 'created_at'])->orderBy('id')->paginate(20)->through(fn (Article $article): array => [...$article->only(['title', 'slug', 'topics', 'eyecatch_url']), 'published_at' => $article->published_at ?? $article->created_at, ...$article->languageMetadata()]),
+            'articles' => $articles
+                ->when($topic !== null, fn (Builder $query): Builder => $query->whereJsonContains('zenn_frontmatter->topics', $topic))
+                ->select(['id', 'slug', 'zenn_frontmatter', 'published_at', 'created_at'])->orderBy('id')->paginate(20)->withQueryString()->through(fn (Article $article): array => [...$article->only(['title', 'slug', 'topics', 'eyecatch_url']), 'published_at' => $article->published_at ?? $article->created_at, ...$article->languageMetadata()]),
         ]);
     }
 

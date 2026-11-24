@@ -2,8 +2,12 @@ import ArticleLanguageNotice from '@/components/article-language-notice';
 import { lang } from '@erag/lang-sync-inertia/react';
 import { Link } from '@inertiajs/react';
 import { ArrowRight, ArrowUpRight } from 'lucide-react';
-import { show } from '@/actions/App/Http/Controllers/PublicArticleController';
+import {
+    index,
+    show,
+} from '@/actions/App/Http/Controllers/PublicArticleController';
 import ArticleCover from '@/components/article-cover';
+import ArticleTopicFilter from '@/components/article-topic-filter';
 import PublicArticleHeader from '@/components/public-article-header';
 import SocialHead, { type SocialMetadata } from '@/components/social-head';
 import { cn } from '@/lib/utils';
@@ -27,9 +31,13 @@ type Articles = {
 export default function PublicIndex({
     articles,
     social,
+    topics,
+    selectedTopic,
 }: {
     articles: Articles;
     social: SocialMetadata;
+    topics: string[];
+    selectedTopic: string | null;
 }) {
     const { __ } = lang();
 
@@ -57,6 +65,15 @@ export default function PublicIndex({
                             {__('Ideas, notes, and things worth sharing.')}
                         </p>
                     </div>
+                    <div className="mb-6">
+                        <ArticleTopicFilter
+                            topics={topics}
+                            selectedTopic={selectedTopic}
+                            topicUrl={(topic) =>
+                                index.url({ query: { topic } })
+                            }
+                        />
+                    </div>
                     <div className="mb-6 flex items-center justify-between border-t pt-5 text-xs text-muted-foreground">
                         <span>{__('All stories')}</span>
                         <span className="font-mono tabular-nums">
@@ -65,7 +82,11 @@ export default function PublicIndex({
                     </div>
                     {articles.data.length === 0 ? (
                         <div className="rounded-2xl border border-dashed px-6 py-20 text-center text-sm text-muted-foreground">
-                            {__('No published articles yet.')}
+                            {__(
+                                selectedTopic !== null
+                                    ? 'No articles match this topic.'
+                                    : 'No published articles yet.',
+                            )}
                         </div>
                     ) : (
                         <ul className="grid gap-x-8 gap-y-10 sm:grid-cols-2">

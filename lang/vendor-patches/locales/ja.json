@@ -225,6 +225,8 @@
     "Acquiring repository lock.": "リポジトリのロックを取得しています。",
     "Committing article.": "記事をコミットしています。",
     "Topics": "トピック",
+    "All topics": "すべて",
+    "No articles match this topic.": "このトピックの記事はありません。",
     "Separate topics with commas. Add up to 5 topics, shared across article languages.": "カンマ区切りで最大5件まで入力できます。トピックは記事の各言語で共通です。",
     "Reading the article list from GitHub.": "GitHubから記事一覧を読み込んでいます。",
     "Reading article :current of :total.": ":total件中:current件目の記事を読み込んでいます。",

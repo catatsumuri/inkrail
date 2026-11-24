@@ -94,13 +94,28 @@ export default function PublicShow({
                                                 <span
                                                     key={topic}
                                                     className={cn(
-                                                        'rounded-full border px-3 py-1 text-xs',
+                                                        'rounded-full border text-xs',
                                                         article.eyecatch_url
                                                             ? 'border-white/25 bg-black/30 text-white'
                                                             : 'bg-background/70 text-muted-foreground',
                                                     )}
                                                 >
-                                                    {topic}
+                                                    {publicIndexEnabled ? (
+                                                        <Link
+                                                            href={index({
+                                                                query: {
+                                                                    topic,
+                                                                },
+                                                            })}
+                                                            className="block rounded-full px-3 py-1 transition-colors hover:bg-foreground/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                                                        >
+                                                            {topic}
+                                                        </Link>
+                                                    ) : (
+                                                        <span className="block px-3 py-1">
+                                                            {topic}
+                                                        </span>
+                                                    )}
                                                 </span>
                                             ))}
                                         </div>
