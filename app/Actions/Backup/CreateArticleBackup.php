@@ -112,6 +112,7 @@ class CreateArticleBackup
             'sync_id' => $article->sync_id,
             'slug' => $article->slug,
             'is_published' => (bool) $article->is_published,
+            'published_at' => $article->published_at,
             'edit_version' => $article->edit_version,
             'owner' => $usernames->get($article->user_id),
             'namespace' => $namespaceSlugs->get($article->namespace_id),

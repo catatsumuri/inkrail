@@ -1,3 +1,4 @@
+import ArticlePublicationTime from '@/components/article-publication-time';
 import { useState } from 'react';
 import ArticleLanguageNotice from '@/components/article-language-notice';
 import { lang } from '@erag/lang-sync-inertia/react';
@@ -174,7 +175,7 @@ export default function Show({
                         </TooltipContent>
                     </Tooltip>
                     <div className="flex items-center gap-1 text-muted-foreground">
-                        {article.is_published && (
+                        {article.publication_status === 'published' && (
                             <>
                                 <Tooltip>
                                     <TooltipTrigger asChild>
@@ -267,6 +268,23 @@ export default function Show({
                                                 : 'The Japanese version will be saved to the configured GitHub repository with draft status. If the repository is connected to Zenn, this status will also be reflected on Zenn.',
                                         )}
                                     </DialogDescription>
+                                    <p className="text-sm text-muted-foreground">
+                                        {__(
+                                            'Publication dates are sent to Zenn in Japan time. Zenn may restrict changes to an existing publication date.',
+                                        )}
+                                    </p>
+                                    {article.published_at && (
+                                        <p>
+                                            {new Intl.DateTimeFormat('ja-JP', {
+                                                timeZone: 'Asia/Tokyo',
+                                                dateStyle: 'medium',
+                                                timeStyle: 'short',
+                                            }).format(
+                                                new Date(article.published_at),
+                                            )}{' '}
+                                            JST
+                                        </p>
+                                    )}
                                     <pre
                                         role="log"
                                         aria-live="polite"
@@ -376,7 +394,10 @@ export default function Show({
                                 />
                                 {__(
                                     article.is_published
-                                        ? 'Published'
+                                        ? article.publication_status ===
+                                          'scheduled'
+                                            ? 'Scheduled'
+                                            : 'Published'
                                         : 'Draft',
                                 )}
                             </Badge>
@@ -390,6 +411,25 @@ export default function Show({
                         <h1 className="text-3xl leading-tight font-semibold tracking-tight break-words sm:text-4xl">
                             {article.title}
                         </h1>
+                        {article.published_at && (
+                            <div className="flex flex-wrap items-baseline gap-x-2 text-sm text-muted-foreground">
+                                <span>
+                                    {__(
+                                        article.publication_status ===
+                                            'scheduled'
+                                            ? 'Scheduled publication:'
+                                            : 'Published at:',
+                                    )}
+                                </span>
+                                <ArticlePublicationTime
+                                    date={article.published_at}
+                                    scheduled={
+                                        article.publication_status ===
+                                        'scheduled'
+                                    }
+                                />
+                            </div>
+                        )}
                         <ArticleLanguageNotice
                             resolvedLocale={article.resolvedLocale}
                         />

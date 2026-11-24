@@ -1,3 +1,4 @@
+import ArticlePublicationTime from '@/components/article-publication-time';
 import ArticleLanguageNotice from '@/components/article-language-notice';
 import TranslationStatus from '@/components/translation-status';
 import { lang } from '@erag/lang-sync-inertia/react';
@@ -26,6 +27,8 @@ type Articles = {
         | 'slug'
         | 'resolvedLocale'
         | 'is_published'
+        | 'publication_status'
+        | 'published_at'
         | 'translationStatus'
     >[];
     prev_page_url: string | null;
@@ -92,6 +95,25 @@ export default function Index({ articles }: { articles: Articles }) {
                                     >
                                         {article.title}
                                     </Link>
+                                    {article.published_at && (
+                                        <div className="flex flex-wrap items-baseline gap-x-2 text-sm text-muted-foreground">
+                                            <span>
+                                                {__(
+                                                    article.publication_status ===
+                                                        'scheduled'
+                                                        ? 'Scheduled publication:'
+                                                        : 'Published at:',
+                                                )}
+                                            </span>
+                                            <ArticlePublicationTime
+                                                date={article.published_at}
+                                                scheduled={
+                                                    article.publication_status ===
+                                                    'scheduled'
+                                                }
+                                            />
+                                        </div>
+                                    )}
                                     <ArticleLanguageNotice
                                         resolvedLocale={article.resolvedLocale}
                                     />
@@ -106,7 +128,10 @@ export default function Index({ articles }: { articles: Articles }) {
                                             />
                                             {__(
                                                 article.is_published
-                                                    ? 'Published'
+                                                    ? article.publication_status ===
+                                                      'scheduled'
+                                                        ? 'Scheduled'
+                                                        : 'Published'
                                                     : 'Draft',
                                             )}
                                         </Badge>

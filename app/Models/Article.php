@@ -3,8 +3,10 @@
 namespace App\Models;
 
 use App\Support\ArticleEyecatch;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -23,6 +25,7 @@ use Illuminate\Support\Str;
  * @property string|null $eyecatch
  * @property string|null $eyecatch_url
  * @property string $slug
+ * @property CarbonImmutable|null $published_at
  * @property bool $is_published
  * @property int $edit_version
  * @property string $sync_id
@@ -33,7 +36,7 @@ use Illuminate\Support\Str;
  * @property string|null $zenn_local_sha SHA of the locally rendered article at the last sync; formatting may differ from the remote blob.
  * @property array<string, mixed>|null $zenn_frontmatter
  */
-#[Fillable(['title', 'content', 'slug', 'is_published', 'topics', 'eyecatch'])]
+#[Fillable(['title', 'content', 'slug', 'is_published', 'published_at', 'topics', 'eyecatch'])]
 #[Hidden(['namespace_id', 'namespace', 'sync_id', 'zenn_repository', 'zenn_branch', 'zenn_path', 'zenn_sha', 'zenn_local_sha', 'zenn_frontmatter'])]
 class Article extends Model
 {
@@ -65,6 +68,19 @@ class Article extends Model
     public function latestReview(): HasOne
     {
         return $this->hasOne(ArticleTranslationReview::class)->latestOfMany();
+    }
+
+    /** @param Builder<Article> $query */
+    public function scopePubliclyVisible(Builder $query): void
+    {
+        $query->where('is_published', true)->where(function ($query): void {
+            $query->whereNull('published_at')->orWhere('published_at', '<=', now());
+        });
+    }
+
+    public function publicationStatus(): string
+    {
+        return ! $this->is_published ? 'draft' : ($this->published_at?->isFuture() ? 'scheduled' : 'published');
     }
 
     public function resolvedTranslation(): ?ArticleTranslation
@@ -211,7 +227,7 @@ class Article extends Model
     /** @return array{is_published: 'boolean', zenn_frontmatter: 'array'} */
     protected function casts(): array
     {
-        return ['is_published' => 'boolean', 'zenn_frontmatter' => 'array'];
+        return ['published_at' => 'immutable_datetime', 'is_published' => 'boolean', 'zenn_frontmatter' => 'array'];
     }
 
     /** @return BelongsTo<User, $this> */

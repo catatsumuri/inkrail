@@ -20,15 +20,15 @@ class PublicArticleController extends Controller
                 __('Public articles'), __('Ideas, notes, and things worth sharing.'), 'website',
                 route('public.articles.index', $request->integer('page', 1) > 1 ? ['page' => $request->integer('page')] : []),
             ),
-            'articles' => Article::query()->where('is_published', true)
+            'articles' => Article::query()->publiclyVisible()
                 ->when(config('app.demo_mode'), fn (Builder $query): Builder => $query->whereRelation('user', 'is_showcase_owner', true))
-                ->select(['id', 'slug', 'zenn_frontmatter'])->orderBy('id')->paginate(20)->through(fn (Article $article): array => [...$article->only(['title', 'slug', 'topics', 'eyecatch_url']), ...$article->languageMetadata()]),
+                ->select(['id', 'slug', 'zenn_frontmatter', 'published_at', 'created_at'])->orderBy('id')->paginate(20)->through(fn (Article $article): array => [...$article->only(['title', 'slug', 'topics', 'eyecatch_url']), 'published_at' => $article->published_at ?? $article->created_at, ...$article->languageMetadata()]),
         ]);
     }
 
     public function show(Request $request, Article $article): Response
     {
-        abort_unless($article->is_published && (! config('app.demo_mode') || $article->user->is_showcase_owner), 404);
+        abort_unless($article->publicationStatus() === 'published' && (! config('app.demo_mode') || $article->user->is_showcase_owner), 404);
 
         return Inertia::render('articles/public-show', [
             'social' => $this->socialMetadata(
@@ -37,7 +37,7 @@ class PublicArticleController extends Controller
                 'article', route('public.articles.show', $article->slug),
                 $article->eyecatch_url === null ? null : url($article->eyecatch_url),
             ),
-            'article' => [...$article->only(['title', 'content', 'slug', 'topics', 'eyecatch_url']), ...$article->languageMetadata()],
+            'article' => [...$article->only(['title', 'content', 'slug', 'topics', 'eyecatch_url']), 'published_at' => $article->published_at ?? $article->created_at, ...$article->languageMetadata()],
             'editableArticleId' => $request->user()?->can('update', $article) ? $article->id : null,
             'publicIndexEnabled' => (bool) config('articles.public_index_enabled'),
         ]);

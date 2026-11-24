@@ -53,6 +53,7 @@ class ParseZennArticle
                     $fail('The publication state must be a boolean.');
                 }
             }],
+            'published_at' => ['sometimes', 'date_format:Y-m-d,Y-m-d H:i,Y-m-d H:i:s'],
             'inkrail_id' => ['sometimes', 'required', 'uuid'],
             'namespace' => ['sometimes', 'nullable', 'string', 'max:255', 'regex:/\A[a-z0-9]+(?:-[a-z0-9]+)*\z/'],
             'emoji' => ['sometimes', 'string'],

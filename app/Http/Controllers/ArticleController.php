@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Article;
 use App\Support\ArticleEyecatch;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -20,7 +21,7 @@ class ArticleController extends Controller
         return Inertia::render('articles/index', [
             'articles' => $request->user()->articles()
                 ->with(['allTranslations', 'latestReview'])
-                ->select(['id', 'slug', 'is_published'])->latest('id')->paginate(20)->through(fn (Article $article): array => [...$article->only(['id', 'title', 'slug', 'is_published']), ...$article->languageMetadata(), 'translationStatus' => $article->translationStatus()]),
+                ->select(['id', 'slug', 'is_published', 'published_at'])->latest('id')->paginate(20)->through(fn (Article $article): array => [...$article->only(['id', 'title', 'slug', 'is_published', 'published_at']), 'publication_status' => $article->publicationStatus(), ...$article->languageMetadata(), 'translationStatus' => $article->translationStatus()]),
         ]);
     }
 
@@ -51,7 +52,7 @@ class ArticleController extends Controller
         Gate::authorize('view', $article);
 
         return Inertia::render('articles/show', [
-            'article' => [...$article->only(['id', 'title', 'content', 'slug', 'is_published', 'edit_version', 'topics', 'eyecatch']), ...$article->languageMetadata(), 'translationStatus' => $article->translationStatus(), 'translations' => $article->translations->mapWithKeys(fn ($translation) => [$translation->locale => $translation->only(['title', 'content'])])->all()],
+            'article' => [...$article->only(['id', 'title', 'content', 'slug', 'is_published', 'published_at', 'edit_version', 'topics', 'eyecatch']), 'publication_status' => $article->publicationStatus(), ...$article->languageMetadata(), 'translationStatus' => $article->translationStatus(), 'translations' => $article->translations->mapWithKeys(fn ($translation) => [$translation->locale => $translation->only(['title', 'content'])])->all()],
             'canPushToZenn' => Gate::allows('push-to-zenn', $article),
         ]);
     }
@@ -60,7 +61,7 @@ class ArticleController extends Controller
     {
         Gate::authorize('update', $article);
 
-        return Inertia::render('articles/edit', ['article' => [...$article->only(['id', 'title', 'content', 'slug', 'is_published', 'edit_version', 'topics', 'eyecatch']), ...$article->languageMetadata(), 'translationStatus' => $article->translationStatus(), 'translations' => $article->translations->mapWithKeys(fn ($translation) => [$translation->locale => $translation->only(['title', 'content'])])->all()]]);
+        return Inertia::render('articles/edit', ['article' => [...$article->only(['id', 'title', 'content', 'slug', 'is_published', 'published_at', 'edit_version', 'topics', 'eyecatch']), 'publication_status' => $article->publicationStatus(), ...$article->languageMetadata(), 'translationStatus' => $article->translationStatus(), 'translations' => $article->translations->mapWithKeys(fn ($translation) => [$translation->locale => $translation->only(['title', 'content'])])->all()]]);
     }
 
     public function update(Request $request, Article $article): RedirectResponse
@@ -75,7 +76,7 @@ class ArticleController extends Controller
             $translations = $attributes['translations'] ?? null;
             unset($attributes['translations']);
             $locked->update($attributes);
-            if ($locked->wasChanged(['slug', 'is_published', 'zenn_frontmatter'])) {
+            if ($locked->wasChanged(['slug', 'is_published', 'published_at', 'zenn_frontmatter'])) {
                 $locked->increment('edit_version');
             }
             if ($translations !== null) {
@@ -109,12 +110,21 @@ class ArticleController extends Controller
             'topics' => ['sometimes', 'array', 'list', 'max:5'],
             'eyecatch' => ['sometimes', 'nullable', 'string', 'max:255', 'regex:'.ArticleEyecatch::PATTERN],
             'topics.*' => ['required', 'string', 'max:255', 'distinct:ignore_case'],
+            'published_at' => ['sometimes', 'nullable', 'date_format:Y-m-d\TH:i'],
             'is_published' => ['sometimes', 'boolean', ...($request->user()->is_sandbox ? [Rule::in([false, 0, '0'])] : [])],
         ]);
 
         $attributes = [
             'is_published' => $request->has('is_published') ? $request->boolean('is_published') : ($article->is_published ?? false),
         ];
+
+        if (array_key_exists('published_at', $validated)) {
+            $attributes['published_at'] = ! $attributes['is_published'] ? null : (
+                $validated['published_at'] !== null
+                    ? CarbonImmutable::createFromFormat('!Y-m-d\TH:i', $validated['published_at'], 'Asia/Tokyo')->utc()
+                    : ($article?->published_at !== null && ! $article->published_at->isFuture() ? $article->published_at : now())
+            );
+        }
 
         if (array_key_exists('translations', $validated)) {
             $translations = [];

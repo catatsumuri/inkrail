@@ -212,6 +212,7 @@ class RestoreArticleBackup
         $values = [
             'slug' => $article['slug'],
             'is_published' => $article['is_published'],
+            'published_at' => $article['published_at'] ?? null,
             'edit_version' => $article['edit_version'],
             'user_id' => $resolveUser($article['owner']),
             'namespace_id' => $article['namespace'] !== null ? ($namespaceIds[$article['namespace']] ?? null) : null,
