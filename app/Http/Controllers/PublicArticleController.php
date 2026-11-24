@@ -6,6 +6,7 @@ use App\Models\Article;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -38,11 +39,16 @@ class PublicArticleController extends Controller
     {
         abort_unless($article->publicationStatus() === 'published' && (! config('app.demo_mode') || $article->user->is_showcase_owner), 404);
 
+        $forcedLocale = $request->validate(['lang' => ['nullable', Rule::in(config('articles.locales'))]])['lang'] ?? null;
+        if ($forcedLocale !== null) {
+            app()->setLocale($forcedLocale);
+        }
+
         return Inertia::render('articles/public-show', [
             'social' => $this->socialMetadata(
                 $article->title,
                 Str::limit(Str::squish(html_entity_decode(strip_tags(Str::markdown($article->content, ['html_input' => 'strip', 'allow_unsafe_links' => false])), ENT_QUOTES | ENT_HTML5, 'UTF-8')), 160),
-                'article', route('public.articles.show', $article->slug),
+                'article', route('public.articles.show', array_filter(['article' => $article->slug, 'lang' => $forcedLocale])),
                 $article->eyecatch_url === null ? null : url($article->eyecatch_url),
             ),
             'article' => [...$article->only(['title', 'content', 'slug', 'topics', 'eyecatch_url']), 'published_at' => $article->published_at ?? $article->created_at, ...$article->languageMetadata()],
