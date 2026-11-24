@@ -408,17 +408,28 @@ export default function Show({
                                 {article.slug}
                             </span>
                         </div>
-                        {article.published_at && (
-                            <ArticlePublicationTime
-                                date={article.published_at}
-                                scheduled={
-                                    article.publication_status === 'scheduled'
-                                }
-                            />
-                        )}
                         <h1 className="text-3xl leading-tight font-semibold tracking-tight break-words sm:text-4xl">
                             {article.title}
                         </h1>
+                        {article.published_at && (
+                            <div className="flex flex-wrap items-baseline gap-x-2 text-sm text-muted-foreground">
+                                <span>
+                                    {__(
+                                        article.publication_status ===
+                                            'scheduled'
+                                            ? 'Scheduled publication:'
+                                            : 'Published at:',
+                                    )}
+                                </span>
+                                <ArticlePublicationTime
+                                    date={article.published_at}
+                                    scheduled={
+                                        article.publication_status ===
+                                        'scheduled'
+                                    }
+                                />
+                            </div>
+                        )}
                         <ArticleLanguageNotice
                             resolvedLocale={article.resolvedLocale}
                         />
