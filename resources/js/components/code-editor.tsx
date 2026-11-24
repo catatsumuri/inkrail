@@ -9,8 +9,10 @@ import {
     foldService,
     syntaxHighlighting,
 } from '@codemirror/language';
+import { search, searchKeymap } from '@codemirror/search';
 import { EditorState, type Text } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
+import { lang } from '@erag/lang-sync-inertia/react';
 import { tags } from '@lezer/highlight';
 import { useEffect, useRef, type RefObject } from 'react';
 import type { EditorHandle } from '@/components/editor-handle';
@@ -153,6 +155,7 @@ export default function CodeEditor({
     describedBy,
     className,
 }: Props) {
+    const { __ } = lang();
     const hostRef = useRef<HTMLDivElement>(null);
     const handlers = useRef({
         onChange,
@@ -192,7 +195,22 @@ export default function CodeEditor({
                         ...defaultKeymap,
                         ...historyKeymap,
                         ...foldKeymap,
+                        ...searchKeymap,
                     ]),
+                    search({ top: true }),
+                    EditorState.phrases.of({
+                        Find: __('Find'),
+                        Replace: __('Replace'),
+                        next: __('Next match'),
+                        previous: __('Previous match'),
+                        all: __('Select all matches'),
+                        'match case': __('Match case'),
+                        regexp: __('Regular expression'),
+                        'by word': __('Whole word'),
+                        replace: __('Replace'),
+                        'replace all': __('Replace all'),
+                        close: __('Close'),
+                    }),
                     markdown({
                         codeLanguages: (info) =>
                             info === 'html-embed' || info === 'html'
