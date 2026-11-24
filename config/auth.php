@@ -114,4 +114,22 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Password Rules
+    |--------------------------------------------------------------------------
+    |
+    | Minimum length and extra requirements for new passwords. "rules" is a
+    | comma-separated list of: mixed_case, letters, numbers, symbols,
+    | uncompromised. Leave both unset to use the environment default (production:
+    | 12 characters with all five rules; elsewhere: Laravel's 8 characters).
+    | Set PASSWORD_RULES= (empty) to require only the minimum length.
+    |
+    */
+
+    'password_rules' => [
+        'min_length' => env('PASSWORD_MIN_LENGTH'),
+        'rules' => env('PASSWORD_RULES'),
+    ],
+
 ];

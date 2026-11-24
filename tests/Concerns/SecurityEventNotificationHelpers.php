@@ -75,7 +75,7 @@ trait SecurityEventNotificationHelpers
     /**
      * Assert exactly one notification was sent in total, by mail, for the given event, to the user.
      */
-    protected function assertNotifiedOnce(User $user, SecurityEvent $event): void
+    protected function assertNotifiedOnce(User $user, SecurityEvent $event, array $expectedChannels = ['mail']): void
     {
         Notification::assertCount(1);
         Notification::assertSentTo(
@@ -83,7 +83,7 @@ trait SecurityEventNotificationHelpers
             GeneralNotification::class,
             fn (GeneralNotification $notification, array $channels) => $notification->title === $event->subject()
                 && $notification->body === $event->mailBody()
-                && $channels === ['mail'],
+                && $channels === $expectedChannels,
         );
     }
 

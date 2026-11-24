@@ -25,7 +25,7 @@ test('password change notifies the user once', function () {
 
     $this->updatePassword($user, 'password')->assertSessionHasNoErrors();
 
-    $this->assertNotifiedOnce($user, SecurityEvent::PasswordChanged);
+    $this->assertNotifiedOnce($user, SecurityEvent::PasswordChanged, ['mail', 'database']);
 });
 
 test('password change with wrong current password does not notify', function () {
