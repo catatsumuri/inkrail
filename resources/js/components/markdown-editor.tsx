@@ -1,7 +1,6 @@
 import { lang } from '@erag/lang-sync-inertia/react';
 import { useHttp } from '@inertiajs/react';
 import {
-    AlignLeft,
     Code2,
     Columns2,
     Eye,
@@ -23,6 +22,7 @@ import { store as storeImage } from '@/actions/App/Http/Controllers/ArticleImage
 import ArticleContent from '@/components/article-content';
 import CodeEditor from '@/components/code-editor';
 import type { EditorHandle } from '@/components/editor-handle';
+import PillToggle from '@/components/pill-toggle';
 import PlainEditor from '@/components/plain-editor';
 import { Button } from '@/components/ui/button';
 import { useEditorMode } from '@/hooks/use-editor-mode';
@@ -347,33 +347,31 @@ export default function MarkdownEditor({
                         </Button>
                     );
                 })}
-                <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
+                <PillToggle
                     className="ml-auto"
-                    aria-pressed={editorMode === 'plain'}
-                    title={
-                        editorMode === 'plain'
-                            ? __('Switch to the code editor')
-                            : __('Switch to the plain text editor')
-                    }
-                    onClick={() => {
+                    label={__('Editor type')}
+                    value={editorMode}
+                    options={[
+                        {
+                            value: 'codemirror',
+                            label: __('Code editor'),
+                            title: __(
+                                'Syntax highlighting and folding for long embedded HTML',
+                            ),
+                        },
+                        {
+                            value: 'plain',
+                            label: __('Standard editor'),
+                            title: __(
+                                'A plain text box, like a normal form field',
+                            ),
+                        },
+                    ]}
+                    onValueChange={(mode) => {
                         anchorCache.current = null;
-                        setEditorMode(
-                            editorMode === 'plain' ? 'codemirror' : 'plain',
-                        );
+                        setEditorMode(mode);
                     }}
-                >
-                    {editorMode === 'plain' ? (
-                        <Code2 aria-hidden="true" />
-                    ) : (
-                        <AlignLeft aria-hidden="true" />
-                    )}
-                    {editorMode === 'plain'
-                        ? __('Code editor')
-                        : __('Plain text')}
-                </Button>
+                />
                 {!maximized && (
                     <Button
                         type="button"
