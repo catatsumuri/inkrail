@@ -291,5 +291,14 @@
     "A plain text box, like a normal form field": "A plain text box, like a normal form field",
     "Editor type": "Editor type",
     "Code editor": "Code editor",
-    "Standard editor": "Standard editor"
+    "Standard editor": "Standard editor",
+    "Find": "Find",
+    "Replace": "Replace",
+    "Next match": "Next match",
+    "Previous match": "Previous match",
+    "Select all matches": "Select all matches",
+    "Match case": "Match case",
+    "Regular expression": "Regular expression",
+    "Whole word": "Whole word",
+    "Replace all": "Replace all"
 }

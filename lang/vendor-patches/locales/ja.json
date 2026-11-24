@@ -290,5 +290,14 @@
     "A plain text box, like a normal form field": "ふつうのテキスト入力欄",
     "Editor type": "エディターの種類",
     "Code editor": "コードエディタ",
-    "Standard editor": "標準エディタ"
+    "Standard editor": "標準エディタ",
+    "Find": "検索",
+    "Replace": "置換",
+    "Next match": "次のヒット",
+    "Previous match": "前のヒット",
+    "Select all matches": "すべて選択",
+    "Match case": "大文字小文字を区別",
+    "Regular expression": "正規表現",
+    "Whole word": "単語単位",
+    "Replace all": "すべて置換"
 }
