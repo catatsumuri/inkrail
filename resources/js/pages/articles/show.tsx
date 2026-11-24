@@ -1,5 +1,5 @@
 import ArticlePublicationTime from '@/components/article-publication-time';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import ArticleLanguageNotice from '@/components/article-language-notice';
 import { lang } from '@erag/lang-sync-inertia/react';
 import { Form, Head, Link, router, setLayoutProps } from '@inertiajs/react';
@@ -134,7 +134,24 @@ export default function Show({
             );
         }
     }
-    function editHeading({ level, text }: EditHeadingPayload) {
+    useEffect(() => {
+        const hash = window.location.hash.slice(1);
+        if (hash === '') {
+            return;
+        }
+        const id = decodeURIComponent(hash);
+        const timers = [0, 100, 300, 600, 1000].map((delay) =>
+            window.setTimeout(() => {
+                const target = document.getElementById(id);
+                if (target && target.getBoundingClientRect().top > 100) {
+                    target.scrollIntoView();
+                }
+            }, delay),
+        );
+
+        return () => timers.forEach(window.clearTimeout);
+    }, []);
+    function editHeading({ level, text, id }: EditHeadingPayload) {
         const jump = findHeadingOffset(article.content, text, level);
 
         router.visit(
@@ -144,6 +161,12 @@ export default function Show({
                         ? { locale: article.resolvedLocale }
                         : {}),
                     ...(jump === null ? {} : { jump }),
+                    ...(id === ''
+                        ? {}
+                        : {
+                              return_heading: id,
+                              return_to: window.location.pathname,
+                          }),
                 },
             }),
         );

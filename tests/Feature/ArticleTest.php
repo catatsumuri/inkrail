@@ -233,3 +233,27 @@ test('continuing editing preserves validation and conflict protection', function
 
     expect($article->fresh()->translations->firstWhere('locale', 'en'))->title->toBe('Latest')->content->toBe('Saved elsewhere');
 });
+
+test('finishing an edit returns to a safe return_to path', function () {
+    $user = User::factory()->create();
+    $article = $user->articles()->create(['title' => '原稿']);
+    $this->actingAs($user);
+    $payload = fn (array $extra = []) => [
+        'edit_version' => $article->fresh()->edit_version,
+        'title' => '更新',
+        ...$extra,
+    ];
+
+    $this->patch(route('articles.update', $article), $payload(['return_to' => '/articles?page=2']))
+        ->assertRedirect('/articles?page=2');
+    $this->patch(route('articles.update', $article), $payload(['return_to' => '/articles?page=2', 'continue_editing' => true]))
+        ->assertRedirect(route('articles.edit', $article));
+
+    $this->patch(route('articles.update', $article), $payload(['return_to' => '/articles/'.$article->id, 'return_heading' => '#見出し']))
+        ->assertRedirect('/articles/'.$article->id.'#'.rawurlencode('見出し'));
+
+    foreach (['https://evil.example/x', '//evil.example', '/\\evil.example', 'articles'] as $unsafe) {
+        $this->patch(route('articles.update', $article), $payload(['return_to' => $unsafe]))
+            ->assertRedirect(route('articles.show', $article));
+    }
+});
