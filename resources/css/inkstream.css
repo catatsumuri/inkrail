@@ -36,3 +36,50 @@
     line-height: 1.5;
     letter-spacing: 0.015em;
 }
+
+/* Generative UI controls: the package ships only layout, so give them the app theme. */
+.ink-markdown .ink-ui-form fieldset {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1.25rem;
+}
+
+.ink-markdown .ink-ui-select,
+.ink-markdown .ink-ui-slider,
+.ink-markdown .ink-ui-input,
+.ink-markdown .ink-ui-checkbox {
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.ink-markdown .ink-ui-select select,
+.ink-markdown .ink-ui-input input {
+    min-width: 12rem;
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    background: var(--background);
+    padding: 0.4rem 0.75rem;
+    font-weight: 400;
+}
+
+.ink-markdown .ink-ui-slider input {
+    width: 16rem;
+    accent-color: var(--primary);
+}
+
+.ink-markdown .ink-ui-button {
+    border-radius: 0.5rem;
+    background: var(--primary);
+    color: var(--primary-foreground);
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.ink-markdown .ink-ui-button:disabled,
+.ink-markdown .ink-ui-form select:disabled,
+.ink-markdown .ink-ui-form input:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}

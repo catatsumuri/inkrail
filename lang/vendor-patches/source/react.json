@@ -305,5 +305,8 @@
     "This is the live-demo branch of InkRail.": "This is the live-demo branch of InkRail.",
     "Built with": "Built with",
     "View on GitHub": "View on GitHub",
-    "Start from a template": "Start from a template"
+    "Start from a template": "Start from a template",
+    "Generative UI demo": "Generative UI demo",
+    "Back": "Back",
+    "The stream was interrupted. Reload to try again.": "The stream was interrupted. Reload to try again."
 }

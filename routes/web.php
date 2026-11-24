@@ -7,6 +7,7 @@ use App\Http\Controllers\ArticleHistoryController;
 use App\Http\Controllers\ArticleImageController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeleteNotificationController;
+use App\Http\Controllers\GenerativeUiDemoController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\MarkNotificationAsReadController;
@@ -17,6 +18,9 @@ use App\Http\Controllers\ZennPushController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', HomeController::class)->name('home');
+
+Route::get('demo', [GenerativeUiDemoController::class, 'show'])->name('demo');
+Route::post('demo/stream', [GenerativeUiDemoController::class, 'stream'])->middleware('throttle:20,1')->name('demo.stream');
 
 Route::post('sandbox', SandboxController::class)
     ->middleware('throttle:6,1')

@@ -1,13 +1,13 @@
 import LocaleSwitcher from '@/components/locale-switcher';
 import { lang } from '@erag/lang-sync-inertia/react';
 import { Head, Link, usePage } from '@inertiajs/react';
-import { BookOpen, Github } from 'lucide-react';
+import { BookOpen, Github, Sparkles } from 'lucide-react';
 import { index as myArticles } from '@/actions/App/Http/Controllers/ArticleController';
 import { index as publicArticles } from '@/actions/App/Http/Controllers/PublicArticleController';
 import { Button } from '@/components/ui/button';
 import AppLogoIcon from '@/components/app-logo-icon';
 import DemoNotice from '@/components/demo-notice';
-import { login } from '@/routes';
+import { demo, login } from '@/routes';
 
 export default function Welcome({
     publicIndexEnabled,
@@ -79,6 +79,12 @@ export default function Welcome({
                                     </Link>
                                 </Button>
                             )}
+                            <Button asChild size="lg" variant="outline">
+                                <Link href={demo()}>
+                                    <Sparkles aria-hidden="true" />
+                                    {__('Generative UI demo')}
+                                </Link>
+                            </Button>
                             <Button asChild size="lg" variant="outline">
                                 <a
                                     href="https://github.com/catatsumuri/inkrail/tree/live-demo"

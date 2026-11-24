@@ -1,7 +1,7 @@
 import LocaleSwitcher from '@/components/locale-switcher';
 import { Link, usePage } from '@inertiajs/react';
 import { lang } from '@erag/lang-sync-inertia/react';
-import { BookOpen, LayoutGrid, Menu, Search } from 'lucide-react';
+import { BookOpen, LayoutGrid, Menu, Search, Sparkles } from 'lucide-react';
 import { index as articlesIndex } from '@/actions/App/Http/Controllers/ArticleController';
 import AppLogo from '@/components/app-logo';
 import AppLogoIcon from '@/components/app-logo-icon';
@@ -31,7 +31,7 @@ import { UserMenuContent } from '@/components/user-menu-content';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { useInitials } from '@/hooks/use-initials';
 import { cn } from '@/lib/utils';
-import { dashboard } from '@/routes';
+import { dashboard, demo } from '@/routes';
 import type { BreadcrumbItem, NavItem } from '@/types';
 
 type Props = {
@@ -48,6 +48,11 @@ const mainNavItems: NavItem[] = [
         title: 'Articles',
         href: articlesIndex(),
         icon: BookOpen,
+    },
+    {
+        title: 'Generative UI demo',
+        href: demo(),
+        icon: Sparkles,
     },
 ];
 

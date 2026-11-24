@@ -304,5 +304,8 @@
     "This is the live-demo branch of InkRail.": "これは InkRail の live-demo ブランチです。",
     "Built with": "使用:",
     "View on GitHub": "GitHub で見る",
-    "Start from a template": "テンプレートから書き始める"
+    "Start from a template": "テンプレートから書き始める",
+    "Generative UI demo": "Generative UI デモ",
+    "Back": "戻る",
+    "The stream was interrupted. Reload to try again.": "ストリームが中断されました。再読み込みしてください。"
 }
