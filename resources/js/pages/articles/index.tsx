@@ -3,7 +3,7 @@ import ArticleLanguageNotice from '@/components/article-language-notice';
 import ArticleTopicFilter from '@/components/article-topic-filter';
 import TranslationStatus from '@/components/translation-status';
 import { lang } from '@erag/lang-sync-inertia/react';
-import { Head, Link, setLayoutProps } from '@inertiajs/react';
+import { Head, Link, setLayoutProps, usePage } from '@inertiajs/react';
 import { ArrowLeft, ArrowRight, FileText, Pencil, Plus } from 'lucide-react';
 import {
     create,
@@ -47,6 +47,7 @@ export default function Index({
     selectedTopic: string | null;
 }) {
     const { __ } = lang();
+    const currentUrl = usePage().url;
     const topicUrl = (topic: string | null) => index.url({ query: { topic } });
     setLayoutProps({ breadcrumbs: [{ title: __('Articles'), href: index() }] });
     return (
@@ -192,7 +193,11 @@ export default function Index({
                                             className="shrink-0 text-muted-foreground"
                                         >
                                             <Link
-                                                href={edit(article.id)}
+                                                href={edit(article.id, {
+                                                    query: {
+                                                        return_to: currentUrl,
+                                                    },
+                                                })}
                                                 aria-label={__('Edit article')}
                                             >
                                                 <Pencil aria-hidden="true" />

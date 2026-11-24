@@ -43,6 +43,11 @@ export default function ArticleForm({ article }: { article?: Article }) {
         article?.edit_version ?? 0,
     );
     const continueEditing = useRef(true);
+    const modifierHeldOnSave = useRef(false);
+    const [modifierHeld, setModifierHeld] = useState(false);
+    const modifierKeyLabel = /Mac|iPhone|iPad/.test(navigator.platform)
+        ? '⌘'
+        : 'Ctrl';
     const formId = useId();
     const [saveButtonTarget, setSaveButtonTarget] = useState<Element | null>(
         null,
@@ -62,11 +67,38 @@ export default function ArticleForm({ article }: { article?: Article }) {
                 updateSaveButtonTarget,
             );
     }, []);
-    const [{ jumpTo, jumpLocale }] = useState(() => {
+    useEffect(() => {
+        function syncModifier(event: KeyboardEvent) {
+            setModifierHeld(event.ctrlKey || event.metaKey);
+        }
+
+        function resetModifier() {
+            setModifierHeld(false);
+        }
+
+        window.addEventListener('keydown', syncModifier);
+        window.addEventListener('keyup', syncModifier);
+        window.addEventListener('blur', resetModifier);
+
+        return () => {
+            window.removeEventListener('keydown', syncModifier);
+            window.removeEventListener('keyup', syncModifier);
+            window.removeEventListener('blur', resetModifier);
+        };
+    }, []);
+    const [{ jumpTo, jumpLocale, returnTo, returnHeading }] = useState(() => {
         const params = new URLSearchParams(window.location.search);
         const jump = params.get('jump');
+        const returnPath = params.get('return_to');
 
         return {
+            returnHeading: params.get('return_heading') ?? undefined,
+            returnTo:
+                returnPath !== null &&
+                returnPath.startsWith('/') &&
+                !returnPath.startsWith('//')
+                    ? returnPath
+                    : undefined,
             jumpTo: jump === null || jump === '' ? undefined : Number(jump),
             jumpLocale: params.get('locale') ?? undefined,
         };
@@ -96,8 +128,9 @@ export default function ArticleForm({ article }: { article?: Article }) {
                 const submitter = (event.nativeEvent as SubmitEvent).submitter;
                 continueEditing.current = !(
                     submitter instanceof HTMLButtonElement &&
-                    submitter.value === 'finish'
+                    (submitter.value === 'finish' || modifierHeldOnSave.current)
                 );
+                modifierHeldOnSave.current = false;
             }}
             onSuccess={(page) => {
                 const savedArticle = page.props.article as Article | undefined;
@@ -120,6 +153,20 @@ export default function ArticleForm({ article }: { article?: Article }) {
         >
             {({ errors, processing, recentlySuccessful }) => (
                 <>
+                    {returnTo && (
+                        <input
+                            type="hidden"
+                            name="return_to"
+                            value={returnTo}
+                        />
+                    )}
+                    {returnTo && returnHeading && (
+                        <input
+                            type="hidden"
+                            name="return_heading"
+                            value={returnHeading}
+                        />
+                    )}
                     {article && (
                         <>
                             <input
@@ -358,7 +405,14 @@ export default function ArticleForm({ article }: { article?: Article }) {
                             {__('Save and view article')}
                         </Button>
                         <Button asChild variant="outline">
-                            <Link href={article ? show(article.id) : index()}>
+                            <Link
+                                href={
+                                    (returnTo
+                                        ? `${returnTo}${returnHeading ? `#${encodeURIComponent(returnHeading)}` : ''}`
+                                        : undefined) ??
+                                    (article ? show(article.id) : index())
+                                }
+                            >
                                 <ArrowLeft aria-hidden="true" />
                                 {__('Back without saving')}
                             </Link>
@@ -366,36 +420,53 @@ export default function ArticleForm({ article }: { article?: Article }) {
                     </div>
                     {saveButtonTarget &&
                         createPortal(
-                            <Button
-                                type="submit"
-                                value="continue"
-                                form={formId}
-                                disabled={processing || uploadingEyecatch}
-                                className="fixed right-4 bottom-4 z-40 h-12 min-w-40 rounded-full bg-blue-600 px-6 text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700 focus-visible:ring-blue-500/50 sm:right-8 sm:bottom-6 dark:bg-blue-500 dark:hover:bg-blue-600"
-                                title={__('Save and keep editing')}
-                            >
-                                {processing ? (
-                                    <LoaderCircle
-                                        aria-hidden="true"
-                                        className="animate-spin"
-                                    />
-                                ) : Object.keys(errors).length > 0 ? (
-                                    <Save aria-hidden="true" />
-                                ) : recentlySuccessful ? (
-                                    <Check aria-hidden="true" />
-                                ) : (
-                                    <Save aria-hidden="true" />
-                                )}
-                                <span aria-live="polite">
-                                    {processing
-                                        ? __('Saving…')
-                                        : Object.keys(errors).length > 0
-                                          ? __('Save failed')
-                                          : recentlySuccessful
-                                            ? __('Saved')
-                                            : __('Save')}
+                            <>
+                                <span className="pointer-events-none fixed right-4 bottom-[4.75rem] z-40 hidden rounded-full bg-background/80 px-3 py-1 text-xs text-muted-foreground shadow-sm backdrop-blur sm:right-8 sm:bottom-[5.25rem] pointer-fine:block">
+                                    {__(':key+click to save and return', {
+                                        key: modifierKeyLabel,
+                                    })}
                                 </span>
-                            </Button>,
+                                <Button
+                                    type="submit"
+                                    value="continue"
+                                    form={formId}
+                                    onClick={(event) => {
+                                        modifierHeldOnSave.current =
+                                            event.ctrlKey || event.metaKey;
+                                    }}
+                                    disabled={processing || uploadingEyecatch}
+                                    className="fixed right-4 bottom-4 z-40 h-12 min-w-40 rounded-full bg-blue-600 px-6 text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700 focus-visible:ring-blue-500/50 sm:right-8 sm:bottom-6 dark:bg-blue-500 dark:hover:bg-blue-600"
+                                    title={__(
+                                        'Save and keep editing (Ctrl+click to save and return)',
+                                    )}
+                                >
+                                    {processing ? (
+                                        <LoaderCircle
+                                            aria-hidden="true"
+                                            className="animate-spin"
+                                        />
+                                    ) : Object.keys(errors).length > 0 ? (
+                                        <Save aria-hidden="true" />
+                                    ) : recentlySuccessful ? (
+                                        <Check aria-hidden="true" />
+                                    ) : modifierHeld ? (
+                                        <Check aria-hidden="true" />
+                                    ) : (
+                                        <Save aria-hidden="true" />
+                                    )}
+                                    <span aria-live="polite">
+                                        {processing
+                                            ? __('Saving…')
+                                            : Object.keys(errors).length > 0
+                                              ? __('Save failed')
+                                              : recentlySuccessful
+                                                ? __('Saved')
+                                                : modifierHeld
+                                                  ? __('Save and return')
+                                                  : __('Save')}
+                                    </span>
+                                </Button>
+                            </>,
                             saveButtonTarget,
                         )}
                 </>

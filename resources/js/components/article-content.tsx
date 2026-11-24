@@ -9,7 +9,7 @@ import { Pencil } from 'lucide-react';
 import { useMemo, type ComponentType, type ReactNode } from 'react';
 import type { Components } from 'react-markdown';
 
-export type EditHeadingPayload = { level: 2 | 3; text: string };
+export type EditHeadingPayload = { level: 2 | 3; text: string; id: string };
 
 function editableHeading(
     level: 2 | 3,
@@ -27,7 +27,13 @@ function editableHeading(
             <Base {...props}>
                 <button
                     type="button"
-                    onClick={() => onEditHeading({ level, text })}
+                    onClick={(event) =>
+                        onEditHeading({
+                            level,
+                            text,
+                            id: event.currentTarget.closest('h2, h3')?.id ?? '',
+                        })
+                    }
                     aria-label={label(text)}
                     title={label(text)}
                     className="float-right rounded p-1 text-muted-foreground/60 opacity-0 transition-opacity hover:bg-accent hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none [.ink-heading:hover_&]:opacity-100 [@media(hover:none)]:opacity-100"

@@ -93,6 +93,16 @@ class ArticleController extends Controller
             }
         });
 
+        if (! $request->boolean('continue_editing')) {
+            $returnTo = $this->safeReturnPath($request->string('return_to')->toString());
+
+            if ($returnTo !== null) {
+                $heading = ltrim($request->string('return_heading')->toString(), '#');
+
+                return redirect()->to($returnTo.($heading !== '' ? '#'.rawurlencode($heading) : ''));
+            }
+        }
+
         return to_route($request->boolean('continue_editing') ? 'articles.edit' : 'articles.show', $article);
     }
 
@@ -174,5 +184,21 @@ class ArticleController extends Controller
         }
 
         return $attributes;
+    }
+
+    private function safeReturnPath(string $path): ?string
+    {
+        if (
+            $path === ''
+            || ! str_starts_with($path, '/')
+            || str_starts_with($path, '//')
+            || str_contains($path, '\\')
+            || parse_url($path, PHP_URL_SCHEME) !== null
+            || parse_url($path, PHP_URL_HOST) !== null
+        ) {
+            return null;
+        }
+
+        return $path;
     }
 }

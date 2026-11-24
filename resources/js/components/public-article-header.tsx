@@ -14,6 +14,7 @@ export default function PublicArticleHeader({
 }) {
     const { __ } = lang();
     const { auth } = usePage().props;
+    const currentUrl = usePage().url;
 
     return (
         <header className="border-b">
@@ -38,7 +39,11 @@ export default function PublicArticleHeader({
                         </Button>
                         {editableArticleId !== null && (
                             <Button asChild variant="outline" size="sm">
-                                <Link href={edit(editableArticleId)}>
+                                <Link
+                                    href={edit(editableArticleId, {
+                                        query: { return_to: currentUrl },
+                                    })}
+                                >
                                     {__('Edit article')}
                                 </Link>
                             </Button>
