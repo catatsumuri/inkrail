@@ -1,9 +1,15 @@
 import { lang } from '@erag/lang-sync-inertia/react';
 import { useHttp } from '@inertiajs/react';
-import { Code2, Eye, ImagePlus } from 'lucide-react';
+import { Code2, Eye, ImagePlus, Maximize2, Minimize2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { slugify } from '@catatsumuri/inkstream/advanced';
-import { useDeferredValue, useEffect, useRef, useState } from 'react';
+import {
+    useDeferredValue,
+    useEffect,
+    useRef,
+    useState,
+    type CSSProperties,
+} from 'react';
 import { store as storeImage } from '@/actions/App/Http/Controllers/ArticleImageController';
 import ArticleContent from '@/components/article-content';
 import { Button } from '@/components/ui/button';
@@ -36,6 +42,71 @@ export default function MarkdownEditor({
     const [activePanel, setActivePanel] = useState<'write' | 'preview'>(
         'write',
     );
+
+    const [layout, setLayout] = useState<'both' | 'write' | 'preview'>('both');
+    const [maximized, setMaximized] = useState<
+        'both' | 'write' | 'preview' | null
+    >(null);
+    const editorRef = useRef<HTMLDivElement>(null);
+    const splitRef = useRef<HTMLDivElement>(null);
+    const [split, setSplit] = useState(50);
+    const [resizing, setResizing] = useState(false);
+
+    function resizeSplit(value: number) {
+        setSplit(Math.min(80, Math.max(20, value)));
+        anchorCache.current = null;
+    }
+
+    function resizeAt(clientX: number) {
+        const bounds = splitRef.current?.getBoundingClientRect();
+
+        if (bounds && bounds.width > 0) {
+            resizeSplit(((clientX - bounds.left) / bounds.width) * 100);
+        }
+    }
+
+    const visiblePanel = maximized ?? layout;
+
+    useEffect(() => {
+        const editor = editorRef.current;
+
+        function handleFullscreenChange() {
+            if (document.fullscreenElement !== editor) {
+                setMaximized(null);
+            }
+            anchorCache.current = null;
+        }
+
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+
+        return () => {
+            document.removeEventListener(
+                'fullscreenchange',
+                handleFullscreenChange,
+            );
+        };
+    }, []);
+
+    async function maximize() {
+        try {
+            if (document.fullscreenElement !== editorRef.current) {
+                await editorRef.current?.requestFullscreen();
+            }
+            setMaximized('both');
+        } catch {
+            toast.error(__('Could not enter full screen.'));
+        }
+    }
+
+    function selectPanel(panel: 'write' | 'preview') {
+        setActivePanel(panel);
+        if (maximized) {
+            setMaximized((current) => (current === panel ? 'both' : panel));
+        } else {
+            setLayout((current) => (current === panel ? 'both' : panel));
+        }
+        anchorCache.current = null;
+    }
 
     const [uploading, setUploading] = useState(0);
     const [dragging, setDragging] = useState(false);
@@ -176,7 +247,8 @@ export default function MarkdownEditor({
         if (
             !textarea ||
             !pane ||
-            !window.matchMedia('(min-width: 1024px)').matches ||
+            visiblePanel !== 'both' ||
+            (!maximized && !window.matchMedia('(min-width: 1024px)').matches) ||
             textarea.scrollHeight <= textarea.clientHeight
         ) {
             return;
@@ -236,43 +308,84 @@ export default function MarkdownEditor({
     }, [jumpTo]);
 
     return (
-        <div className="overflow-hidden rounded-xl border bg-background">
-            <div className="flex gap-1 border-b p-2 lg:hidden">
+        <div
+            ref={editorRef}
+            className={cn(
+                'overflow-hidden rounded-xl border bg-background',
+                maximized && 'flex h-dvh w-screen flex-col rounded-none',
+            )}
+        >
+            <div className="flex shrink-0 flex-wrap items-center gap-1 border-b p-2">
                 <Button
                     type="button"
-                    variant={activePanel === 'write' ? 'secondary' : 'ghost'}
+                    variant={visiblePanel !== 'preview' ? 'secondary' : 'ghost'}
                     size="sm"
-                    aria-pressed={activePanel === 'write'}
+                    aria-pressed={visiblePanel !== 'preview'}
                     aria-controls={`${id}-write`}
-                    onClick={() => setActivePanel('write')}
+                    onClick={() => selectPanel('write')}
                 >
                     <Code2 aria-hidden="true" />
                     {__('Markdown')}
                 </Button>
                 <Button
                     type="button"
-                    variant={activePanel === 'preview' ? 'secondary' : 'ghost'}
+                    variant={visiblePanel !== 'write' ? 'secondary' : 'ghost'}
                     size="sm"
-                    aria-pressed={activePanel === 'preview'}
+                    aria-pressed={visiblePanel !== 'write'}
                     aria-controls={`${id}-preview`}
-                    onClick={() => setActivePanel('preview')}
+                    onClick={() => selectPanel('preview')}
                 >
                     <Eye aria-hidden="true" />
                     {__('Preview')}
                 </Button>
+                {maximized && (
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="ml-auto"
+                        onClick={() => void document.exitFullscreen()}
+                    >
+                        <Minimize2 aria-hidden="true" />
+                        {__('Exit full screen')}
+                    </Button>
+                )}
             </div>
-            <div className="grid min-w-0 lg:grid-cols-2">
+            <div
+                ref={splitRef}
+                style={
+                    {
+                        '--editor-left': `${split}fr`,
+                        '--editor-right': `${100 - split}fr`,
+                    } as CSSProperties
+                }
+                className={cn(
+                    'grid min-h-0 min-w-0',
+                    visiblePanel === 'both' &&
+                        (maximized
+                            ? 'grid-cols-[minmax(0,var(--editor-left))_0.375rem_minmax(0,var(--editor-right))]'
+                            : 'lg:grid-cols-[minmax(0,var(--editor-left))_0.375rem_minmax(0,var(--editor-right))]'),
+                    maximized && 'flex-1',
+                    resizing && 'cursor-col-resize select-none',
+                )}
+            >
                 <div
                     id={`${id}-write`}
                     className={cn(
-                        'min-w-0 lg:border-r',
-                        activePanel !== 'write' && 'hidden lg:block',
+                        'min-h-0 min-w-0 flex-col',
+                        visiblePanel === 'preview'
+                            ? 'hidden'
+                            : visiblePanel === 'write'
+                              ? 'flex'
+                              : !maximized && activePanel !== 'write'
+                                ? 'hidden lg:flex'
+                                : 'flex',
                     )}
                 >
-                    <div className="hidden items-center gap-2 border-b bg-muted/30 px-5 py-3 text-xs font-medium text-muted-foreground lg:flex">
+                    <div className="flex shrink-0 items-center gap-2 border-b bg-muted/30 px-5 py-2 text-xs font-medium text-muted-foreground">
                         <Code2 aria-hidden="true" className="size-3.5" />
                         {__('Markdown')}
-                        <span className="ml-auto flex items-center gap-1.5 font-normal">
+                        <span className="ml-auto hidden items-center gap-1.5 font-normal xl:flex">
                             <ImagePlus
                                 aria-hidden="true"
                                 className="size-3.5"
@@ -281,6 +394,38 @@ export default function MarkdownEditor({
                                 ? __('Uploading image…')
                                 : __('Drop or paste an image to upload')}
                         </span>
+
+                        <div className="ml-auto flex items-center gap-1">
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                aria-label={__('Maximize Markdown')}
+                                title={__('Maximize Markdown')}
+                                onClick={() => void maximize()}
+                            >
+                                <Maximize2 aria-hidden="true" />
+                            </Button>
+                            {visiblePanel === 'both' && (
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    aria-label={__('Hide Markdown')}
+                                    title={__('Hide Markdown')}
+                                    onClick={() => {
+                                        if (maximized) {
+                                            setMaximized('preview');
+                                        } else {
+                                            setLayout('preview');
+                                        }
+                                        setActivePanel('preview');
+                                    }}
+                                >
+                                    <X aria-hidden="true" />
+                                </Button>
+                            )}
+                        </div>
                     </div>
                     <textarea
                         id={id}
@@ -303,27 +448,134 @@ export default function MarkdownEditor({
                         spellCheck={false}
                         className={cn(
                             'block h-[60vh] min-h-80 w-full resize-none bg-transparent p-5 font-mono text-sm leading-7 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset sm:p-6',
+                            maximized && 'h-auto min-h-0 flex-1',
                             dragging &&
                                 'bg-muted/50 ring-2 ring-ring ring-inset',
                         )}
                     />
                 </div>
+                <div
+                    role="separator"
+                    aria-label={__('Resize Markdown and preview')}
+                    aria-orientation="vertical"
+                    aria-valuemin={20}
+                    aria-valuemax={80}
+                    aria-valuenow={Math.round(split)}
+                    aria-controls={`${id}-write ${id}-preview`}
+                    tabIndex={0}
+                    title={__('Drag to resize. Double-click to reset.')}
+                    className={cn(
+                        'cursor-col-resize touch-none bg-border transition-colors hover:bg-primary/50 focus-visible:bg-primary/50 focus-visible:outline-none',
+                        visiblePanel !== 'both'
+                            ? 'hidden'
+                            : maximized
+                              ? 'block'
+                              : 'hidden lg:block',
+                        resizing && 'bg-primary/50',
+                    )}
+                    onPointerDown={(event) => {
+                        if (event.button !== 0) {
+                            return;
+                        }
+                        event.preventDefault();
+                        event.currentTarget.focus();
+                        event.currentTarget.setPointerCapture(event.pointerId);
+                        setResizing(true);
+                    }}
+                    onPointerMove={(event) => {
+                        if (
+                            event.currentTarget.hasPointerCapture(
+                                event.pointerId,
+                            )
+                        ) {
+                            resizeAt(event.clientX);
+                        }
+                    }}
+                    onPointerUp={(event) => {
+                        if (
+                            event.currentTarget.hasPointerCapture(
+                                event.pointerId,
+                            )
+                        ) {
+                            event.currentTarget.releasePointerCapture(
+                                event.pointerId,
+                            );
+                        }
+                        setResizing(false);
+                    }}
+                    onLostPointerCapture={() => setResizing(false)}
+                    onDoubleClick={() => resizeSplit(50)}
+                    onKeyDown={(event) => {
+                        const value = {
+                            ArrowLeft: split - 2,
+                            ArrowRight: split + 2,
+                            Home: 20,
+                            End: 80,
+                        }[event.key];
+
+                        if (value !== undefined) {
+                            event.preventDefault();
+                            resizeSplit(value);
+                        }
+                    }}
+                />
                 <section
                     id={`${id}-preview`}
                     aria-label={__('Preview')}
                     className={cn(
-                        'min-w-0',
-                        activePanel !== 'preview' && 'hidden lg:block',
+                        'min-h-0 min-w-0 flex-col',
+                        visiblePanel === 'write'
+                            ? 'hidden'
+                            : visiblePanel === 'preview'
+                              ? 'flex'
+                              : !maximized && activePanel !== 'preview'
+                                ? 'hidden lg:flex'
+                                : 'flex',
                     )}
                 >
-                    <div className="hidden items-center gap-2 border-b bg-muted/30 px-5 py-3 text-xs font-medium text-muted-foreground lg:flex">
+                    <div className="flex shrink-0 items-center gap-2 border-b bg-muted/30 px-5 py-2 text-xs font-medium text-muted-foreground">
                         <Eye aria-hidden="true" className="size-3.5" />
                         {__('Preview')}
+
+                        <div className="ml-auto flex items-center gap-1">
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                aria-label={__('Maximize Preview')}
+                                title={__('Maximize Preview')}
+                                onClick={() => void maximize()}
+                            >
+                                <Maximize2 aria-hidden="true" />
+                            </Button>
+                            {visiblePanel === 'both' && (
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    aria-label={__('Hide Preview')}
+                                    title={__('Hide Preview')}
+                                    onClick={() => {
+                                        if (maximized) {
+                                            setMaximized('write');
+                                        } else {
+                                            setLayout('write');
+                                        }
+                                        setActivePanel('write');
+                                    }}
+                                >
+                                    <X aria-hidden="true" />
+                                </Button>
+                            )}
+                        </div>
                     </div>
                     <div
                         ref={previewRef}
                         tabIndex={0}
-                        className="h-[60vh] min-h-80 overflow-auto p-5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-inset sm:p-6"
+                        className={cn(
+                            'h-[60vh] min-h-80 overflow-auto p-5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-inset sm:p-6',
+                            maximized && 'h-auto min-h-0 flex-1',
+                        )}
                     >
                         {content.trim() ? (
                             <ArticleContent content={preview} syntax={syntax} />

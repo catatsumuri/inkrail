@@ -255,5 +255,13 @@
     "Read article": "Read article",
     "Cover image": "Cover image",
     "Upload image": "Upload image",
-    "Upload a cover or enter an image filename. Leave empty for a typographic cover.": "Upload a cover or enter an image filename. Leave empty for a typographic cover."
+    "Upload a cover or enter an image filename. Leave empty for a typographic cover.": "Upload a cover or enter an image filename. Leave empty for a typographic cover.",
+    "Could not enter full screen.": "Could not enter full screen.",
+    "Exit full screen": "Exit full screen",
+    "Maximize Markdown": "Maximize Markdown",
+    "Maximize Preview": "Maximize Preview",
+    "Hide Markdown": "Hide Markdown",
+    "Hide Preview": "Hide Preview",
+    "Resize Markdown and preview": "Resize Markdown and preview",
+    "Drag to resize. Double-click to reset.": "Drag to resize. Double-click to reset."
 }

@@ -254,5 +254,13 @@
     "Read article": "記事を読む",
     "Cover image": "アイキャッチ画像",
     "Upload image": "画像をアップロード",
-    "Upload a cover or enter an image filename. Leave empty for a typographic cover.": "画像をアップロードするか、画像ファイル名を入力してください。未指定の場合はタイトルの表紙を表示します。"
+    "Upload a cover or enter an image filename. Leave empty for a typographic cover.": "画像をアップロードするか、画像ファイル名を入力してください。未指定の場合はタイトルの表紙を表示します。",
+    "Could not enter full screen.": "全画面表示に切り替えられませんでした。",
+    "Exit full screen": "全画面表示を終了",
+    "Maximize Markdown": "本文を最大化",
+    "Maximize Preview": "プレビューを最大化",
+    "Hide Markdown": "本文を閉じる",
+    "Hide Preview": "プレビューを閉じる",
+    "Resize Markdown and preview": "本文とプレビューの幅を調整",
+    "Drag to resize. Double-click to reset.": "ドラッグで幅を調整。ダブルクリックで均等に戻します。"
 }
