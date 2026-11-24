@@ -1,3 +1,4 @@
+import ArticlePublicationTime from '@/components/article-publication-time';
 import { lang } from '@erag/lang-sync-inertia/react';
 import { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -331,6 +332,13 @@ export default function ArticleForm({ article }: { article?: Article }) {
                                     value=""
                                 />
                             )}
+                            {article?.published_at &&
+                                article.publication_status === 'scheduled' && (
+                                    <ArticlePublicationTime
+                                        date={article.published_at}
+                                        scheduled
+                                    />
+                                )}
                             <InputError message={errors.published_at} />
                             <p className="text-sm text-muted-foreground">
                                 {__(

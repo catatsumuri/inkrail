@@ -1,3 +1,4 @@
+import ArticlePublicationTime from '@/components/article-publication-time';
 import { useState } from 'react';
 import ArticleLanguageNotice from '@/components/article-language-notice';
 import { lang } from '@erag/lang-sync-inertia/react';
@@ -408,14 +409,12 @@ export default function Show({
                             </span>
                         </div>
                         {article.published_at && (
-                            <p className="text-sm text-muted-foreground">
-                                {new Intl.DateTimeFormat('ja-JP', {
-                                    timeZone: 'Asia/Tokyo',
-                                    dateStyle: 'medium',
-                                    timeStyle: 'short',
-                                }).format(new Date(article.published_at))}{' '}
-                                JST
-                            </p>
+                            <ArticlePublicationTime
+                                date={article.published_at}
+                                scheduled={
+                                    article.publication_status === 'scheduled'
+                                }
+                            />
                         )}
                         <h1 className="text-3xl leading-tight font-semibold tracking-tight break-words sm:text-4xl">
                             {article.title}

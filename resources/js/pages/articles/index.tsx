@@ -1,3 +1,4 @@
+import ArticlePublicationTime from '@/components/article-publication-time';
 import ArticleLanguageNotice from '@/components/article-language-notice';
 import TranslationStatus from '@/components/translation-status';
 import { lang } from '@erag/lang-sync-inertia/react';
@@ -94,21 +95,13 @@ export default function Index({ articles }: { articles: Articles }) {
                                     >
                                         {article.title}
                                         {article.published_at && (
-                                            <span className="ml-2 text-xs text-muted-foreground">
-                                                {new Intl.DateTimeFormat(
-                                                    'ja-JP',
-                                                    {
-                                                        timeZone: 'Asia/Tokyo',
-                                                        dateStyle: 'medium',
-                                                        timeStyle: 'short',
-                                                    },
-                                                ).format(
-                                                    new Date(
-                                                        article.published_at,
-                                                    ),
-                                                )}{' '}
-                                                JST
-                                            </span>
+                                            <ArticlePublicationTime
+                                                date={article.published_at}
+                                                scheduled={
+                                                    article.publication_status ===
+                                                    'scheduled'
+                                                }
+                                            />
                                         )}
                                     </Link>
                                     <ArticleLanguageNotice
