@@ -12,7 +12,12 @@ import type { Article } from '@/types/article';
 type Articles = {
     data: Pick<
         Article,
-        'title' | 'slug' | 'resolvedLocale' | 'topics' | 'eyecatch_url'
+        | 'published_at'
+        | 'title'
+        | 'slug'
+        | 'resolvedLocale'
+        | 'topics'
+        | 'eyecatch_url'
     >[];
     total: number;
     prev_page_url: string | null;
@@ -122,6 +127,23 @@ export default function PublicIndex({
                                             >
                                                 {article.title.split(' — ')[0]}
                                             </h2>
+                                            {article.published_at && (
+                                                <p className="text-xs text-muted-foreground">
+                                                    {new Intl.DateTimeFormat(
+                                                        'ja-JP',
+                                                        {
+                                                            timeZone:
+                                                                'Asia/Tokyo',
+                                                            dateStyle: 'medium',
+                                                        },
+                                                    ).format(
+                                                        new Date(
+                                                            article.published_at,
+                                                        ),
+                                                    )}{' '}
+                                                    JST
+                                                </p>
+                                            )}
                                             {article.title.includes(' — ') && (
                                                 <p className="line-clamp-3 text-sm leading-relaxed text-muted-foreground">
                                                     {article.title

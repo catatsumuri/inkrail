@@ -142,3 +142,50 @@ test('public readers cannot edit update or delete the article', function () {
     $this->delete(route('articles.destroy', $article))->assertForbidden();
     expect($article->fresh())->title->toBe('Public')->content->toBe('Original');
 });
+
+test('scheduled articles become public exactly at their publication time', function () {
+    config(['articles.public_index_enabled' => true]);
+    $this->travelTo(now()->startOfMinute());
+    $article = User::factory()->create()->articles()->create([
+        'title' => 'Scheduled', 'content' => 'Secret', 'is_published' => true,
+        'published_at' => now()->addMinute(),
+    ]);
+    $this->get(route('public.articles.show', $article->slug))->assertNotFound();
+    $this->get(route('public.articles.index'))->assertInertia(fn (Assert $page) => $page->where('articles.total', 0));
+    $this->travel(1)->minutes();
+    $this->get(route('public.articles.show', $article->slug))->assertOk();
+    $this->get(route('public.articles.index'))->assertInertia(fn (Assert $page) => $page->where('articles.total', 1));
+});
+
+test('publication dates submitted in Japan time are saved in UTC', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user)->post(route('articles.store'), [
+        'title' => 'Scheduled', 'is_published' => true, 'published_at' => '2030-01-02T00:30',
+    ])->assertSessionHasNoErrors();
+    expect($user->articles()->firstOrFail()->published_at->format('Y-m-d H:i'))->toBe('2030-01-01 15:30');
+});
+
+test('rescheduling and cancelling publication preserve version protection', function () {
+    $user = User::factory()->create();
+    $article = $user->articles()->create(['title' => 'Article', 'is_published' => true]);
+    $initialVersion = $article->fresh()->edit_version;
+    $this->actingAs($user)->put(route('articles.update', $article), [
+        'title' => 'Article', 'is_published' => true, 'published_at' => '2035-01-01T09:00', 'edit_version' => $initialVersion,
+    ])->assertSessionHasNoErrors();
+    $this->get(route('public.articles.show', $article->slug))->assertNotFound();
+    $version = $article->fresh()->edit_version;
+    expect($version)->toBeGreaterThan(0);
+    $this->put(route('articles.update', $article), [
+        'title' => 'Article', 'is_published' => false, 'published_at' => '', 'edit_version' => 0,
+    ])->assertSessionHasErrors('edit_version');
+    $this->put(route('articles.update', $article), [
+        'title' => 'Article', 'is_published' => false, 'published_at' => '', 'edit_version' => $version,
+    ])->assertSessionHasNoErrors();
+    expect($article->fresh()->published_at)->toBeNull();
+});
+
+test('invalid publication dates are rejected', function () {
+    $this->actingAs(User::factory()->create())->post(route('articles.store'), [
+        'title' => 'Invalid', 'is_published' => true, 'published_at' => '2030-02-31T10:00',
+    ])->assertSessionHasErrors('published_at');
+});

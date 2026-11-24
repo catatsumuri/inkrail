@@ -28,7 +28,10 @@ class RenderZennArticle
         ], $article->zenn_frontmatter ?? [], [
             'title' => $translation->title, 'published' => $article->is_published, 'inkrail_id' => $article->sync_id,
         ]);
-        unset($frontmatter['namespace']);
+        unset($frontmatter['namespace'], $frontmatter['published_at']);
+        if ($article->published_at !== null) {
+            $frontmatter['published_at'] = $article->published_at->setTimezone('Asia/Tokyo')->format('Y-m-d H:i');
+        }
         if ($article->namespace !== null) {
             $frontmatter['namespace'] = $article->namespace->slug;
         }

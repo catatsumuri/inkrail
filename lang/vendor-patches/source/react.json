@@ -271,5 +271,12 @@
     "Hide Markdown": "Hide Markdown",
     "Hide Preview": "Hide Preview",
     "Resize Markdown and preview": "Resize Markdown and preview",
-    "Drag to resize. Double-click to reset.": "Drag to resize. Double-click to reset."
+    "Drag to resize. Double-click to reset.": "Drag to resize. Double-click to reset.",
+    "Publication": "Publication",
+    "Publish now": "Publish now",
+    "Choose publication date": "Choose publication date",
+    "Publication date (JST)": "Publication date (JST)",
+    "Scheduled": "Scheduled",
+    "Changing a published article to a future date hides it until that date.": "Changing a published article to a future date hides it until that date.",
+    "Publication dates are sent to Zenn in Japan time. Zenn may restrict changes to an existing publication date.": "Publication dates are sent to Zenn in Japan time. Zenn may restrict changes to an existing publication date."
 }

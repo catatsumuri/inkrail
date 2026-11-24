@@ -7,6 +7,7 @@ use App\Exceptions\ZennImportException;
 use App\Models\Article;
 use App\Models\ArticleNamespace;
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Closure;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Support\Facades\DB;
@@ -149,13 +150,14 @@ class ImportZennArticles
                 ['name' => $namespaceSlug],
             ));
         }
+        $article->published_at = isset($parsed['frontmatter']['published_at']) ? CarbonImmutable::parse($parsed['frontmatter']['published_at'], 'Asia/Tokyo')->utc() : null;
         $article->is_published = $parsed['is_published'];
         $article->zenn_repository = $repository;
         $article->zenn_branch = $branch;
         $article->zenn_path = $path;
         $article->zenn_sha = $sha;
         $article->zenn_frontmatter = $parsed['frontmatter'];
-        $editableMetadataChanged = $article->exists && $article->isDirty(['is_published', 'zenn_frontmatter']);
+        $editableMetadataChanged = $article->exists && $article->isDirty(['is_published', 'published_at', 'zenn_frontmatter']);
         $article->save();
         if ($editableMetadataChanged) {
             $article->increment('edit_version');

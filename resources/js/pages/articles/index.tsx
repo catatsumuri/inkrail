@@ -26,6 +26,8 @@ type Articles = {
         | 'slug'
         | 'resolvedLocale'
         | 'is_published'
+        | 'publication_status'
+        | 'published_at'
         | 'translationStatus'
     >[];
     prev_page_url: string | null;
@@ -91,6 +93,23 @@ export default function Index({ articles }: { articles: Articles }) {
                                         className="block w-fit rounded-sm text-lg leading-snug font-medium tracking-tight break-words transition-colors hover:text-muted-foreground focus-visible:outline-2 focus-visible:outline-ring sm:text-xl"
                                     >
                                         {article.title}
+                                        {article.published_at && (
+                                            <span className="ml-2 text-xs text-muted-foreground">
+                                                {new Intl.DateTimeFormat(
+                                                    'ja-JP',
+                                                    {
+                                                        timeZone: 'Asia/Tokyo',
+                                                        dateStyle: 'medium',
+                                                        timeStyle: 'short',
+                                                    },
+                                                ).format(
+                                                    new Date(
+                                                        article.published_at,
+                                                    ),
+                                                )}{' '}
+                                                JST
+                                            </span>
+                                        )}
                                     </Link>
                                     <ArticleLanguageNotice
                                         resolvedLocale={article.resolvedLocale}
@@ -106,7 +125,10 @@ export default function Index({ articles }: { articles: Articles }) {
                                             />
                                             {__(
                                                 article.is_published
-                                                    ? 'Published'
+                                                    ? article.publication_status ===
+                                                      'scheduled'
+                                                        ? 'Scheduled'
+                                                        : 'Published'
                                                     : 'Draft',
                                             )}
                                         </Badge>

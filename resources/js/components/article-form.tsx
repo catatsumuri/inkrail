@@ -16,7 +16,6 @@ import MarkdownEditor from '@/components/markdown-editor';
 import TranslationStatus from '@/components/translation-status';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { Article } from '@/types/article';
@@ -24,6 +23,13 @@ import type { Article } from '@/types/article';
 export default function ArticleForm({ article }: { article?: Article }) {
     const { __ } = lang();
     const { auth, locale, articleLocales } = usePage().props;
+    const [publicationMode, setPublicationMode] = useState(
+        article?.is_published
+            ? article.published_at
+                ? 'date'
+                : 'now'
+            : 'draft',
+    );
     const [uploadingEyecatch, setUploadingEyecatch] = useState(false);
     const [topicsInput, setTopicsInput] = useState(
         article?.topics?.join(', ') ?? '',
@@ -272,25 +278,65 @@ export default function ArticleForm({ article }: { article?: Article }) {
                     />
                     {!auth.user?.is_sandbox && (
                         <div className="grid gap-2">
-                            <div className="flex items-center gap-2">
+                            <Label htmlFor="publication_mode">
+                                {__('Publication')}
+                            </Label>
+                            <select
+                                id="publication_mode"
+                                value={publicationMode}
+                                onChange={(event) =>
+                                    setPublicationMode(event.target.value)
+                                }
+                                className="h-9 rounded-md border bg-background px-3"
+                            >
+                                <option value="draft">{__('Draft')}</option>
+                                <option value="now">{__('Publish now')}</option>
+                                <option value="date">
+                                    {__('Choose publication date')}
+                                </option>
+                            </select>
+                            <input
+                                type="hidden"
+                                name="is_published"
+                                value={publicationMode === 'draft' ? '0' : '1'}
+                            />
+                            {publicationMode === 'date' ? (
+                                <>
+                                    <Label htmlFor="published_at">
+                                        {__('Publication date (JST)')}
+                                    </Label>
+                                    <Input
+                                        id="published_at"
+                                        name="published_at"
+                                        type="datetime-local"
+                                        required
+                                        defaultValue={
+                                            article?.published_at
+                                                ? new Date(
+                                                      new Date(
+                                                          article.published_at,
+                                                      ).getTime() +
+                                                          9 * 3600000,
+                                                  )
+                                                      .toISOString()
+                                                      .slice(0, 16)
+                                                : ''
+                                        }
+                                    />
+                                </>
+                            ) : (
                                 <input
                                     type="hidden"
-                                    name="is_published"
-                                    value="0"
+                                    name="published_at"
+                                    value=""
                                 />
-                                <Checkbox
-                                    id="is_published"
-                                    name="is_published"
-                                    value="1"
-                                    defaultChecked={
-                                        article?.is_published ?? false
-                                    }
-                                    aria-invalid={Boolean(errors.is_published)}
-                                />
-                                <Label htmlFor="is_published">
-                                    {__('Published')}
-                                </Label>
-                            </div>
+                            )}
+                            <InputError message={errors.published_at} />
+                            <p className="text-sm text-muted-foreground">
+                                {__(
+                                    'Changing a published article to a future date hides it until that date.',
+                                )}
+                            </p>
                             <InputError message={errors.is_published} />
                         </div>
                     )}

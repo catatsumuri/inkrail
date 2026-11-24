@@ -12,6 +12,8 @@ export type Article = {
     content: string;
     slug: string;
     is_published: boolean;
+    publication_status?: 'draft' | 'scheduled' | 'published';
+    published_at?: string | null;
 };
 
 export type TranslationState = {

@@ -14,6 +14,8 @@ return new class extends Migration
             $table->foreignId('namespace_id')->nullable()->constrained('article_namespaces')->nullOnDelete();
             $table->string('slug')->unique();
             $table->boolean('is_published')->default(false);
+            $table->dateTime('published_at')->nullable();
+            $table->index(['is_published', 'published_at']);
             $table->unsignedInteger('edit_version')->default(0);
             $table->uuid('sync_id')->nullable()->unique();
             $table->string('zenn_repository')->nullable();

@@ -18,6 +18,7 @@ export default function PublicShow({
 }: {
     article: Pick<
         Article,
+        | 'published_at'
         | 'title'
         | 'content'
         | 'slug'
@@ -107,6 +108,17 @@ export default function PublicShow({
                             </div>
                         </header>
                         <div className="mx-auto max-w-3xl">
+                            {article.published_at && (
+                                <p className="text-sm text-muted-foreground">
+                                    {new Intl.DateTimeFormat('ja-JP', {
+                                        timeZone: 'Asia/Tokyo',
+                                        dateStyle: 'medium',
+                                    }).format(
+                                        new Date(article.published_at),
+                                    )}{' '}
+                                    JST
+                                </p>
+                            )}
                             <ArticleContent
                                 content={article.content}
                                 syntax={
