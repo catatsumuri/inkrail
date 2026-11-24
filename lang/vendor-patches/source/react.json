@@ -300,5 +300,10 @@
     "Match case": "Match case",
     "Regular expression": "Regular expression",
     "Whole word": "Whole word",
-    "Replace all": "Replace all"
+    "Replace all": "Replace all",
+    "InkRail Live Demo": "InkRail Live Demo",
+    "This is the live-demo branch of InkRail.": "This is the live-demo branch of InkRail.",
+    "Built with": "Built with",
+    "View on GitHub": "View on GitHub",
+    "Start from a template": "Start from a template"
 }

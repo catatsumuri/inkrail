@@ -105,11 +105,12 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * Allow every authenticated user to manage article backups.
+     * Allow every authenticated user to manage article backups, except in demo
+     * mode where backups are disabled.
      */
     protected function configureArticleBackups(): void
     {
-        Gate::define('manage-article-backups', fn (Authenticatable $user): bool => $user instanceof User);
+        Gate::define('manage-article-backups', fn (Authenticatable $user): bool => ! config('app.demo_mode') && $user instanceof User);
     }
 
     /**

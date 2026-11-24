@@ -193,3 +193,15 @@ test('creating a backup warns when referenced image files are missing', function
         ->assertRedirect(route('dashboard'))
         ->assertInertiaFlash('toast.type', 'warning');
 });
+
+test('backups are disabled in demo mode', function () {
+    config(['app.demo_mode' => true]);
+    $filename = storedBackup();
+
+    $this->actingAs($this->owner)->get(route('dashboard'))->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->where('backups', null));
+    $this->actingAs($this->owner)->post(route('backups.store'))->assertForbidden();
+    $this->actingAs($this->owner)->get(route('backups.download', $filename))->assertForbidden();
+    $this->actingAs($this->owner)->post(route('backups.restore', $filename))->assertForbidden();
+    $this->actingAs($this->owner)->delete(route('backups.destroy', $filename))->assertForbidden();
+});

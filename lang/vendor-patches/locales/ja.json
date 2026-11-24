@@ -299,5 +299,10 @@
     "Match case": "大文字小文字を区別",
     "Regular expression": "正規表現",
     "Whole word": "単語単位",
-    "Replace all": "すべて置換"
+    "Replace all": "すべて置換",
+    "InkRail Live Demo": "InkRail ライブデモ",
+    "This is the live-demo branch of InkRail.": "これは InkRail の live-demo ブランチです。",
+    "Built with": "使用:",
+    "View on GitHub": "GitHub で見る",
+    "Start from a template": "テンプレートから書き始める"
 }

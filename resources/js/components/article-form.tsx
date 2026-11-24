@@ -13,6 +13,7 @@ import {
 import InputError from '@/components/input-error';
 import ArticleEyecatchInput from '@/components/article-eyecatch-input';
 import LanguageToggle from '@/components/language-toggle';
+import { articleTemplate } from '@/lib/article-template';
 import MarkdownEditor from '@/components/markdown-editor';
 import TranslationStatus from '@/components/translation-status';
 import { Badge } from '@/components/ui/badge';
@@ -110,6 +111,7 @@ export default function ArticleForm({ article }: { article?: Article }) {
             ? preferred
             : articleLocales[0];
     });
+    const [templateLocale] = useState(editingLocale);
     return (
         <Form
             id={formId}
@@ -223,7 +225,10 @@ export default function ArticleForm({ article }: { article?: Article }) {
                                     name={`translations[${language}][content]`}
                                     defaultValue={
                                         article?.translations?.[language]
-                                            ?.content ?? ''
+                                            ?.content ??
+                                        (article || language !== templateLocale
+                                            ? ''
+                                            : articleTemplate(language))
                                     }
                                     invalid={Boolean(
                                         errors[

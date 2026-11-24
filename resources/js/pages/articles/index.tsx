@@ -68,7 +68,7 @@ export default function Index({
                     <Button asChild>
                         <Link href={create()}>
                             <Plus aria-hidden="true" />
-                            {__('Start writing')}
+                            {__('Start from a template')}
                         </Link>
                     </Button>
                 </header>
@@ -98,7 +98,7 @@ export default function Index({
                         <Button asChild variant="outline">
                             <Link href={create()}>
                                 <Plus aria-hidden="true" />
-                                {__('Start writing')}
+                                {__('Start from a template')}
                             </Link>
                         </Button>
                     </div>
