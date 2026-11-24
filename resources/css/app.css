@@ -143,3 +143,21 @@
         @apply bg-background text-foreground;
     }
 }
+
+:root {
+    --cm-heading: oklch(0.42 0.16 260);
+    --cm-keyword: oklch(0.5 0.2 320);
+    --cm-string: oklch(0.5 0.14 150);
+    --cm-comment: oklch(0.6 0 0);
+    --cm-link: oklch(0.5 0.15 230);
+    --cm-meta: oklch(0.55 0.12 60);
+}
+
+.dark {
+    --cm-heading: oklch(0.8 0.12 260);
+    --cm-keyword: oklch(0.78 0.14 320);
+    --cm-string: oklch(0.8 0.13 150);
+    --cm-comment: oklch(0.65 0 0);
+    --cm-link: oklch(0.78 0.11 230);
+    --cm-meta: oklch(0.8 0.1 60);
+}

@@ -285,5 +285,10 @@
     "Publication dates are sent to Zenn in Japan time. Zenn may restrict changes to an existing publication date.": "Publication dates are sent to Zenn in Japan time. Zenn may restrict changes to an existing publication date.",
     "Scheduled publication:": "Scheduled publication:",
     "Published at:": "Published at:",
-    "Back up every article with its translations, history and images. Backups are stored on the \":disk\" disk, outside the database. They survive migrate:fresh, but surviving redeploys requires persistent storage such as R2. Local files may be lost on redeploy.": "Back up every article with its translations, history and images. Backups are stored on the \":disk\" disk, outside the database. They survive migrate:fresh, but surviving redeploys requires persistent storage such as R2. Local files may be lost on redeploy."
+    "Back up every article with its translations, history and images. Backups are stored on the \":disk\" disk, outside the database. They survive migrate:fresh, but surviving redeploys requires persistent storage such as R2. Local files may be lost on redeploy.": "Back up every article with its translations, history and images. Backups are stored on the \":disk\" disk, outside the database. They survive migrate:fresh, but surviving redeploys requires persistent storage such as R2. Local files may be lost on redeploy.",
+    "Syntax highlighting and folding for long embedded HTML": "Syntax highlighting and folding for long embedded HTML",
+    "A plain text box, like a normal form field": "A plain text box, like a normal form field",
+    "Editor type": "Editor type",
+    "Code editor": "Code editor",
+    "Standard editor": "Standard editor"
 }

@@ -20,7 +20,12 @@ import {
 } from 'react';
 import { store as storeImage } from '@/actions/App/Http/Controllers/ArticleImageController';
 import ArticleContent from '@/components/article-content';
+import CodeEditor from '@/components/code-editor';
+import type { EditorHandle } from '@/components/editor-handle';
+import PillToggle from '@/components/pill-toggle';
+import PlainEditor from '@/components/plain-editor';
 import { Button } from '@/components/ui/button';
+import { useEditorMode } from '@/hooks/use-editor-mode';
 import { listFencedBlocks, listHeadings } from '@/lib/heading-offset';
 import { buildAnchors, mapScroll, type ScrollAnchor } from '@/lib/scroll-sync';
 import { cn } from '@/lib/utils';
@@ -45,6 +50,7 @@ export default function MarkdownEditor({
     jumpTo,
 }: Props) {
     const { __ } = lang();
+    const [editorMode, setEditorMode] = useEditorMode();
     const [content, setContent] = useState(defaultValue);
     const preview = useDeferredValue(content);
 
@@ -118,7 +124,7 @@ export default function MarkdownEditor({
         image: null,
     });
 
-    const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const handleRef = useRef<EditorHandle | null>(null);
     const previewRef = useRef<HTMLDivElement>(null);
 
     const anchorCache = useRef<{
@@ -129,12 +135,6 @@ export default function MarkdownEditor({
     useEffect(() => {
         anchorCache.current = null;
     }, [preview]);
-
-    function imageFrom(files: FileList | null | undefined): File | undefined {
-        return Array.from(files ?? []).find((file) =>
-            file.type.startsWith('image/'),
-        );
-    }
 
     async function uploadImage(file: File) {
         let reported = false;
@@ -151,25 +151,13 @@ export default function MarkdownEditor({
                     );
                 },
             });
-            const textarea = textareaRef.current;
+            const alt =
+                file.name
+                    .replace(/\.[^.]+$/, '')
+                    .replace(/[[\]]/g, '')
+                    .trim() || 'image';
 
-            if (textarea) {
-                const alt =
-                    file.name
-                        .replace(/\.[^.]+$/, '')
-                        .replace(/[[\]]/g, '')
-                        .trim() || 'image';
-                const markdown = `![${alt}](${url})\n`;
-
-                textarea.setRangeText(
-                    markdown,
-                    textarea.selectionStart,
-                    textarea.selectionEnd,
-                    'end',
-                );
-                setContent(textarea.value);
-                textarea.focus();
-            }
+            handleRef.current?.insertAtCursor(`![${alt}](${url})\n`);
         } catch {
             if (!reported) {
                 toast.error(__('Could not upload the image.'));
@@ -179,43 +167,25 @@ export default function MarkdownEditor({
         }
     }
 
-    function handleDrop(event: React.DragEvent<HTMLTextAreaElement>) {
-        setDragging(false);
-
-        const file = imageFrom(event.dataTransfer.files);
-
-        if (file) {
-            event.preventDefault();
-            void uploadImage(file);
-        }
-    }
-
-    function handlePaste(event: React.ClipboardEvent<HTMLTextAreaElement>) {
-        const file = imageFrom(event.clipboardData.files);
-
-        if (file) {
-            event.preventDefault();
-            void uploadImage(file);
-        }
-    }
-
     function measureAnchors(
-        textarea: HTMLTextAreaElement,
+        handle: EditorHandle,
         pane: HTMLDivElement,
     ): ScrollAnchor[] {
-        const maxFrom = textarea.scrollHeight - textarea.clientHeight;
+        const scroller = handle.scroller();
+        const maxFrom = scroller.scrollHeight - scroller.clientHeight;
         const maxTo = pane.scrollHeight - pane.clientHeight;
-        const key = `${textarea.value.length}:${textarea.clientWidth}:${pane.scrollHeight}`;
+        const value = handle.getValue();
+        const key = `${editorMode}:${value.length}:${handle.layoutKey()}:${pane.scrollHeight}`;
 
         if (anchorCache.current?.key === key) {
             return anchorCache.current.anchors;
         }
 
-        const source = listHeadings(textarea.value).filter(
+        const source = listHeadings(value).filter(
             (heading) => heading.level <= 4,
         );
         const rendered = pane.querySelectorAll('.ink-heading');
-        const embeds = listFencedBlocks(textarea.value, 'html-embed');
+        const embeds = listFencedBlocks(value, 'html-embed');
         const renderedEmbeds = pane.querySelectorAll('.ink-html-embed');
         const useHeadings =
             source.length > 0 && source.length === rendered.length;
@@ -224,38 +194,36 @@ export default function MarkdownEditor({
         let headings: ScrollAnchor[] = [];
 
         if (useHeadings || useEmbeds) {
-            const style = window.getComputedStyle(textarea);
-            const mirror = document.createElement('div');
-            mirror.style.cssText = `position:fixed;visibility:hidden;left:-200%;top:0;height:auto;white-space:pre-wrap;overflow-wrap:break-word;box-sizing:${style.boxSizing};font:${style.font};line-height:${style.lineHeight};padding:${style.padding};width:${textarea.clientWidth}px`;
-            const paddingBottom = Number.parseFloat(style.paddingBottom) || 0;
             const paneTop = pane.getBoundingClientRect().top;
-            const sourceTop = (offset: number): number => {
-                mirror.textContent = textarea.value.slice(0, offset);
-
-                return mirror.scrollHeight - paddingBottom;
-            };
+            const offsets = [
+                ...(useHeadings ? source.map((heading) => heading.offset) : []),
+                ...(useEmbeds
+                    ? embeds.flatMap((embed) => [embed.start, embed.end])
+                    : []),
+            ];
+            const tops = handle.tops(offsets);
+            let next = 0;
             const renderedTop = (element: Element, edge: 'top' | 'bottom') =>
                 pane.scrollTop +
                 element.getBoundingClientRect()[edge] -
                 paneTop;
-            document.body.appendChild(mirror);
 
             if (useHeadings) {
-                headings = source.map((heading, index) => ({
-                    from: sourceTop(heading.offset),
+                headings = source.map((_, index) => ({
+                    from: tops[next++],
                     to: renderedTop(rendered[index], 'top'),
                 }));
             }
 
             if (useEmbeds) {
-                for (const [index, embed] of embeds.entries()) {
+                for (const index of embeds.keys()) {
                     headings.push(
                         {
-                            from: sourceTop(embed.start),
+                            from: tops[next++],
                             to: renderedTop(renderedEmbeds[index], 'top'),
                         },
                         {
-                            from: sourceTop(embed.end),
+                            from: tops[next++],
                             to: renderedTop(renderedEmbeds[index], 'bottom'),
                         },
                     );
@@ -263,8 +231,6 @@ export default function MarkdownEditor({
 
                 headings.sort((left, right) => left.from - right.from);
             }
-
-            document.body.removeChild(mirror);
         }
 
         const anchors = buildAnchors(headings, maxFrom, maxTo);
@@ -274,56 +240,47 @@ export default function MarkdownEditor({
     }
 
     function syncPreview() {
-        const textarea = textareaRef.current;
+        const handle = handleRef.current;
         const pane = previewRef.current;
 
         if (
-            !textarea ||
+            !handle ||
             !pane ||
             visiblePanel !== 'both' ||
             (!maximized && !window.matchMedia('(min-width: 1024px)').matches) ||
-            textarea.scrollHeight <= textarea.clientHeight
+            handle.scroller().scrollHeight <= handle.scroller().clientHeight
         ) {
             return;
         }
 
-        const anchors = measureAnchors(textarea, pane);
+        const scroller = handle.scroller();
+        const anchors = measureAnchors(handle, pane);
 
         pane.scrollTop =
             anchors.length > 1
-                ? mapScroll(anchors, textarea.scrollTop)
-                : (textarea.scrollTop /
-                      (textarea.scrollHeight - textarea.clientHeight)) *
+                ? mapScroll(anchors, scroller.scrollTop)
+                : (scroller.scrollTop /
+                      (scroller.scrollHeight - scroller.clientHeight)) *
                   (pane.scrollHeight - pane.clientHeight);
     }
 
     useEffect(() => {
-        const textarea = textareaRef.current;
+        const handle = handleRef.current;
 
-        if (!textarea || jumpTo === undefined || !Number.isFinite(jumpTo)) {
+        if (!handle || jumpTo === undefined || !Number.isFinite(jumpTo)) {
             return;
         }
 
-        const start = Math.max(0, Math.min(jumpTo, textarea.value.length));
-        const lineEnd = textarea.value.indexOf('\n', start);
-        const end = lineEnd === -1 ? textarea.value.length : lineEnd;
+        handle.jumpTo(jumpTo);
 
-        textarea.focus({ preventScroll: true });
-        textarea.setSelectionRange(start, end);
-
-        const style = window.getComputedStyle(textarea);
-        const lineHeight = Number.parseFloat(style.lineHeight) || 24;
-        const mirror = document.createElement('div');
-        mirror.style.cssText = `position:fixed;visibility:hidden;left:-200%;top:0;height:auto;white-space:pre-wrap;overflow-wrap:break-word;box-sizing:${style.boxSizing};font:${style.font};line-height:${style.lineHeight};padding:${style.padding};width:${textarea.clientWidth}px`;
-        mirror.textContent = textarea.value.slice(0, start);
-        document.body.appendChild(mirror);
-        const top = mirror.scrollHeight;
-        document.body.removeChild(mirror);
-        textarea.scrollTo({ top: Math.max(0, top - lineHeight * 2) });
-
-        const heading = /^#{1,6}\s+(.+?)(?:\s+#+\s*)?$/.exec(
-            textarea.value.slice(start, end),
+        const value = handle.getValue();
+        const start = Math.max(0, Math.min(jumpTo, value.length));
+        const lineEnd = value.indexOf('\n', start);
+        const line = value.slice(
+            value.lastIndexOf('\n', start - 1) + 1,
+            lineEnd === -1 ? value.length : lineEnd,
         );
+        const heading = /^#{1,6}\s+(.+?)(?:\s+#+\s*)?$/.exec(line);
         const preview = previewRef.current;
         const target = heading
             ? preview?.querySelector(`#${CSS.escape(slugify(heading[1]))}`)
@@ -339,6 +296,12 @@ export default function MarkdownEditor({
             });
         }
     }, [jumpTo]);
+
+    const editorClassName = cn(
+        'h-[60vh] min-h-80 w-full',
+        maximized && 'h-auto min-h-0 flex-1',
+        dragging && 'bg-muted/50 ring-2 ring-ring ring-inset',
+    );
 
     return (
         <div
@@ -384,12 +347,36 @@ export default function MarkdownEditor({
                         </Button>
                     );
                 })}
+                <PillToggle
+                    className="ml-auto"
+                    label={__('Editor type')}
+                    value={editorMode}
+                    options={[
+                        {
+                            value: 'codemirror',
+                            label: __('Code editor'),
+                            title: __(
+                                'Syntax highlighting and folding for long embedded HTML',
+                            ),
+                        },
+                        {
+                            value: 'plain',
+                            label: __('Standard editor'),
+                            title: __(
+                                'A plain text box, like a normal form field',
+                            ),
+                        },
+                    ]}
+                    onValueChange={(mode) => {
+                        anchorCache.current = null;
+                        setEditorMode(mode);
+                    }}
+                />
                 {!maximized && (
                     <Button
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="ml-auto"
                         onClick={() => void maximize()}
                     >
                         <Maximize2 aria-hidden="true" />
@@ -401,7 +388,6 @@ export default function MarkdownEditor({
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="ml-auto"
                         onClick={() => void document.exitFullscreen()}
                     >
                         <Minimize2 aria-hidden="true" />
@@ -472,32 +458,39 @@ export default function MarkdownEditor({
                             )}
                         </div>
                     </div>
-                    <textarea
-                        id={id}
-                        ref={textareaRef}
-                        onScroll={syncPreview}
-                        name={name}
-                        defaultValue={defaultValue}
-                        onChange={(event) => setContent(event.target.value)}
-                        onDrop={handleDrop}
-                        onDragOver={(event) => {
-                            if (event.dataTransfer.types.includes('Files')) {
-                                event.preventDefault();
-                                setDragging(true);
-                            }
-                        }}
-                        onDragLeave={() => setDragging(false)}
-                        onPaste={handlePaste}
-                        aria-invalid={invalid}
-                        aria-describedby={describedBy}
-                        spellCheck={false}
-                        className={cn(
-                            'block h-[60vh] min-h-80 w-full resize-none bg-transparent p-5 font-mono text-sm leading-7 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset sm:p-6',
-                            maximized && 'h-auto min-h-0 flex-1',
-                            dragging &&
-                                'bg-muted/50 ring-2 ring-ring ring-inset',
-                        )}
-                    />
+                    {editorMode === 'plain' ? (
+                        <PlainEditor
+                            key="plain"
+                            id={id}
+                            name={name}
+                            defaultValue={content}
+                            handleRef={handleRef}
+                            onChange={setContent}
+                            onScroll={syncPreview}
+                            onImageFile={(file) => void uploadImage(file)}
+                            onDraggingChange={setDragging}
+                            invalid={invalid}
+                            describedBy={describedBy}
+                            className={editorClassName}
+                        />
+                    ) : (
+                        <>
+                            <input type="hidden" name={name} value={content} />
+                            <CodeEditor
+                                key="codemirror"
+                                id={id}
+                                defaultValue={content}
+                                handleRef={handleRef}
+                                onChange={setContent}
+                                onScroll={syncPreview}
+                                onImageFile={(file) => void uploadImage(file)}
+                                onDraggingChange={setDragging}
+                                invalid={invalid}
+                                describedBy={describedBy}
+                                className={editorClassName}
+                            />
+                        </>
+                    )}
                 </div>
                 <div
                     role="separator"

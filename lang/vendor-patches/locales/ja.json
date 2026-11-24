@@ -284,5 +284,10 @@
     "Publication dates are sent to Zenn in Japan time. Zenn may restrict changes to an existing publication date.": "公開日時は日本時間でZennへ送信します。Zenn側では設定済みの公開日時の変更が制限される場合があります。",
     "Scheduled publication:": "公開予定：",
     "Published at:": "公開日時：",
-    "Back up every article with its translations, history and images. Backups are stored on the \":disk\" disk, outside the database. They survive migrate:fresh, but surviving redeploys requires persistent storage such as R2. Local files may be lost on redeploy.": "すべての記事を、翻訳・履歴・画像ごとバックアップします。バックアップはデータベース外の「:disk」ディスクに保存され、migrate:freshでは削除されません。ただし、再デプロイ後も保持するにはR2などの永続ストレージが必要です。ローカルファイルは再デプロイ時に失われる可能性があります。"
+    "Back up every article with its translations, history and images. Backups are stored on the \":disk\" disk, outside the database. They survive migrate:fresh, but surviving redeploys requires persistent storage such as R2. Local files may be lost on redeploy.": "すべての記事を、翻訳・履歴・画像ごとバックアップします。バックアップはデータベース外の「:disk」ディスクに保存され、migrate:freshでは削除されません。ただし、再デプロイ後も保持するにはR2などの永続ストレージが必要です。ローカルファイルは再デプロイ時に失われる可能性があります。",
+    "Syntax highlighting and folding for long embedded HTML": "色付けと折りたたみ付き。長い埋め込みHTMLも畳めます",
+    "A plain text box, like a normal form field": "ふつうのテキスト入力欄",
+    "Editor type": "エディターの種類",
+    "Code editor": "コードエディタ",
+    "Standard editor": "標準エディタ"
 }
