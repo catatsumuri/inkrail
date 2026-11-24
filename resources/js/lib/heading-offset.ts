@@ -67,3 +67,58 @@ export function findHeadingOffset(
 
     return found?.offset ?? null;
 }
+
+export type FencedBlock = { start: number; end: number };
+
+/**
+ * Lists fenced code blocks whose info string starts with the given language,
+ * as character offsets: `start` is the opening fence line, `end` is just past
+ * the closing fence line (or the end of content when it is never closed).
+ */
+export function listFencedBlocks(
+    content: string,
+    language: string,
+): FencedBlock[] {
+    const blocks: FencedBlock[] = [];
+    const text = content.replace(/\r\n/g, '\n');
+    let offset = 0;
+    let activeFence: string | null = null;
+    let current: FencedBlock | null = null;
+
+    for (const line of text.split('\n')) {
+        const trimmed = line.trimStart();
+        const fence = /^(`{3,}|~{3,})/.exec(trimmed)?.[1];
+
+        if (fence) {
+            if (activeFence === null) {
+                activeFence = fence;
+                const info = trimmed.slice(fence.length).trim().split(/\s+/)[0];
+
+                current =
+                    info === language
+                        ? { start: offset, end: text.length }
+                        : null;
+            } else if (
+                fence[0] === activeFence[0] &&
+                fence.length >= activeFence.length &&
+                trimmed.slice(fence.length).trim() === ''
+            ) {
+                activeFence = null;
+
+                if (current) {
+                    current.end = offset + line.length + 1;
+                    blocks.push(current);
+                    current = null;
+                }
+            }
+        }
+
+        offset += line.length + 1;
+    }
+
+    if (current) {
+        blocks.push(current);
+    }
+
+    return blocks;
+}

@@ -21,7 +21,7 @@ import {
 import { store as storeImage } from '@/actions/App/Http/Controllers/ArticleImageController';
 import ArticleContent from '@/components/article-content';
 import { Button } from '@/components/ui/button';
-import { listHeadings } from '@/lib/heading-offset';
+import { listFencedBlocks, listHeadings } from '@/lib/heading-offset';
 import { buildAnchors, mapScroll, type ScrollAnchor } from '@/lib/scroll-sync';
 import { cn } from '@/lib/utils';
 
@@ -215,26 +215,55 @@ export default function MarkdownEditor({
             (heading) => heading.level <= 4,
         );
         const rendered = pane.querySelectorAll('.ink-heading');
+        const embeds = listFencedBlocks(textarea.value, 'html-embed');
+        const renderedEmbeds = pane.querySelectorAll('.ink-html-embed');
+        const useHeadings =
+            source.length > 0 && source.length === rendered.length;
+        const useEmbeds =
+            embeds.length > 0 && embeds.length === renderedEmbeds.length;
         let headings: ScrollAnchor[] = [];
 
-        if (source.length > 0 && source.length === rendered.length) {
+        if (useHeadings || useEmbeds) {
             const style = window.getComputedStyle(textarea);
             const mirror = document.createElement('div');
             mirror.style.cssText = `position:fixed;visibility:hidden;left:-200%;top:0;height:auto;white-space:pre-wrap;overflow-wrap:break-word;box-sizing:${style.boxSizing};font:${style.font};line-height:${style.lineHeight};padding:${style.padding};width:${textarea.clientWidth}px`;
             const paddingBottom = Number.parseFloat(style.paddingBottom) || 0;
             const paneTop = pane.getBoundingClientRect().top;
-            document.body.appendChild(mirror);
-            headings = source.map((heading, index) => {
-                mirror.textContent = textarea.value.slice(0, heading.offset);
+            const sourceTop = (offset: number): number => {
+                mirror.textContent = textarea.value.slice(0, offset);
 
-                return {
-                    from: mirror.scrollHeight - paddingBottom,
-                    to:
-                        pane.scrollTop +
-                        rendered[index].getBoundingClientRect().top -
-                        paneTop,
-                };
-            });
+                return mirror.scrollHeight - paddingBottom;
+            };
+            const renderedTop = (element: Element, edge: 'top' | 'bottom') =>
+                pane.scrollTop +
+                element.getBoundingClientRect()[edge] -
+                paneTop;
+            document.body.appendChild(mirror);
+
+            if (useHeadings) {
+                headings = source.map((heading, index) => ({
+                    from: sourceTop(heading.offset),
+                    to: renderedTop(rendered[index], 'top'),
+                }));
+            }
+
+            if (useEmbeds) {
+                for (const [index, embed] of embeds.entries()) {
+                    headings.push(
+                        {
+                            from: sourceTop(embed.start),
+                            to: renderedTop(renderedEmbeds[index], 'top'),
+                        },
+                        {
+                            from: sourceTop(embed.end),
+                            to: renderedTop(renderedEmbeds[index], 'bottom'),
+                        },
+                    );
+                }
+
+                headings.sort((left, right) => left.from - right.from);
+            }
+
             document.body.removeChild(mirror);
         }
 
