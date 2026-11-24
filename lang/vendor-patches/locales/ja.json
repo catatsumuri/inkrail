@@ -253,6 +253,7 @@
     "The backup file :filename will be permanently removed.": "バックアップファイル :filename を完全に削除します。",
     "The backup could not be created.": "バックアップを作成できませんでした。",
     "Backup created.": "バックアップを作成しました。",
+    "Backup created, but :count image file(s) were missing and left out.": "バックアップを作成しましたが、:count 件の画像ファイルが見つからず含まれていません。",
     "The file is not a valid InkRail backup.": "このファイルは有効なInkRailのバックアップではありません。",
     "Backup uploaded.": "バックアップをアップロードしました。",
     "The backup could not be restored.": "バックアップを復元できませんでした。",

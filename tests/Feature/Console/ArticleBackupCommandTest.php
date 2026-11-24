@@ -221,3 +221,39 @@ test('an image that already exists is not overwritten', function () {
     expect(Storage::disk('public')->get(ArticleImage::DIRECTORY.'/'.$name))->toBe('already there');
     expect(ArticleImage::where('path', $name)->exists())->toBeTrue();
 });
+
+test('an image referenced by an article but missing its database row is still backed up', function () {
+    $owner = User::factory()->withUsername('writer')->create();
+    $article = createBackedUpArticle($owner);
+    $bytes = 'untracked-image-bytes';
+    $path = hash('sha256', $bytes).'.png';
+    Storage::disk('public')->put(ArticleImage::DIRECTORY.'/'.$path, $bytes);
+    $article->translations()->where('locale', 'en')->first()->update(['content' => "![shot](/images/{$path})"]);
+
+    $this->artisan('articles:backup', ['--output' => $this->backupPath])->assertSuccessful();
+
+    $zip = new ZipArchive;
+    $zip->open($this->backupPath);
+    expect($zip->getFromName('_files/'.$path))->toBe($bytes);
+    $zip->close();
+
+    wipeArticles();
+    Storage::disk('public')->deleteDirectory(ArticleImage::DIRECTORY);
+    $this->artisan('articles:restore', ['path' => $this->backupPath])->assertSuccessful();
+
+    Storage::disk('public')->assertExists(ArticleImage::DIRECTORY.'/'.$path);
+    expect(ArticleImage::where('path', $path)->value('mime'))->toBe('image/png');
+});
+
+test('referenced images whose files are gone are reported as missing', function () {
+    $owner = User::factory()->withUsername('writer')->create();
+    $article = createBackedUpArticle($owner);
+    $untracked = hash('sha256', 'untracked').'.png';
+    $tracked = ArticleImage::factory()->for($owner)->create(['path' => hash('sha256', 'tracked').'.png']);
+    $article->translations()->where('locale', 'en')->first()->update(['content' => "![a](/images/{$untracked}) ![b](/images/{$tracked->path})"]);
+
+    $this->artisan('articles:backup', ['--output' => $this->backupPath])
+        ->expectsOutputToContain("Image file is missing on disk and was skipped: {$untracked}")
+        ->expectsOutputToContain("Image file is missing on disk and was skipped: {$tracked->path}")
+        ->assertSuccessful();
+});

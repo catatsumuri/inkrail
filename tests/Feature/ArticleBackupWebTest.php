@@ -182,3 +182,14 @@ test('a description survives upload and is removed with the backup', function ()
     $this->actingAs($this->owner)->get(route('dashboard'))
         ->assertInertia(fn (Assert $page) => $page->where('backups.items.0.description', 'keep me'));
 });
+
+test('creating a backup warns when referenced image files are missing', function () {
+    config(['articles.image_disk' => 'public']);
+    Storage::fake('public');
+    $article = $this->owner->articles()->create(['slug' => 'with-image']);
+    $article->replaceTranslations(['en' => ['title' => 'T', 'content' => '![x](/images/'.hash('sha256', 'gone').'.png)']]);
+
+    $this->actingAs($this->owner)->post(route('backups.store'))
+        ->assertRedirect(route('dashboard'))
+        ->assertInertiaFlash('toast.type', 'warning');
+});

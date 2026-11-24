@@ -2,6 +2,7 @@
 
 namespace App\Actions\Backup;
 
+use App\Actions\StoreArticleImage;
 use App\Models\ArticleImage;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -68,6 +69,24 @@ class CreateArticleBackup
             ];
         }
 
+        foreach ($this->untrackedReferencedImages() as $path => $mime) {
+            if (! $disk->exists(ArticleImage::DIRECTORY.'/'.$path)) {
+                $missingImages[] = $path;
+
+                continue;
+            }
+
+            $zip->addFromString(self::FILES_DIRECTORY.$path, (string) $disk->get(ArticleImage::DIRECTORY.'/'.$path));
+            $images[] = [
+                'path' => $path,
+                'mime' => $mime,
+                'size' => $disk->size(ArticleImage::DIRECTORY.'/'.$path),
+                'owner' => null,
+                'created_at' => now()->toIso8601String(),
+                'updated_at' => now()->toIso8601String(),
+            ];
+        }
+
         $data = [
             'namespaces' => $namespaces->map(fn (object $namespace): array => [
                 'name' => $namespace->name,
@@ -97,6 +116,42 @@ class CreateArticleBackup
             'images' => count($images),
             'missing_images' => $missingImages,
         ];
+    }
+
+    /**
+     * Images that articles, revisions or eyecatches point to but that have no
+     * article_images row, mapped to their MIME type. Without this they would
+     * silently be left out of the archive.
+     *
+     * @return array<string, string>
+     */
+    private function untrackedReferencedImages(): array
+    {
+        $known = array_flip(ArticleImage::query()->pluck('path')->all());
+        $pattern = '/(?<![0-9a-f])[0-9a-f]{64}\.(png|jpg|gif|webp)\b/';
+        $found = [];
+
+        $scan = function (?string $text) use ($pattern, $known, &$found): void {
+            if ($text !== null && preg_match_all($pattern, $text, $matches) > 0) {
+                foreach ($matches[0] as $index => $path) {
+                    if (! isset($known[$path])) {
+                        $found[$path] = array_flip(StoreArticleImage::EXTENSIONS)[$matches[1][$index]];
+                    }
+                }
+            }
+        };
+
+        foreach (['article_revisions', 'article_translations'] as $table) {
+            foreach (DB::table($table)->select('content')->orderBy('id')->cursor() as $row) {
+                $scan($row->content);
+            }
+        }
+
+        foreach (DB::table('articles')->whereNotNull('zenn_frontmatter')->pluck('zenn_frontmatter') as $frontmatter) {
+            $scan($frontmatter);
+        }
+
+        return $found;
     }
 
     /**
