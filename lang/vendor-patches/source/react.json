@@ -226,6 +226,8 @@
     "Acquiring repository lock.": "Acquiring repository lock.",
     "Committing article.": "Committing article.",
     "Topics": "Topics",
+    "All topics": "All topics",
+    "No articles match this topic.": "No articles match this topic.",
     "Separate topics with commas. Add up to 5 topics, shared across article languages.": "Separate topics with commas. Add up to 5 topics, shared across article languages.",
     "Reading the article list from GitHub.": "Reading the article list from GitHub.",
     "Reading article :current of :total.": "Reading article :current of :total.",

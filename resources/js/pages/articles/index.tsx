@@ -1,5 +1,6 @@
 import ArticlePublicationTime from '@/components/article-publication-time';
 import ArticleLanguageNotice from '@/components/article-language-notice';
+import ArticleTopicFilter from '@/components/article-topic-filter';
 import TranslationStatus from '@/components/translation-status';
 import { lang } from '@erag/lang-sync-inertia/react';
 import { Head, Link, setLayoutProps } from '@inertiajs/react';
@@ -24,6 +25,7 @@ type Articles = {
         Article,
         | 'id'
         | 'title'
+        | 'topics'
         | 'slug'
         | 'resolvedLocale'
         | 'is_published'
@@ -35,8 +37,17 @@ type Articles = {
     next_page_url: string | null;
 };
 
-export default function Index({ articles }: { articles: Articles }) {
+export default function Index({
+    articles,
+    topics,
+    selectedTopic,
+}: {
+    articles: Articles;
+    topics: string[];
+    selectedTopic: string | null;
+}) {
     const { __ } = lang();
+    const topicUrl = (topic: string | null) => index.url({ query: { topic } });
     setLayoutProps({ breadcrumbs: [{ title: __('Articles'), href: index() }] });
     return (
         <>
@@ -60,7 +71,16 @@ export default function Index({ articles }: { articles: Articles }) {
                         </Link>
                     </Button>
                 </header>
-                {articles.data.length === 0 ? (
+                <ArticleTopicFilter
+                    topics={topics}
+                    selectedTopic={selectedTopic}
+                    topicUrl={topicUrl}
+                />
+                {articles.data.length === 0 && selectedTopic !== null ? (
+                    <div className="rounded-xl border border-dashed px-6 py-16 text-center text-sm text-muted-foreground">
+                        {__('No articles match this topic.')}
+                    </div>
+                ) : articles.data.length === 0 ? (
                     <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed px-6 py-16 text-center">
                         <FileText
                             aria-hidden="true"
@@ -117,6 +137,21 @@ export default function Index({ articles }: { articles: Articles }) {
                                     <ArticleLanguageNotice
                                         resolvedLocale={article.resolvedLocale}
                                     />
+                                    {article.topics &&
+                                        article.topics.length > 0 && (
+                                            <div className="flex flex-wrap gap-2">
+                                                {article.topics.map((topic) => (
+                                                    <Link
+                                                        key={topic}
+                                                        href={topicUrl(topic)}
+                                                        preserveScroll
+                                                        className="rounded-full border px-2.5 py-1 text-xs break-all text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+                                                    >
+                                                        {topic}
+                                                    </Link>
+                                                ))}
+                                            </div>
+                                        )}
                                     <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                                         <Badge
                                             variant="secondary"

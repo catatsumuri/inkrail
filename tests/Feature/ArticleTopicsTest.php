@@ -83,3 +83,77 @@ test('another user cannot modify article topics', function () {
 
     expect($article->fresh()->topics)->toBe(['original']);
 });
+
+test('visitors can filter published articles by exact topic and keep the filter across pages', function () {
+    config(['articles.public_index_enabled' => true]);
+    $this->freezeTime();
+    $owner = User::factory()->create();
+    for ($i = 1; $i <= 21; $i++) {
+        $owner->articles()->create(['title' => "Match $i", 'is_published' => true, 'topics' => ['php', '日本語']]);
+    }
+    $owner->articles()->create(['title' => 'Other', 'is_published' => true, 'topics' => ['phpstan']]);
+    $owner->articles()->create(['title' => 'Draft', 'topics' => ['private', 'php']]);
+    $owner->articles()->create(['title' => 'Scheduled', 'is_published' => true, 'published_at' => now()->addDay(), 'topics' => ['scheduled', 'php']]);
+
+    $this->get(route('public.articles.index', ['topic' => 'php']))->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->where('selectedTopic', 'php')
+            ->where('topics', ['php', 'phpstan', '日本語'])
+            ->where('articles.total', 21)->has('articles.data', 20)
+            ->where('articles.data.0.topics', ['php', '日本語'])
+            ->where('articles.next_page_url', route('public.articles.index', ['topic' => 'php', 'page' => 2])));
+    $this->get(route('public.articles.index', ['topic' => 'php', 'page' => 2]))->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->has('articles.data', 1)->where('articles.data.0.title', 'Match 21')
+            ->where('selectedTopic', 'php')->where('topics', ['php', 'phpstan', '日本語']));
+    $this->get(route('public.articles.index'))->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->where('selectedTopic', null)->where('articles.total', 22));
+});
+
+test('owners can filter their articles including drafts without exposing other owners topics', function () {
+    $owner = User::factory()->create();
+    for ($i = 1; $i <= 21; $i++) {
+        $owner->articles()->create(['title' => "Draft $i", 'topics' => ['日本語']]);
+    }
+    $owner->articles()->create(['title' => 'Other topic', 'topics' => ['other']]);
+    User::factory()->create()->articles()->create(['title' => 'Private', 'topics' => ['secret', '日本語']]);
+
+    $this->actingAs($owner)->get(route('articles.index', ['topic' => '日本語']))->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->where('selectedTopic', '日本語')->where('topics', ['other', '日本語'])
+            ->where('articles.total', 21)->has('articles.data', 20)
+            ->where('articles.data.0.topics', ['日本語'])
+            ->where('articles.next_page_url', route('articles.index', ['topic' => '日本語', 'page' => 2])));
+    $this->get(route('articles.index', ['topic' => '日本語', 'page' => 2]))->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->has('articles.data', 1)->where('articles.data.0.title', 'Draft 1'));
+    $this->get(route('articles.index'))->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->where('selectedTopic', null)->where('articles.total', 22)
+            ->where('articles.data.0.topics', ['other']));
+});
+
+test('public topic choices respect showcase visibility in demo mode', function () {
+    config(['articles.public_index_enabled' => true, 'app.demo_mode' => true]);
+    User::factory()->create(['is_showcase_owner' => true])->articles()->create(['title' => 'Showcase', 'is_published' => true, 'topics' => ['showcase']]);
+    User::factory()->create()->articles()->create(['title' => 'Visitor', 'is_published' => true, 'topics' => ['visitor', 'showcase']]);
+
+    $this->get(route('public.articles.index', ['topic' => 'showcase']))->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->where('topics', ['showcase'])
+            ->has('articles.data', 1)->where('articles.data.0.title', 'Showcase'));
+});
+
+test('unknown topics return an empty list without changing the available choices', function (string $routeName) {
+    config(['articles.public_index_enabled' => true]);
+    $owner = User::factory()->create();
+    $owner->articles()->create(['title' => 'Article', 'is_published' => true, 'topics' => ['php']]);
+
+    $this->actingAs($owner)->get(route($routeName, ['topic' => "' OR 1=1 --"]))->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->has('articles.data', 0)
+            ->where('selectedTopic', "' OR 1=1 --")->where('topics', ['php']));
+})->with(['public.articles.index', 'articles.index']);
+
+test('article lists reject invalid topic filters', function (string $routeName, mixed $topic) {
+    config(['articles.public_index_enabled' => true]);
+
+    $this->actingAs(User::factory()->create())->getJson(route($routeName, ['topic' => $topic]))
+        ->assertUnprocessable()->assertJsonValidationErrors('topic');
+})->with(['public.articles.index', 'articles.index'])->with([
+    'array' => [['php']],
+    'too long' => [str_repeat('a', 256)],
+]);

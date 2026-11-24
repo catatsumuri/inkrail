@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Article;
 use App\Support\ArticleEyecatch;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -18,10 +19,18 @@ class ArticleController extends Controller
 {
     public function index(Request $request): Response
     {
+        $topic = $request->validate(['topic' => ['nullable', 'string', 'max:255']])['topic'] ?? null;
+        $articles = $request->user()->articles()->getQuery();
+        $topics = (clone $articles)->without('translations')->select('zenn_frontmatter')->get()
+            ->flatMap(fn (Article $article): array => $article->topics)->unique()->sort()->values()->all();
+
         return Inertia::render('articles/index', [
-            'articles' => $request->user()->articles()
+            'topics' => $topics,
+            'selectedTopic' => $topic,
+            'articles' => $articles
+                ->when($topic !== null, fn (Builder $query): Builder => $query->whereJsonContains('zenn_frontmatter->topics', $topic))
                 ->with(['allTranslations', 'latestReview'])
-                ->select(['id', 'slug', 'is_published', 'published_at'])->latest('id')->paginate(20)->through(fn (Article $article): array => [...$article->only(['id', 'title', 'slug', 'is_published', 'published_at']), 'publication_status' => $article->publicationStatus(), ...$article->languageMetadata(), 'translationStatus' => $article->translationStatus()]),
+                ->select(['id', 'slug', 'is_published', 'published_at', 'zenn_frontmatter'])->latest('id')->paginate(20)->withQueryString()->through(fn (Article $article): array => [...$article->only(['id', 'title', 'slug', 'topics', 'is_published', 'published_at']), 'publication_status' => $article->publicationStatus(), ...$article->languageMetadata(), 'translationStatus' => $article->translationStatus()]),
         ]);
     }
 

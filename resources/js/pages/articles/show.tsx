@@ -411,6 +411,19 @@ export default function Show({
                         <h1 className="text-3xl leading-tight font-semibold tracking-tight break-words sm:text-4xl">
                             {article.title}
                         </h1>
+                        {article.topics && article.topics.length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                                {article.topics.map((topic) => (
+                                    <Link
+                                        key={topic}
+                                        href={index({ query: { topic } })}
+                                        className="rounded-full border px-3 py-1 text-xs break-all text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                                    >
+                                        {topic}
+                                    </Link>
+                                ))}
+                            </div>
+                        )}
                         {article.published_at && (
                             <div className="flex flex-wrap items-baseline gap-x-2 text-sm text-muted-foreground">
                                 <span>

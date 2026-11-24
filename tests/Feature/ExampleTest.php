@@ -12,7 +12,7 @@ test('returns a successful response', function () {
 });
 
 test('the welcome page follows the public index setting', function (bool $enabled) {
-    config(['articles.public_index_enabled' => $enabled]);
+    config(['articles.public_index_enabled' => $enabled, 'articles.home_page' => 'welcome']);
 
     $this->get(route('home'))->assertOk()
         ->assertInertia(fn (Assert $page) => $page->component('welcome')
