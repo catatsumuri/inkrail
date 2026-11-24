@@ -277,5 +277,7 @@
     "Publication date (JST)": "公開日時（日本時間）",
     "Scheduled": "予約中",
     "Changing a published article to a future date hides it until that date.": "公開済み記事を未来日時に変更すると、その日時まで非公開になります。",
-    "Publication dates are sent to Zenn in Japan time. Zenn may restrict changes to an existing publication date.": "公開日時は日本時間でZennへ送信します。Zenn側では設定済みの公開日時の変更が制限される場合があります。"
+    "Publication dates are sent to Zenn in Japan time. Zenn may restrict changes to an existing publication date.": "公開日時は日本時間でZennへ送信します。Zenn側では設定済みの公開日時の変更が制限される場合があります。",
+    "Scheduled publication:": "公開予定：",
+    "Published at:": "公開日時："
 }

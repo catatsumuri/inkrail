@@ -94,7 +94,17 @@ export default function Index({ articles }: { articles: Articles }) {
                                         className="block w-fit rounded-sm text-lg leading-snug font-medium tracking-tight break-words transition-colors hover:text-muted-foreground focus-visible:outline-2 focus-visible:outline-ring sm:text-xl"
                                     >
                                         {article.title}
-                                        {article.published_at && (
+                                    </Link>
+                                    {article.published_at && (
+                                        <div className="flex flex-wrap items-baseline gap-x-2 text-sm text-muted-foreground">
+                                            <span>
+                                                {__(
+                                                    article.publication_status ===
+                                                        'scheduled'
+                                                        ? 'Scheduled publication:'
+                                                        : 'Published at:',
+                                                )}
+                                            </span>
                                             <ArticlePublicationTime
                                                 date={article.published_at}
                                                 scheduled={
@@ -102,8 +112,8 @@ export default function Index({ articles }: { articles: Articles }) {
                                                     'scheduled'
                                                 }
                                             />
-                                        )}
-                                    </Link>
+                                        </div>
+                                    )}
                                     <ArticleLanguageNotice
                                         resolvedLocale={article.resolvedLocale}
                                     />
