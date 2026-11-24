@@ -13,11 +13,12 @@ import { EditorState, type Text } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
 import { tags } from '@lezer/highlight';
 import { useEffect, useRef, type RefObject } from 'react';
+import type { EditorHandle } from '@/components/editor-handle';
 
 type Props = {
     id: string;
     defaultValue: string;
-    viewRef: RefObject<EditorView | null>;
+    handleRef: RefObject<EditorHandle | null>;
     onChange: (value: string) => void;
     onScroll: () => void;
     onImageFile: (file: File) => void;
@@ -143,7 +144,7 @@ const theme = EditorView.theme({
 export default function CodeEditor({
     id,
     defaultValue,
-    viewRef,
+    handleRef,
     onChange,
     onScroll,
     onImageFile,
@@ -263,7 +264,42 @@ export default function CodeEditor({
             }),
         });
 
-        viewRef.current = view;
+        handleRef.current = {
+            getValue: () => view.state.doc.toString(),
+            insertAtCursor: (text) => {
+                const { from, to } = view.state.selection.main;
+
+                view.dispatch({
+                    changes: { from, to, insert: text },
+                    selection: { anchor: from + text.length },
+                });
+                view.focus();
+            },
+            scroller: () => view.scrollDOM,
+            tops: (offsets) =>
+                offsets.map(
+                    (offset) =>
+                        view.lineBlockAt(
+                            Math.min(offset, view.state.doc.length),
+                        ).top,
+                ),
+            layoutKey: () =>
+                `${view.contentHeight}:${view.scrollDOM.clientWidth}`,
+            jumpTo: (offset) => {
+                const line = view.state.doc.lineAt(
+                    Math.max(0, Math.min(offset, view.state.doc.length)),
+                );
+
+                view.dispatch({
+                    selection: { anchor: line.from, head: line.to },
+                    effects: EditorView.scrollIntoView(line.from, {
+                        y: 'start',
+                        yMargin: view.defaultLineHeight * 2,
+                    }),
+                });
+                view.focus();
+            },
+        };
 
         const folds = [];
 
@@ -279,7 +315,7 @@ export default function CodeEditor({
 
         return () => {
             view.destroy();
-            viewRef.current = null;
+            handleRef.current = null;
         };
         // The editor owns its document after mount; props are read via refs.
         // eslint-disable-next-line react-hooks/exhaustive-deps

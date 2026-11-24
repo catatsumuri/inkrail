@@ -1,6 +1,7 @@
 import { lang } from '@erag/lang-sync-inertia/react';
 import { useHttp } from '@inertiajs/react';
 import {
+    AlignLeft,
     Code2,
     Columns2,
     Eye,
@@ -11,7 +12,6 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { slugify } from '@catatsumuri/inkstream/advanced';
-import { EditorView } from '@codemirror/view';
 import {
     useDeferredValue,
     useEffect,
@@ -22,7 +22,10 @@ import {
 import { store as storeImage } from '@/actions/App/Http/Controllers/ArticleImageController';
 import ArticleContent from '@/components/article-content';
 import CodeEditor from '@/components/code-editor';
+import type { EditorHandle } from '@/components/editor-handle';
+import PlainEditor from '@/components/plain-editor';
 import { Button } from '@/components/ui/button';
+import { useEditorMode } from '@/hooks/use-editor-mode';
 import { listFencedBlocks, listHeadings } from '@/lib/heading-offset';
 import { buildAnchors, mapScroll, type ScrollAnchor } from '@/lib/scroll-sync';
 import { cn } from '@/lib/utils';
@@ -47,6 +50,7 @@ export default function MarkdownEditor({
     jumpTo,
 }: Props) {
     const { __ } = lang();
+    const [editorMode, setEditorMode] = useEditorMode();
     const [content, setContent] = useState(defaultValue);
     const preview = useDeferredValue(content);
 
@@ -120,7 +124,7 @@ export default function MarkdownEditor({
         image: null,
     });
 
-    const viewRef = useRef<EditorView | null>(null);
+    const handleRef = useRef<EditorHandle | null>(null);
     const previewRef = useRef<HTMLDivElement>(null);
 
     const anchorCache = useRef<{
@@ -147,23 +151,13 @@ export default function MarkdownEditor({
                     );
                 },
             });
-            const view = viewRef.current;
+            const alt =
+                file.name
+                    .replace(/\.[^.]+$/, '')
+                    .replace(/[[\]]/g, '')
+                    .trim() || 'image';
 
-            if (view) {
-                const alt =
-                    file.name
-                        .replace(/\.[^.]+$/, '')
-                        .replace(/[[\]]/g, '')
-                        .trim() || 'image';
-                const markdown = `![${alt}](${url})\n`;
-                const { from, to } = view.state.selection.main;
-
-                view.dispatch({
-                    changes: { from, to, insert: markdown },
-                    selection: { anchor: from + markdown.length },
-                });
-                view.focus();
-            }
+            handleRef.current?.insertAtCursor(`![${alt}](${url})\n`);
         } catch {
             if (!reported) {
                 toast.error(__('Could not upload the image.'));
@@ -174,14 +168,14 @@ export default function MarkdownEditor({
     }
 
     function measureAnchors(
-        view: EditorView,
+        handle: EditorHandle,
         pane: HTMLDivElement,
     ): ScrollAnchor[] {
-        const scroller = view.scrollDOM;
+        const scroller = handle.scroller();
         const maxFrom = scroller.scrollHeight - scroller.clientHeight;
         const maxTo = pane.scrollHeight - pane.clientHeight;
-        const value = view.state.doc.toString();
-        const key = `${value.length}:${view.contentHeight}:${scroller.clientWidth}:${pane.scrollHeight}`;
+        const value = handle.getValue();
+        const key = `${editorMode}:${value.length}:${handle.layoutKey()}:${pane.scrollHeight}`;
 
         if (anchorCache.current?.key === key) {
             return anchorCache.current.anchors;
@@ -201,29 +195,35 @@ export default function MarkdownEditor({
 
         if (useHeadings || useEmbeds) {
             const paneTop = pane.getBoundingClientRect().top;
-            const sourceTop = (offset: number): number =>
-                view.lineBlockAt(Math.min(offset, value.length)).top;
+            const offsets = [
+                ...(useHeadings ? source.map((heading) => heading.offset) : []),
+                ...(useEmbeds
+                    ? embeds.flatMap((embed) => [embed.start, embed.end])
+                    : []),
+            ];
+            const tops = handle.tops(offsets);
+            let next = 0;
             const renderedTop = (element: Element, edge: 'top' | 'bottom') =>
                 pane.scrollTop +
                 element.getBoundingClientRect()[edge] -
                 paneTop;
 
             if (useHeadings) {
-                headings = source.map((heading, index) => ({
-                    from: sourceTop(heading.offset),
+                headings = source.map((_, index) => ({
+                    from: tops[next++],
                     to: renderedTop(rendered[index], 'top'),
                 }));
             }
 
             if (useEmbeds) {
-                for (const [index, embed] of embeds.entries()) {
+                for (const index of embeds.keys()) {
                     headings.push(
                         {
-                            from: sourceTop(embed.start),
+                            from: tops[next++],
                             to: renderedTop(renderedEmbeds[index], 'top'),
                         },
                         {
-                            from: sourceTop(embed.end),
+                            from: tops[next++],
                             to: renderedTop(renderedEmbeds[index], 'bottom'),
                         },
                     );
@@ -240,21 +240,21 @@ export default function MarkdownEditor({
     }
 
     function syncPreview() {
-        const view = viewRef.current;
+        const handle = handleRef.current;
         const pane = previewRef.current;
 
         if (
-            !view ||
+            !handle ||
             !pane ||
             visiblePanel !== 'both' ||
             (!maximized && !window.matchMedia('(min-width: 1024px)').matches) ||
-            view.scrollDOM.scrollHeight <= view.scrollDOM.clientHeight
+            handle.scroller().scrollHeight <= handle.scroller().clientHeight
         ) {
             return;
         }
 
-        const scroller = view.scrollDOM;
-        const anchors = measureAnchors(view, pane);
+        const scroller = handle.scroller();
+        const anchors = measureAnchors(handle, pane);
 
         pane.scrollTop =
             anchors.length > 1
@@ -265,25 +265,22 @@ export default function MarkdownEditor({
     }
 
     useEffect(() => {
-        const view = viewRef.current;
+        const handle = handleRef.current;
 
-        if (!view || jumpTo === undefined || !Number.isFinite(jumpTo)) {
+        if (!handle || jumpTo === undefined || !Number.isFinite(jumpTo)) {
             return;
         }
 
-        const start = Math.max(0, Math.min(jumpTo, view.state.doc.length));
-        const line = view.state.doc.lineAt(start);
+        handle.jumpTo(jumpTo);
 
-        view.dispatch({
-            selection: { anchor: line.from, head: line.to },
-            effects: EditorView.scrollIntoView(line.from, {
-                y: 'start',
-                yMargin: view.defaultLineHeight * 2,
-            }),
-        });
-        view.focus();
-
-        const heading = /^#{1,6}\s+(.+?)(?:\s+#+\s*)?$/.exec(line.text);
+        const value = handle.getValue();
+        const start = Math.max(0, Math.min(jumpTo, value.length));
+        const lineEnd = value.indexOf('\n', start);
+        const line = value.slice(
+            value.lastIndexOf('\n', start - 1) + 1,
+            lineEnd === -1 ? value.length : lineEnd,
+        );
+        const heading = /^#{1,6}\s+(.+?)(?:\s+#+\s*)?$/.exec(line);
         const preview = previewRef.current;
         const target = heading
             ? preview?.querySelector(`#${CSS.escape(slugify(heading[1]))}`)
@@ -299,6 +296,12 @@ export default function MarkdownEditor({
             });
         }
     }, [jumpTo]);
+
+    const editorClassName = cn(
+        'h-[60vh] min-h-80 w-full',
+        maximized && 'h-auto min-h-0 flex-1',
+        dragging && 'bg-muted/50 ring-2 ring-ring ring-inset',
+    );
 
     return (
         <div
@@ -344,12 +347,38 @@ export default function MarkdownEditor({
                         </Button>
                     );
                 })}
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="ml-auto"
+                    aria-pressed={editorMode === 'plain'}
+                    title={
+                        editorMode === 'plain'
+                            ? __('Switch to the code editor')
+                            : __('Switch to the plain text editor')
+                    }
+                    onClick={() => {
+                        anchorCache.current = null;
+                        setEditorMode(
+                            editorMode === 'plain' ? 'codemirror' : 'plain',
+                        );
+                    }}
+                >
+                    {editorMode === 'plain' ? (
+                        <Code2 aria-hidden="true" />
+                    ) : (
+                        <AlignLeft aria-hidden="true" />
+                    )}
+                    {editorMode === 'plain'
+                        ? __('Code editor')
+                        : __('Plain text')}
+                </Button>
                 {!maximized && (
                     <Button
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="ml-auto"
                         onClick={() => void maximize()}
                     >
                         <Maximize2 aria-hidden="true" />
@@ -361,7 +390,6 @@ export default function MarkdownEditor({
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="ml-auto"
                         onClick={() => void document.exitFullscreen()}
                     >
                         <Minimize2 aria-hidden="true" />
@@ -432,24 +460,39 @@ export default function MarkdownEditor({
                             )}
                         </div>
                     </div>
-                    <input type="hidden" name={name} value={content} />
-                    <CodeEditor
-                        id={id}
-                        defaultValue={defaultValue}
-                        viewRef={viewRef}
-                        onChange={setContent}
-                        onScroll={syncPreview}
-                        onImageFile={(file) => void uploadImage(file)}
-                        onDraggingChange={setDragging}
-                        invalid={invalid}
-                        describedBy={describedBy}
-                        className={cn(
-                            'h-[60vh] min-h-80 w-full',
-                            maximized && 'h-auto min-h-0 flex-1',
-                            dragging &&
-                                'bg-muted/50 ring-2 ring-ring ring-inset',
-                        )}
-                    />
+                    {editorMode === 'plain' ? (
+                        <PlainEditor
+                            key="plain"
+                            id={id}
+                            name={name}
+                            defaultValue={content}
+                            handleRef={handleRef}
+                            onChange={setContent}
+                            onScroll={syncPreview}
+                            onImageFile={(file) => void uploadImage(file)}
+                            onDraggingChange={setDragging}
+                            invalid={invalid}
+                            describedBy={describedBy}
+                            className={editorClassName}
+                        />
+                    ) : (
+                        <>
+                            <input type="hidden" name={name} value={content} />
+                            <CodeEditor
+                                key="codemirror"
+                                id={id}
+                                defaultValue={content}
+                                handleRef={handleRef}
+                                onChange={setContent}
+                                onScroll={syncPreview}
+                                onImageFile={(file) => void uploadImage(file)}
+                                onDraggingChange={setDragging}
+                                invalid={invalid}
+                                describedBy={describedBy}
+                                className={editorClassName}
+                            />
+                        </>
+                    )}
                 </div>
                 <div
                     role="separator"
