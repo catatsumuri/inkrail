@@ -1,5 +1,7 @@
 import { lang } from '@erag/lang-sync-inertia/react';
-import { useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { ArrowLeft, Check, LoaderCircle, Save } from 'lucide-react';
 import { Form, Link, usePage } from '@inertiajs/react';
 import {
     store,
@@ -30,7 +32,29 @@ export default function ArticleForm({ article }: { article?: Article }) {
         .split(',')
         .map((topic) => topic.trim())
         .filter(Boolean);
-    const [loadedVersion] = useState(article?.edit_version ?? 0);
+    const [loadedVersion, setLoadedVersion] = useState(
+        article?.edit_version ?? 0,
+    );
+    const continueEditing = useRef(true);
+    const formId = useId();
+    const [saveButtonTarget, setSaveButtonTarget] = useState<Element | null>(
+        null,
+    );
+
+    useEffect(() => {
+        function updateSaveButtonTarget() {
+            setSaveButtonTarget(document.fullscreenElement ?? document.body);
+        }
+
+        updateSaveButtonTarget();
+        document.addEventListener('fullscreenchange', updateSaveButtonTarget);
+
+        return () =>
+            document.removeEventListener(
+                'fullscreenchange',
+                updateSaveButtonTarget,
+            );
+    }, []);
     const [{ jumpTo, jumpLocale }] = useState(() => {
         const params = new URLSearchParams(window.location.search);
         const jump = params.get('jump');
@@ -49,15 +73,34 @@ export default function ArticleForm({ article }: { article?: Article }) {
     });
     return (
         <Form
+            id={formId}
             {...(article ? update.form(article.id) : store.form())}
             transform={({ topics_input, ...data }) => ({
                 ...data,
+                continue_editing: continueEditing.current,
                 topics: String(topics_input ?? '')
                     .split(',')
                     .map((topic) => topic.trim())
                     .filter(Boolean),
             })}
             data-article-form
+            options={{ preserveScroll: () => continueEditing.current }}
+            onSubmitCapture={(event) => {
+                const submitter = (event.nativeEvent as SubmitEvent).submitter;
+                continueEditing.current = !(
+                    submitter instanceof HTMLButtonElement &&
+                    submitter.value === 'finish'
+                );
+            }}
+            onSuccess={(page) => {
+                const savedArticle = page.props.article as Article | undefined;
+                if (
+                    savedArticle?.id === article?.id &&
+                    savedArticle?.edit_version !== undefined
+                ) {
+                    setLoadedVersion(savedArticle.edit_version);
+                }
+            }}
             onError={(errors) => {
                 const invalidLanguage = articleLocales.find((language) =>
                     Object.keys(errors).some((key) =>
@@ -66,9 +109,9 @@ export default function ArticleForm({ article }: { article?: Article }) {
                 );
                 if (invalidLanguage) setEditingLocale(invalidLanguage);
             }}
-            className="grid gap-6"
+            className="grid gap-6 pb-24"
         >
-            {({ errors, processing }) => (
+            {({ errors, processing, recentlySuccessful }) => (
                 <>
                     {article && (
                         <>
@@ -251,14 +294,56 @@ export default function ArticleForm({ article }: { article?: Article }) {
                             <InputError message={errors.is_published} />
                         </div>
                     )}
-                    <div className="flex items-center gap-4">
-                        <Button disabled={processing || uploadingEyecatch}>
-                            {__('Save')}
+                    <div className="flex flex-wrap items-center gap-3 border-t pt-6">
+                        <Button
+                            type="submit"
+                            value="finish"
+                            disabled={processing || uploadingEyecatch}
+                        >
+                            <Check aria-hidden="true" />
+                            {__('Save and view article')}
                         </Button>
-                        <Link href={article ? show(article.id) : index()}>
-                            {__('Cancel')}
-                        </Link>
+                        <Button asChild variant="outline">
+                            <Link href={article ? show(article.id) : index()}>
+                                <ArrowLeft aria-hidden="true" />
+                                {__('Back without saving')}
+                            </Link>
+                        </Button>
                     </div>
+                    {saveButtonTarget &&
+                        createPortal(
+                            <Button
+                                type="submit"
+                                value="continue"
+                                form={formId}
+                                disabled={processing || uploadingEyecatch}
+                                className="fixed right-4 bottom-4 z-40 h-12 min-w-40 rounded-full bg-blue-600 px-6 text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700 focus-visible:ring-blue-500/50 sm:right-8 sm:bottom-6 dark:bg-blue-500 dark:hover:bg-blue-600"
+                                title={__('Save and keep editing')}
+                            >
+                                {processing ? (
+                                    <LoaderCircle
+                                        aria-hidden="true"
+                                        className="animate-spin"
+                                    />
+                                ) : Object.keys(errors).length > 0 ? (
+                                    <Save aria-hidden="true" />
+                                ) : recentlySuccessful ? (
+                                    <Check aria-hidden="true" />
+                                ) : (
+                                    <Save aria-hidden="true" />
+                                )}
+                                <span aria-live="polite">
+                                    {processing
+                                        ? __('Saving…')
+                                        : Object.keys(errors).length > 0
+                                          ? __('Save failed')
+                                          : recentlySuccessful
+                                            ? __('Saved')
+                                            : __('Save')}
+                                </span>
+                            </Button>,
+                            saveButtonTarget,
+                        )}
                 </>
             )}
         </Form>

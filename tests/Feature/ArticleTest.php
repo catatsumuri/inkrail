@@ -183,3 +183,53 @@ test('normal seeding preserves user articles without adding samples', function (
     $this->assertDatabaseCount('articles', 1);
     expect($article->fresh())->title->toBe('My introduction')->content->toBe('My own text')->slug->toBe('welcome-to-inkrail');
 });
+
+test('saving a new article can continue on its edit screen', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)->post(route('articles.store'), [
+        'title' => 'First draft', 'content' => 'Work in progress', 'continue_editing' => true,
+    ])->assertSessionHasNoErrors()->assertRedirect(route('articles.edit', $user->articles()->sole()));
+
+    expect($user->articles()->sole())->title->toBe('First draft')->content->toBe('Work in progress');
+});
+
+test('owners can save repeatedly and receive the next edit version without leaving editing', function () {
+    $user = User::factory()->create();
+    $article = $user->articles()->create(['title' => 'Draft', 'content' => 'Original']);
+    $this->actingAs($user);
+    $version = $article->fresh()->edit_version;
+
+    foreach (['First save', 'Second save'] as $content) {
+        $this->patch(route('articles.update', $article), [
+            'edit_version' => $version,
+            'continue_editing' => true,
+            'translations' => ['en' => ['title' => 'Draft', 'content' => $content]],
+        ])->assertSessionHasNoErrors()->assertRedirect(route('articles.edit', $article));
+
+        $article->refresh();
+        expect($article->translations->firstWhere('locale', 'en')->content)->toBe($content);
+        expect($article->edit_version)->toBeGreaterThan($version);
+        $version = $article->edit_version;
+        $this->get(route('articles.edit', $article))->assertInertia(fn (Assert $page) => $page
+            ->component('articles/edit')->where('article.edit_version', $version)
+            ->where('article.translations.en.content', $content));
+    }
+});
+
+test('continuing editing preserves validation and conflict protection', function () {
+    $article = User::factory()->create()->articles()->create(['title' => 'Draft', 'content' => 'Original']);
+    $this->actingAs($article->user);
+    $version = $article->edit_version;
+
+    $this->from(route('articles.edit', $article))->patch(route('articles.update', $article), [
+        'edit_version' => $version, 'continue_editing' => true, 'title' => '',
+    ])->assertSessionHasErrors('title')->assertRedirect(route('articles.edit', $article));
+
+    $article->replaceTranslations(['en' => ['title' => 'Latest', 'content' => 'Saved elsewhere']]);
+    $this->patch(route('articles.update', $article), [
+        'edit_version' => $version, 'continue_editing' => true, 'title' => 'Stale',
+    ])->assertSessionHasErrors('edit_version');
+
+    expect($article->fresh()->translations->firstWhere('locale', 'en'))->title->toBe('Latest')->content->toBe('Saved elsewhere');
+});

@@ -43,7 +43,7 @@ class ArticleController extends Controller
             return $article;
         });
 
-        return to_route('articles.show', $article);
+        return to_route($request->boolean('continue_editing') ? 'articles.edit' : 'articles.show', $article);
     }
 
     public function show(Article $article): Response
@@ -83,7 +83,7 @@ class ArticleController extends Controller
             }
         });
 
-        return to_route('articles.show', $article);
+        return to_route($request->boolean('continue_editing') ? 'articles.edit' : 'articles.show', $article);
     }
 
     public function destroy(Article $article): RedirectResponse
