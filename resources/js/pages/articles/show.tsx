@@ -1,3 +1,4 @@
+import ArticleTitleHeader from '@/components/article-title-header';
 import ArticlePublicationTime from '@/components/article-publication-time';
 import { useEffect, useState } from 'react';
 import ArticleLanguageNotice from '@/components/article-language-notice';
@@ -213,7 +214,7 @@ export default function Show({
                                         <Button
                                             asChild
                                             variant="ghost"
-                                            size="icon"
+                                            size="sm"
                                         >
                                             <Link
                                                 href={publicShow(article.slug)}
@@ -224,6 +225,7 @@ export default function Show({
                                                 )}
                                             >
                                                 <ExternalLink aria-hidden="true" />
+                                                {__('View public page')}
                                             </Link>
                                         </Button>
                                     </TooltipTrigger>
@@ -439,9 +441,10 @@ export default function Show({
                                 {article.slug}
                             </span>
                         </div>
-                        <h1 className="text-3xl leading-tight font-semibold tracking-tight break-words sm:text-4xl">
-                            {article.title}
-                        </h1>
+                        <ArticleTitleHeader
+                            title={article.title}
+                            src={article.eyecatch_url}
+                        />
                         {article.topics && article.topics.length > 0 && (
                             <div className="flex flex-wrap gap-2">
                                 {article.topics.map((topic) => (
