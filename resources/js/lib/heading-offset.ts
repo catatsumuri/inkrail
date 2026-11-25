@@ -122,3 +122,50 @@ export function listFencedBlocks(
 
     return blocks;
 }
+
+/**
+ * Lists the character offset where each top-level block starts. Blocks are
+ * separated by blank lines, except inside fenced code and `:::` containers.
+ */
+export function listBlockOffsets(content: string): number[] {
+    const offsets: number[] = [];
+    let offset = 0;
+    let activeFence: string | null = null;
+    let depth = 0;
+    let open = false;
+
+    for (const line of content.replace(/\r\n/g, '\n').split('\n')) {
+        const trimmed = line.trimStart();
+        const fence = /^(`{3,}|~{3,})/.exec(trimmed)?.[1];
+
+        if (activeFence !== null) {
+            if (
+                fence &&
+                fence[0] === activeFence[0] &&
+                fence.length >= activeFence.length &&
+                trimmed.slice(fence.length).trim() === ''
+            ) {
+                activeFence = null;
+            }
+        } else if (trimmed === '') {
+            open = open && depth > 0;
+        } else {
+            if (!open) {
+                offsets.push(offset);
+                open = true;
+            }
+
+            if (fence) {
+                activeFence = fence;
+            } else if (/^:{3,}\S/.test(trimmed)) {
+                depth++;
+            } else if (/^:{3,}$/.test(trimmed) && depth > 0) {
+                depth--;
+            }
+        }
+
+        offset += line.length + 1;
+    }
+
+    return offsets;
+}

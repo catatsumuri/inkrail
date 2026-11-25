@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { listHeadings } from './heading-offset.ts';
+import { listBlockOffsets, listHeadings } from './heading-offset.ts';
 import { buildAnchors, mapScroll } from './scroll-sync.ts';
 
 await test('interpolates between anchors and clamps at the ends', () => {
@@ -39,5 +39,17 @@ await test('lists headings outside fenced code in order', () => {
             [1, 'A'],
             [3, 'B'],
         ],
+    );
+});
+
+await test('lists top-level block offsets, keeping fences and containers whole', () => {
+    const text =
+        '# A\ntext\n\n```\na\n\nb\n```\n\n:::message\nx\n\ny\n:::\n\nlast\n';
+
+    assert.deepEqual(
+        listBlockOffsets(text).map(
+            (offset) => text.slice(offset).split('\n')[0],
+        ),
+        ['# A', '```', ':::message', 'last'],
     );
 });
