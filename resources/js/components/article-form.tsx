@@ -13,6 +13,7 @@ import {
 import InputError from '@/components/input-error';
 import ArticleEyecatchInput from '@/components/article-eyecatch-input';
 import LanguageToggle from '@/components/language-toggle';
+import { handleSaveShortcut } from '@/lib/save-shortcut';
 import MarkdownEditor from '@/components/markdown-editor';
 import TranslationStatus from '@/components/translation-status';
 import { Badge } from '@/components/ui/badge';
@@ -44,6 +45,7 @@ export default function ArticleForm({ article }: { article?: Article }) {
     );
     const continueEditing = useRef(true);
     const modifierHeldOnSave = useRef(false);
+    const saveButtonRef = useRef<HTMLButtonElement>(null);
     const [modifierHeld, setModifierHeld] = useState(false);
     const modifierKeyLabel = /Mac|iPhone|iPad/.test(navigator.platform)
         ? '⌘'
@@ -52,6 +54,18 @@ export default function ArticleForm({ article }: { article?: Article }) {
     const [saveButtonTarget, setSaveButtonTarget] = useState<Element | null>(
         null,
     );
+
+    useEffect(() => {
+        function saveWithKeyboard(event: KeyboardEvent) {
+            modifierHeldOnSave.current = false;
+            handleSaveShortcut(event, saveButtonRef.current);
+        }
+
+        window.addEventListener('keydown', saveWithKeyboard, true);
+
+        return () =>
+            window.removeEventListener('keydown', saveWithKeyboard, true);
+    }, []);
 
     useEffect(() => {
         function updateSaveButtonTarget() {
@@ -429,6 +443,7 @@ export default function ArticleForm({ article }: { article?: Article }) {
                                 <Button
                                     type="submit"
                                     value="continue"
+                                    ref={saveButtonRef}
                                     form={formId}
                                     onClick={(event) => {
                                         modifierHeldOnSave.current =
