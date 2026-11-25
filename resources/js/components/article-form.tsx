@@ -118,7 +118,12 @@ export default function ArticleForm({ article }: { article?: Article }) {
         };
     });
     const [editingLocale, setEditingLocale] = useState(() => {
-        const preferred = jumpLocale ?? locale;
+        const requested = jumpLocale ?? locale;
+        const preferred =
+            article?.translations?.[requested] === undefined &&
+            article?.resolvedLocale !== undefined
+                ? article.resolvedLocale
+                : requested;
 
         return articleLocales.includes(preferred)
             ? preferred
