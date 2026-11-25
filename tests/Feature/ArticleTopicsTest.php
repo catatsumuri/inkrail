@@ -102,7 +102,7 @@ test('visitors can filter published articles by exact topic and keep the filter 
             ->where('articles.data.0.topics', ['php', '日本語'])
             ->where('articles.next_page_url', route('public.articles.index', ['topic' => 'php', 'page' => 2])));
     $this->get(route('public.articles.index', ['topic' => 'php', 'page' => 2]))->assertOk()
-        ->assertInertia(fn (Assert $page) => $page->has('articles.data', 1)->where('articles.data.0.title', 'Match 21')
+        ->assertInertia(fn (Assert $page) => $page->has('articles.data', 1)->where('articles.data.0.title', 'Match 1')
             ->where('selectedTopic', 'php')->where('topics', ['php', 'phpstan', '日本語']));
     $this->get(route('public.articles.index'))->assertOk()
         ->assertInertia(fn (Assert $page) => $page->where('selectedTopic', null)->where('articles.total', 22));

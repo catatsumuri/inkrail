@@ -24,6 +24,8 @@ test('owners can set a cover filename and retrieve its public URL without exposi
         ->where('articles.data.0.eyecatch_url', '/images/cover.png')->missing('articles.data.0.zenn_frontmatter'));
     $this->get(route('public.articles.show', $article->slug))->assertInertia(fn (Assert $page) => $page
         ->where('article.eyecatch_url', '/images/cover.png')->missing('article.zenn_frontmatter'));
+    $this->get(route('articles.index'))->assertInertia(fn (Assert $page) => $page->where('articles.data.0.eyecatch_url', '/images/cover.png'));
+    $this->get(route('articles.show', $article))->assertInertia(fn (Assert $page) => $page->where('article.eyecatch_url', '/images/cover.png'));
     $parsed = app(ParseZennArticle::class)(app(RenderZennArticle::class)($article->fresh()));
     expect($parsed['frontmatter']['eyecatch'])->toBe('cover.png');
 });

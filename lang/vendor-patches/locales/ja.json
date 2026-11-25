@@ -300,5 +300,6 @@
     "Match case": "大文字小文字を区別",
     "Regular expression": "正規表現",
     "Whole word": "単語単位",
-    "Replace all": "すべて置換"
+    "Replace all": "すべて置換",
+    "The public page shows saved changes only.": "公開ページには保存済みの内容が表示されます。"
 }

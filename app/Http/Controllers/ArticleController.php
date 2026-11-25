@@ -30,7 +30,7 @@ class ArticleController extends Controller
             'articles' => $articles
                 ->when($topic !== null, fn (Builder $query): Builder => $query->whereJsonContains('zenn_frontmatter->topics', $topic))
                 ->with(['allTranslations', 'latestReview'])
-                ->select(['id', 'slug', 'is_published', 'published_at', 'zenn_frontmatter'])->latest('id')->paginate(20)->withQueryString()->through(fn (Article $article): array => [...$article->only(['id', 'title', 'slug', 'topics', 'is_published', 'published_at']), 'publication_status' => $article->publicationStatus(), ...$article->languageMetadata(), 'translationStatus' => $article->translationStatus()]),
+                ->select(['id', 'slug', 'is_published', 'published_at', 'zenn_frontmatter'])->latest('id')->paginate(20)->withQueryString()->through(fn (Article $article): array => [...$article->only(['id', 'title', 'slug', 'topics', 'is_published', 'published_at', 'eyecatch_url']), 'publication_status' => $article->publicationStatus(), ...$article->languageMetadata(), 'translationStatus' => $article->translationStatus()]),
         ]);
     }
 
@@ -61,7 +61,7 @@ class ArticleController extends Controller
         Gate::authorize('view', $article);
 
         return Inertia::render('articles/show', [
-            'article' => [...$article->only(['id', 'title', 'content', 'slug', 'is_published', 'published_at', 'edit_version', 'topics', 'eyecatch']), 'publication_status' => $article->publicationStatus(), ...$article->languageMetadata(), 'translationStatus' => $article->translationStatus(), 'translations' => $article->translations->mapWithKeys(fn ($translation) => [$translation->locale => $translation->only(['title', 'content'])])->all()],
+            'article' => [...$article->only(['id', 'title', 'content', 'slug', 'is_published', 'published_at', 'edit_version', 'topics', 'eyecatch', 'eyecatch_url']), 'publication_status' => $article->publicationStatus(), ...$article->languageMetadata(), 'translationStatus' => $article->translationStatus(), 'translations' => $article->translations->mapWithKeys(fn ($translation) => [$translation->locale => $translation->only(['title', 'content'])])->all()],
             'canPushToZenn' => Gate::allows('push-to-zenn', $article),
         ]);
     }
@@ -70,7 +70,7 @@ class ArticleController extends Controller
     {
         Gate::authorize('update', $article);
 
-        return Inertia::render('articles/edit', ['article' => [...$article->only(['id', 'title', 'content', 'slug', 'is_published', 'published_at', 'edit_version', 'topics', 'eyecatch']), 'publication_status' => $article->publicationStatus(), ...$article->languageMetadata(), 'translationStatus' => $article->translationStatus(), 'translations' => $article->translations->mapWithKeys(fn ($translation) => [$translation->locale => $translation->only(['title', 'content'])])->all()]]);
+        return Inertia::render('articles/edit', ['article' => [...$article->only(['id', 'title', 'content', 'slug', 'is_published', 'published_at', 'edit_version', 'topics', 'eyecatch', 'eyecatch_url']), 'publication_status' => $article->publicationStatus(), ...$article->languageMetadata(), 'translationStatus' => $article->translationStatus(), 'translations' => $article->translations->mapWithKeys(fn ($translation) => [$translation->locale => $translation->only(['title', 'content'])])->all()]]);
     }
 
     public function update(Request $request, Article $article): RedirectResponse

@@ -1,3 +1,5 @@
+import ArticleCover from '@/components/article-cover';
+import { show as publicShow } from '@/actions/App/Http/Controllers/PublicArticleController';
 import ArticlePublicationTime from '@/components/article-publication-time';
 import ArticleLanguageNotice from '@/components/article-language-notice';
 import ArticleTopicFilter from '@/components/article-topic-filter';
@@ -23,6 +25,7 @@ import type { Article } from '@/types/article';
 type Articles = {
     data: Pick<
         Article,
+        | 'eyecatch_url'
         | 'id'
         | 'title'
         | 'topics'
@@ -112,6 +115,16 @@ export default function Index({
                                 <div className="min-w-0 flex-1 space-y-3">
                                     <Link
                                         href={show(article.id)}
+                                        aria-label={article.title}
+                                    >
+                                        <ArticleCover
+                                            src={article.eyecatch_url}
+                                            title={article.title}
+                                            className="mb-3 aspect-video w-40 rounded-lg"
+                                        />
+                                    </Link>
+                                    <Link
+                                        href={show(article.id)}
                                         className="block w-fit rounded-sm text-lg leading-snug font-medium tracking-tight break-words transition-colors hover:text-muted-foreground focus-visible:outline-2 focus-visible:outline-ring sm:text-xl"
                                     >
                                         {article.title}
@@ -178,6 +191,24 @@ export default function Index({
                                             {article.slug}
                                         </span>
                                     </div>
+                                    {article.publication_status ===
+                                        'published' && (
+                                        <Button
+                                            asChild
+                                            variant="outline"
+                                            size="sm"
+                                        >
+                                            <a
+                                                href={publicShow.url(
+                                                    article.slug,
+                                                )}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                            >
+                                                {__('View public page')}
+                                            </a>
+                                        </Button>
+                                    )}
                                     <TranslationStatus
                                         articleId={article.id}
                                         states={article.translationStatus}

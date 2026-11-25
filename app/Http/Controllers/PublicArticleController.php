@@ -31,7 +31,7 @@ class PublicArticleController extends Controller
             ),
             'articles' => $articles
                 ->when($topic !== null, fn (Builder $query): Builder => $query->whereJsonContains('zenn_frontmatter->topics', $topic))
-                ->select(['id', 'slug', 'zenn_frontmatter', 'published_at', 'created_at'])->orderBy('id')->paginate(20)->withQueryString()->through(fn (Article $article): array => [...$article->only(['title', 'slug', 'topics', 'eyecatch_url']), 'published_at' => $article->published_at ?? $article->created_at, ...$article->languageMetadata()]),
+                ->select(['id', 'slug', 'zenn_frontmatter', 'published_at', 'created_at'])->latest('id')->paginate(20)->withQueryString()->through(fn (Article $article): array => [...$article->only(['title', 'slug', 'topics', 'eyecatch_url']), 'published_at' => $article->published_at ?? $article->created_at, ...$article->languageMetadata()]),
         ]);
     }
 
