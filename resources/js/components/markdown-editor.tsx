@@ -26,7 +26,11 @@ import PillToggle from '@/components/pill-toggle';
 import PlainEditor from '@/components/plain-editor';
 import { Button } from '@/components/ui/button';
 import { useEditorMode } from '@/hooks/use-editor-mode';
-import { listFencedBlocks, listHeadings } from '@/lib/heading-offset';
+import {
+    listBlockOffsets,
+    listFencedBlocks,
+    listHeadings,
+} from '@/lib/heading-offset';
 import { buildAnchors, mapScroll, type ScrollAnchor } from '@/lib/scroll-sync';
 import { cn } from '@/lib/utils';
 
@@ -179,6 +183,33 @@ export default function MarkdownEditor({
 
         if (anchorCache.current?.key === key) {
             return anchorCache.current.anchors;
+        }
+
+        const blockOffsets = listBlockOffsets(value);
+        const renderedBlocks = Array.from(
+            pane.querySelector('.ink-markdown')?.children ?? [],
+        );
+
+        if (
+            blockOffsets.length > 0 &&
+            blockOffsets.length === renderedBlocks.length
+        ) {
+            const paneTop = pane.getBoundingClientRect().top;
+            const tops = handle.tops(blockOffsets);
+            const anchors = buildAnchors(
+                renderedBlocks.map((element, index) => ({
+                    from: tops[index],
+                    to:
+                        pane.scrollTop +
+                        element.getBoundingClientRect().top -
+                        paneTop,
+                })),
+                maxFrom,
+                maxTo,
+            );
+            anchorCache.current = { key, anchors };
+
+            return anchors;
         }
 
         const source = listHeadings(value).filter(
