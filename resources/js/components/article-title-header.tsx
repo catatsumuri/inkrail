@@ -23,7 +23,9 @@ export default function ArticleTitleHeader({
                     />
                 </>
             )}
-            <div className="relative flex min-h-60 flex-col justify-end p-6 sm:min-h-80 sm:p-12">
+            <div
+                className={`relative flex flex-col justify-end p-6 sm:p-12 ${src ? 'min-h-60 sm:min-h-80' : ''}`}
+            >
                 <h1
                     className={`max-w-3xl text-3xl leading-tight font-semibold tracking-tight break-words sm:text-5xl ${src ? 'text-white' : ''}`}
                 >

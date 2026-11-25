@@ -113,7 +113,10 @@ export default function Index({
                                 className="group flex items-start justify-between gap-4 py-6 sm:py-7"
                             >
                                 <div className="min-w-0 flex-1 space-y-3">
-                                    <Link href={show(article.id)}>
+                                    <Link
+                                        href={show(article.id)}
+                                        aria-label={article.title}
+                                    >
                                         <ArticleCover
                                             src={article.eyecatch_url}
                                             title={article.title}
