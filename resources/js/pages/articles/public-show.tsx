@@ -1,6 +1,6 @@
 import ArticleLanguageNotice from '@/components/article-language-notice';
 import { lang } from '@erag/lang-sync-inertia/react';
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { ArrowLeft } from 'lucide-react';
 import { index } from '@/actions/App/Http/Controllers/PublicArticleController';
 import ArticleContent from '@/components/article-content';
@@ -31,6 +31,7 @@ export default function PublicShow({
     social: SocialMetadata;
 }) {
     const { __ } = lang();
+    const { locale } = usePage().props;
 
     return (
         <>
@@ -125,7 +126,7 @@ export default function PublicShow({
                         <div className="mx-auto max-w-3xl">
                             {article.published_at && (
                                 <p className="text-sm text-muted-foreground">
-                                    {new Intl.DateTimeFormat('ja-JP', {
+                                    {new Intl.DateTimeFormat(locale, {
                                         timeZone: 'Asia/Tokyo',
                                         dateStyle: 'medium',
                                     }).format(

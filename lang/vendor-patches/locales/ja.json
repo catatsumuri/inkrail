@@ -1,4 +1,5 @@
 {
+    "Create article": "記事の新規作成",
     "GitHub unchanged": "GitHub側に変更なし",
     "Imported: :created · Updated: :updated · GitHub unchanged: :unchanged · Conflicts: :conflict · Invalid: :invalid": "新規: :created件 · 更新: :updated件 · GitHub側に変更なし: :unchanged件 · 競合: :conflict件 · 不正: :invalid件",
     "The repository is busy or the sync lock was lost. Try again shortly.": "別の同期処理が実行中か、同期ロックの有効期限が切れました。少し待ってから再実行してください。",

@@ -2,7 +2,14 @@ import ArticlePublicationTime from '@/components/article-publication-time';
 import { useEffect, useState } from 'react';
 import ArticleLanguageNotice from '@/components/article-language-notice';
 import { lang } from '@erag/lang-sync-inertia/react';
-import { Form, Head, Link, router, setLayoutProps } from '@inertiajs/react';
+import {
+    Form,
+    Head,
+    Link,
+    router,
+    setLayoutProps,
+    usePage,
+} from '@inertiajs/react';
 import {
     ArrowLeft,
     CloudUpload,
@@ -52,6 +59,7 @@ export default function Show({
     canPushToZenn: boolean;
 }) {
     const { __ } = lang();
+    const { locale } = usePage().props;
     const [saveDialogOpen, setSaveDialogOpen] = useState(false);
     const [saving, setSaving] = useState(false);
     const [saveLogs, setSaveLogs] = useState<string[]>([]);
@@ -173,7 +181,7 @@ export default function Show({
     }
     setLayoutProps({
         breadcrumbs: [
-            { title: '記事', href: index() },
+            { title: __('Articles'), href: index() },
             { title: article.title, href: show(article.id) },
         ],
     });
@@ -298,7 +306,7 @@ export default function Show({
                                     </p>
                                     {article.published_at && (
                                         <p>
-                                            {new Intl.DateTimeFormat('ja-JP', {
+                                            {new Intl.DateTimeFormat(locale, {
                                                 timeZone: 'Asia/Tokyo',
                                                 dateStyle: 'medium',
                                                 timeStyle: 'short',
