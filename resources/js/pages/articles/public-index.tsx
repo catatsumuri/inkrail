@@ -1,6 +1,6 @@
 import ArticleLanguageNotice from '@/components/article-language-notice';
 import { lang } from '@erag/lang-sync-inertia/react';
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { ArrowRight, ArrowUpRight } from 'lucide-react';
 import {
     index,
@@ -40,6 +40,7 @@ export default function PublicIndex({
     selectedTopic: string | null;
 }) {
     const { __ } = lang();
+    const { locale } = usePage().props;
 
     return (
         <>
@@ -151,7 +152,7 @@ export default function PublicIndex({
                                             {article.published_at && (
                                                 <p className="text-xs text-muted-foreground">
                                                     {new Intl.DateTimeFormat(
-                                                        'ja-JP',
+                                                        locale,
                                                         {
                                                             timeZone:
                                                                 'Asia/Tokyo',

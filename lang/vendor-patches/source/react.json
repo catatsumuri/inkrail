@@ -1,4 +1,5 @@
 {
+    "Create article": "Create article",
     "GitHub unchanged": "GitHub unchanged",
     "Imported: :created · Updated: :updated · GitHub unchanged: :unchanged · Conflicts: :conflict · Invalid: :invalid": "Imported: :created · Updated: :updated · GitHub unchanged: :unchanged · Conflicts: :conflict · Invalid: :invalid",
     "The repository is busy or the sync lock was lost. Try again shortly.": "The repository is busy or the sync lock was lost. Try again shortly.",

@@ -17,7 +17,7 @@ import { dashboard } from '@/routes';
 import type { NavItem } from '@/types';
 
 const mainNavItems: NavItem[] = [
-    { title: '記事', href: articlesIndex(), icon: BookOpen },
+    { title: 'Articles', href: articlesIndex(), icon: BookOpen },
     {
         title: 'Dashboard',
         href: dashboard(),
