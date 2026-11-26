@@ -302,5 +302,15 @@
     "Regular expression": "Regular expression",
     "Whole word": "Whole word",
     "Replace all": "Replace all",
-    "The public page shows saved changes only.": "The public page shows saved changes only."
+    "The public page shows saved changes only.": "The public page shows saved changes only.",
+    "Sandbox": "Sandbox",
+    "All articles": "All articles",
+    "Writing spaces": "Writing spaces",
+    "Write a sandbox note": "Write a sandbox note",
+    "A workspace for notes and experiments. Sandbox notes cannot be published to InkRail or Zenn.": "A workspace for notes and experiments. Sandbox notes cannot be published to InkRail or Zenn.",
+    "All your articles and sandbox notes in one place.": "All your articles and sandbox notes in one place.",
+    "Only you can view these notes. Publishing is disabled.": "Only you can view these notes. Publishing is disabled.",
+    "Your sandbox is ready": "Your sandbox is ready",
+    "Try an idea, keep a rough note, or explore Markdown. Everything here stays private in InkRail.": "Try an idea, keep a rough note, or explore Markdown. Everything here stays private in InkRail.",
+    "Sandbox · Private": "Sandbox · Private"
 }

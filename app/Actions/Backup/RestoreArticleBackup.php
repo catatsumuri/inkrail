@@ -159,7 +159,7 @@ class RestoreArticleBackup
         foreach ($namespaces as $namespace) {
             $existingId = DB::table('article_namespaces')->where('slug', $namespace['slug'])->value('id');
             $values = [
-                'name' => $namespace['name'],
+                'name' => $namespace['slug'] === 'sandbox' ? 'Sandbox' : $namespace['name'],
                 'created_at' => $namespace['created_at'],
                 'updated_at' => $namespace['updated_at'],
             ];
@@ -211,8 +211,8 @@ class RestoreArticleBackup
     {
         $values = [
             'slug' => $article['slug'],
-            'is_published' => $article['is_published'],
-            'published_at' => $article['published_at'] ?? null,
+            'is_published' => $article['namespace'] === 'sandbox' ? false : $article['is_published'],
+            'published_at' => $article['namespace'] === 'sandbox' ? null : ($article['published_at'] ?? null),
             'edit_version' => $article['edit_version'],
             'user_id' => $resolveUser($article['owner']),
             'namespace_id' => $article['namespace'] !== null ? ($namespaceIds[$article['namespace']] ?? null) : null,
@@ -227,10 +227,18 @@ class RestoreArticleBackup
         ];
 
         if ($existingId === null) {
-            return DB::table('articles')->insertGetId(['sync_id' => $article['sync_id'], ...$values]);
+            $existingId = DB::table('articles')->insertGetId(['sync_id' => $article['sync_id'], ...$values]);
+        } else {
+            $existingNamespace = DB::table('articles')->where('id', $existingId)->value('namespace_id');
+            if (DB::table('article_namespaces')->where('id', $existingNamespace)->value('slug') === 'sandbox' && $article['namespace'] !== 'sandbox') {
+                throw new RuntimeException('Sandbox documents cannot leave their reserved namespace.');
+            }
+            DB::table('articles')->where('id', $existingId)->update($values);
         }
-
-        DB::table('articles')->where('id', $existingId)->update($values);
+        if ($article['namespace'] === 'sandbox' && is_array($article['github_source'] ?? null)) {
+            $source = array_intersect_key($article['github_source'], array_flip(['repository', 'branch', 'path', 'remote_sha', 'local_fingerprint', 'frontmatter', 'created_at', 'updated_at']));
+            DB::table('article_github_sources')->updateOrInsert(['article_id' => $existingId], $source);
+        }
 
         return $existingId;
     }

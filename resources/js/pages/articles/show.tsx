@@ -477,14 +477,18 @@ export default function Show({
                                 />
                             </div>
                         )}
-                        <ArticleLanguageNotice
-                            resolvedLocale={article.resolvedLocale}
-                        />
-                        <TranslationStatus
-                            articleId={article.id}
-                            states={article.translationStatus}
-                        />
-                        {!article.is_published && (
+                        {!article.is_sandbox && (
+                            <ArticleLanguageNotice
+                                resolvedLocale={article.resolvedLocale}
+                            />
+                        )}
+                        {!article.is_sandbox && (
+                            <TranslationStatus
+                                articleId={article.id}
+                                states={article.translationStatus}
+                            />
+                        )}
+                        {!article.is_published && !article.is_sandbox && (
                             <p className="text-sm text-muted-foreground">
                                 {__(
                                     'This draft is only visible to you. Publish it to share its URL.',

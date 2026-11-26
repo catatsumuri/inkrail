@@ -19,7 +19,7 @@ class ArticleHistoryController extends Controller
     {
         Gate::authorize('view', $article);
         $input = $request->validate(['locale' => ['sometimes', 'in:en,ja'], 'from' => ['nullable', 'integer'], 'to' => ['nullable', 'integer']]);
-        $locale = $input['locale'] ?? app()->getLocale();
+        $locale = $article->isSandbox() ? 'ja' : ($input['locale'] ?? app()->getLocale());
         $revisions = ArticleRevision::where('article_id', $article->id)->where('locale', $locale);
         $selection = [];
         foreach (['from', 'to'] as $key) {
@@ -27,7 +27,7 @@ class ArticleHistoryController extends Controller
         }
 
         return Inertia::render('articles/history', [
-            'article' => [...$article->only(['id', 'title', 'edit_version']), 'translationStatus' => $article->translationStatus()],
+            'article' => [...$article->only(['id', 'title', 'edit_version']), 'is_sandbox' => $article->isSandbox(), 'translationStatus' => $article->translationStatus()],
             'locale' => $locale,
             'revisions' => $revisions->latest('id')->select(['id', 'title', 'is_deleted', 'created_at', 'user_id', 'restored_from_id'])->paginate(20)->withQueryString(),
             'selection' => $selection,
@@ -37,6 +37,7 @@ class ArticleHistoryController extends Controller
 
     public function confirm(Request $request, Article $article): RedirectResponse
     {
+        abort_if($article->isSandbox(), 403);
         $this->mutate($request, $article, function (Article $locked): void {
             $translations = $locked->translations()->get()->keyBy('locale');
             if (! isset($translations['en'], $translations['ja'])) {
@@ -52,6 +53,7 @@ class ArticleHistoryController extends Controller
     public function restore(Request $request, Article $article, ArticleRevision $revision): RedirectResponse
     {
         $this->mutate($request, $article, function (Article $locked) use ($revision): void {
+            abort_if($locked->isSandbox() && $revision->locale !== 'ja', 403);
             abort_unless($revision->article_id === $locked->id && ! $revision->is_deleted, 404);
             $translation = $locked->translations()->withTrashed()->firstOrNew(['locale' => $revision->locale]);
             if (! $translation->trashed() && $translation->title === $revision->title && $translation->content === $revision->content) {

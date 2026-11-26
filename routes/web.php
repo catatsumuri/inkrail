@@ -12,6 +12,7 @@ use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\MarkNotificationAsReadController;
 use App\Http\Controllers\PublicArticleController;
 use App\Http\Controllers\SandboxController;
+use App\Http\Controllers\SandboxImportController;
 use App\Http\Controllers\ZennImportController;
 use App\Http\Controllers\ZennPushController;
 use Illuminate\Support\Facades\Route;
@@ -44,6 +45,7 @@ Route::delete('notifications/{notification}', DeleteNotificationController::clas
     ->name('notifications.destroy');
 
 Route::middleware(['auth', 'verified'])->group(function () {
+    Route::post('sandbox/import', SandboxImportController::class)->middleware(['can:import-from-zenn', 'throttle:6,1'])->name('sandbox.import');
     Route::get('articles/{article}/history', [ArticleHistoryController::class, 'index'])->name('articles.history');
     Route::post('articles/{article}/translation-review', [ArticleHistoryController::class, 'confirm'])->name('articles.review');
     Route::post('articles/{article}/revisions/{revision}/restore', [ArticleHistoryController::class, 'restore'])->name('articles.restore');

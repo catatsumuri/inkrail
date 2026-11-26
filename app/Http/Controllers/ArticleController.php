@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Article;
+use App\Models\ArticleNamespace;
 use App\Support\ArticleEyecatch;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
@@ -21,22 +22,28 @@ class ArticleController extends Controller
     {
         $topic = $request->validate(['topic' => ['nullable', 'string', 'max:255']])['topic'] ?? null;
         $articles = $request->user()->articles()->getQuery();
+        $namespace = $request->validate(['namespace' => ['nullable', 'in:sandbox']])['namespace'] ?? null;
+        $articles->when($namespace === 'sandbox', fn (Builder $query): Builder => $query->whereHas('namespace', fn (Builder $query): Builder => $query->where('slug', 'sandbox')));
         $topics = (clone $articles)->without('translations')->select('zenn_frontmatter')->get()
             ->flatMap(fn (Article $article): array => $article->topics)->unique()->sort()->values()->all();
 
         return Inertia::render('articles/index', [
+            'selectedNamespace' => $namespace,
+            'sandboxImport' => $request->session()->get('sandbox_import'),
             'topics' => $topics,
             'selectedTopic' => $topic,
             'articles' => $articles
                 ->when($topic !== null, fn (Builder $query): Builder => $query->whereJsonContains('zenn_frontmatter->topics', $topic))
-                ->with(['allTranslations', 'latestReview'])
-                ->select(['id', 'slug', 'is_published', 'published_at', 'zenn_frontmatter'])->latest('id')->paginate(20)->withQueryString()->through(fn (Article $article): array => [...$article->only(['id', 'title', 'slug', 'topics', 'is_published', 'published_at', 'eyecatch_url']), 'publication_status' => $article->publicationStatus(), ...$article->languageMetadata(), 'translationStatus' => $article->translationStatus()]),
+                ->with(['allTranslations', 'latestReview', 'namespace'])
+                ->select(['id', 'namespace_id', 'slug', 'is_published', 'published_at', 'zenn_frontmatter'])->latest('id')->paginate(20)->withQueryString()->through(fn (Article $article): array => [...$article->only(['id', 'title', 'slug', 'topics', 'is_published', 'published_at', 'eyecatch_url']), 'is_sandbox' => $article->isSandbox(), 'publication_status' => $article->publicationStatus(), ...$article->languageMetadata(), 'translationStatus' => $article->translationStatus()]),
         ]);
     }
 
-    public function create(): Response
+    public function create(Request $request): Response
     {
-        return Inertia::render('articles/create');
+        $namespace = $request->validate(['namespace' => ['nullable', 'in:sandbox']])['namespace'] ?? null;
+
+        return Inertia::render('articles/create', ['namespace' => $namespace]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -45,7 +52,14 @@ class ArticleController extends Controller
         $article = DB::transaction(function () use ($request, $attributes): Article {
             $translations = $attributes['translations'] ?? null;
             unset($attributes['translations']);
-            $article = $request->user()->articles()->create($attributes);
+            if ($request->input('namespace') === 'sandbox') {
+                $article = new Article($attributes);
+                $article->user_id = $request->user()->id;
+                $article->namespace()->associate(ArticleNamespace::where('slug', 'sandbox')->firstOrFail());
+                $article->save();
+            } else {
+                $article = $request->user()->articles()->create($attributes);
+            }
             if ($translations !== null) {
                 $article->replaceTranslations($translations);
             }
@@ -61,7 +75,7 @@ class ArticleController extends Controller
         Gate::authorize('view', $article);
 
         return Inertia::render('articles/show', [
-            'article' => [...$article->only(['id', 'title', 'content', 'slug', 'is_published', 'published_at', 'edit_version', 'topics', 'eyecatch', 'eyecatch_url']), 'publication_status' => $article->publicationStatus(), ...$article->languageMetadata(), 'translationStatus' => $article->translationStatus(), 'translations' => $article->translations->mapWithKeys(fn ($translation) => [$translation->locale => $translation->only(['title', 'content'])])->all()],
+            'article' => [...$article->only(['id', 'title', 'content', 'slug', 'is_published', 'published_at', 'edit_version', 'topics', 'eyecatch', 'eyecatch_url']), 'is_sandbox' => $article->isSandbox(), 'publication_status' => $article->publicationStatus(), ...$article->languageMetadata(), 'translationStatus' => $article->translationStatus(), 'translations' => $article->translations->mapWithKeys(fn ($translation) => [$translation->locale => $translation->only(['title', 'content'])])->all()],
             'canPushToZenn' => Gate::allows('push-to-zenn', $article),
         ]);
     }
@@ -70,7 +84,7 @@ class ArticleController extends Controller
     {
         Gate::authorize('update', $article);
 
-        return Inertia::render('articles/edit', ['article' => [...$article->only(['id', 'title', 'content', 'slug', 'is_published', 'published_at', 'edit_version', 'topics', 'eyecatch', 'eyecatch_url']), 'publication_status' => $article->publicationStatus(), ...$article->languageMetadata(), 'translationStatus' => $article->translationStatus(), 'translations' => $article->translations->mapWithKeys(fn ($translation) => [$translation->locale => $translation->only(['title', 'content'])])->all()]]);
+        return Inertia::render('articles/edit', ['article' => [...$article->only(['id', 'title', 'content', 'slug', 'is_published', 'published_at', 'edit_version', 'topics', 'eyecatch', 'eyecatch_url']), 'is_sandbox' => $article->isSandbox(), 'publication_status' => $article->publicationStatus(), ...$article->languageMetadata(), 'translationStatus' => $article->translationStatus(), 'translations' => $article->translations->mapWithKeys(fn ($translation) => [$translation->locale => $translation->only(['title', 'content'])])->all()]]);
     }
 
     public function update(Request $request, Article $article): RedirectResponse
@@ -117,6 +131,21 @@ class ArticleController extends Controller
     /** @return array<string, mixed> */
     private function validated(Request $request, ?Article $article = null): array
     {
+        if ($article?->isSandbox() || ($article === null && $request->input('namespace') === 'sandbox')) {
+            $input = $request->validate([
+                'edit_version' => [$article === null ? 'sometimes' : 'required', 'integer', 'min:0'],
+                'title' => ['required', 'string', 'max:255'],
+                'content' => ['nullable', 'string'],
+                'translations' => ['prohibited'],
+                'is_published' => ['sometimes', Rule::in([false, 0, '0'])],
+                'published_at' => ['prohibited'],
+                'namespace_id' => ['prohibited'],
+                'namespace' => $article === null ? ['required', 'in:sandbox'] : ['prohibited'],
+                'eyecatch' => ['prohibited'],
+            ]);
+
+            return ['is_published' => false, 'published_at' => null, 'translations' => ['ja' => ['title' => $input['title'], 'content' => $input['content'] ?? '']]];
+        }
         $validated = $request->validate([
             'edit_version' => [$article === null ? 'sometimes' : 'required', 'integer', 'min:0'],
             'title' => ['required_without:translations', 'string', 'max:255'],
