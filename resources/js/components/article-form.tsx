@@ -441,9 +441,12 @@ export default function ArticleForm({ article }: { article?: Article }) {
                         createPortal(
                             <>
                                 <span className="pointer-events-none fixed right-4 bottom-[4.75rem] z-40 hidden rounded-full bg-background/80 px-3 py-1 text-xs text-muted-foreground shadow-sm backdrop-blur sm:right-8 sm:bottom-[5.25rem] pointer-fine:block">
-                                    {__(':key+click to save and return', {
-                                        key: modifierKeyLabel,
-                                    })}
+                                    {__(
+                                        ':key+S to save · :key+click to save and return',
+                                        {
+                                            key: modifierKeyLabel,
+                                        },
+                                    )}
                                 </span>
                                 <Button
                                     type="submit"
@@ -457,7 +460,7 @@ export default function ArticleForm({ article }: { article?: Article }) {
                                     disabled={processing || uploadingEyecatch}
                                     className="fixed right-4 bottom-4 z-40 h-12 min-w-40 rounded-full bg-blue-600 px-6 text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700 focus-visible:ring-blue-500/50 sm:right-8 sm:bottom-6 dark:bg-blue-500 dark:hover:bg-blue-600"
                                     title={__(
-                                        'Save and keep editing (Ctrl+click to save and return)',
+                                        'Save and keep editing (Ctrl+S to save, Ctrl+click to save and return)',
                                     )}
                                 >
                                     {processing ? (
