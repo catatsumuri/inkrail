@@ -13,7 +13,7 @@ export default function Create({ namespace }: { namespace?: string | null }) {
     setLayoutProps({
         breadcrumbs: [
             {
-                title: __(isSandbox ? 'Sandbox' : 'Articles'),
+                title: __(isSandbox ? 'Sandbox' : 'My articles'),
                 href: index({ query: { namespace } }),
             },
             {

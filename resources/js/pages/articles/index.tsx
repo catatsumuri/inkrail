@@ -65,7 +65,7 @@ export default function Index({
 }) {
     const { __ } = lang();
     const isSandbox = selectedNamespace === 'sandbox';
-    const pageTitle = isSandbox ? __('Sandbox') : __('All articles');
+    const pageTitle = isSandbox ? __('Sandbox') : __('My articles');
     const createLabel = isSandbox
         ? __('Write a sandbox note')
         : __('Start writing');
@@ -104,7 +104,7 @@ export default function Index({
                     {[
                         {
                             sandbox: false,
-                            title: __('All articles'),
+                            title: __('My articles'),
                             icon: Files,
                         },
                         {
@@ -139,7 +139,7 @@ export default function Index({
                             {__(
                                 isSandbox
                                     ? 'A workspace for notes and experiments. Sandbox notes cannot be published to InkRail or Zenn.'
-                                    : 'All your articles and sandbox notes in one place.',
+                                    : 'Manage your articles here. Sandbox notes are listed separately.',
                             )}
                         </p>
                     </div>

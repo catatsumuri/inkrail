@@ -1,14 +1,16 @@
 import { Head, Link, router, setLayoutProps } from '@inertiajs/react';
 import { lang } from '@erag/lang-sync-inertia/react';
-import { CircleCheck, Download, LoaderCircle, PencilLine } from 'lucide-react';
+import { Download, Files, LoaderCircle } from 'lucide-react';
 import { useRef, useState } from 'react';
-import { index, show } from '@/actions/App/Http/Controllers/ArticleController';
+import { index } from '@/actions/App/Http/Controllers/ArticleController';
 import SandboxImportController from '@/actions/App/Http/Controllers/SandboxImportController';
 import ZennImportController from '@/actions/App/Http/Controllers/ZennImportController';
 import ArticleBackupsCard, {
     type ArticleBackups,
 } from '@/components/article-backups';
-import { Badge } from '@/components/ui/badge';
+import LinkedArticles, {
+    type LinkedArticlePage,
+} from '@/components/linked-articles';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -24,7 +26,6 @@ import {
     DialogDescription,
     DialogFooter,
     DialogTitle,
-    DialogTrigger,
 } from '@/components/ui/dialog';
 import {
     Tooltip,
@@ -46,17 +47,8 @@ type Zenn = {
     repository: string | null;
     branch: string;
     configured: boolean;
-    articles: {
-        data: {
-            id: number;
-            title: string;
-            path: string;
-            locallyChanged: boolean;
-        }[];
-        prev_page_url: string | null;
-        next_page_url: string | null;
-        total: number;
-    };
+    articles: LinkedArticlePage;
+    sandboxArticles: LinkedArticlePage;
     result: ImportResult | null;
 };
 
@@ -65,7 +57,7 @@ const resultLabels: Record<ImportStatus, string> = {
     updated: 'Updated',
     unchanged: 'GitHub unchanged',
     conflict: 'Conflict — kept local article',
-    invalid: 'Invalid article — skipped',
+    invalid: 'Invalid file — skipped',
 };
 
 export default function Dashboard({
@@ -77,11 +69,24 @@ export default function Dashboard({
 }) {
     const { __ } = lang();
     const [importDialogOpen, setImportDialogOpen] = useState(false);
+    const [importTarget, setImportTarget] = useState<'articles' | 'sandbox'>(
+        'articles',
+    );
+    const [resultTarget, setResultTarget] = useState<'articles' | 'sandbox'>(
+        'articles',
+    );
     const [importing, setImporting] = useState(false);
     const [importSucceeded, setImportSucceeded] = useState(false);
     const [importLogs, setImportLogs] = useState<string[]>([]);
     const [importResult, setImportResult] = useState<ImportResult | null>(null);
     const cancelImportRef = useRef<HTMLButtonElement>(null);
+
+    function openImport(target: 'articles' | 'sandbox') {
+        setImportTarget(target);
+        setImportLogs([]);
+        setImportSucceeded(false);
+        setImportDialogOpen(true);
+    }
 
     async function importFromGitHub() {
         if (importing) return;
@@ -95,13 +100,18 @@ export default function Dashboard({
                 .split('; ')
                 .find((cookie) => cookie.startsWith('XSRF-TOKEN='))
                 ?.slice(11);
-            const response = await fetch(ZennImportController.url(), {
-                method: 'POST',
-                headers: {
-                    Accept: 'text/event-stream',
-                    'X-XSRF-TOKEN': decodeURIComponent(token ?? ''),
+            const response = await fetch(
+                importTarget === 'sandbox'
+                    ? SandboxImportController.url()
+                    : ZennImportController.url(),
+                {
+                    method: 'POST',
+                    headers: {
+                        Accept: 'text/event-stream',
+                        'X-XSRF-TOKEN': decodeURIComponent(token ?? ''),
+                    },
                 },
-            });
+            );
             if (
                 !response.ok ||
                 !response.body ||
@@ -142,6 +152,7 @@ export default function Dashboard({
                         if (entry.status === 'imported' && entry.result) {
                             imported = true;
                             setImportResult(entry.result);
+                            setResultTarget(importTarget);
                             setImportSucceeded(true);
                         }
                         void reader.cancel();
@@ -197,148 +208,206 @@ export default function Dashboard({
                                     )}
                                 </CardDescription>
                             </CardHeader>
-                            <CardContent className="flex flex-col items-start gap-4">
+                            <CardContent className="space-y-6">
                                 {zenn.configured ? (
-                                    <p className="text-sm break-all text-muted-foreground">
-                                        {zenn.repository} · {zenn.branch}
-                                    </p>
+                                    <dl className="grid gap-4 rounded-lg bg-muted/50 p-4 sm:grid-cols-[minmax(0,1fr)_auto]">
+                                        <div className="min-w-0 space-y-1">
+                                            <dt className="text-xs text-muted-foreground">
+                                                {__('Repository')}
+                                            </dt>
+                                            <dd className="text-sm font-medium break-all">
+                                                {zenn.repository}
+                                            </dd>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <dt className="text-xs text-muted-foreground">
+                                                {__('Branch')}
+                                            </dt>
+                                            <dd className="font-mono text-sm">
+                                                {zenn.branch}
+                                            </dd>
+                                        </div>
+                                    </dl>
                                 ) : (
                                     <p className="text-sm text-muted-foreground">
                                         {__('GitHub sync is not configured.')}
                                     </p>
                                 )}
-                                <Button
-                                    disabled={!zenn.configured}
-                                    onClick={() =>
-                                        router.post(
-                                            SandboxImportController.url(),
-                                        )
-                                    }
-                                >
-                                    sandbox/ · {__('Import from GitHub')}
-                                </Button>
-                                <Button asChild variant="outline">
-                                    <Link
-                                        href={index({
-                                            query: { namespace: 'sandbox' },
-                                        })}
-                                    >
-                                        sandbox/
-                                    </Link>
-                                </Button>
-                                <Dialog
-                                    open={importDialogOpen}
-                                    onOpenChange={(open) => {
-                                        if (importing) return;
-                                        setImportDialogOpen(open);
-                                        if (!open) setImportLogs([]);
-                                    }}
-                                >
-                                    <DialogTrigger asChild>
-                                        <Button
-                                            type="button"
-                                            disabled={
-                                                !zenn.configured || importing
-                                            }
-                                        >
-                                            <Download aria-hidden="true" />
-                                            {__('Import from GitHub')}
-                                        </Button>
-                                    </DialogTrigger>
-                                    <DialogContent
-                                        onEscapeKeyDown={(event) => {
-                                            if (importing)
-                                                event.preventDefault();
-                                        }}
-                                        onInteractOutside={(event) => {
-                                            if (importing)
-                                                event.preventDefault();
-                                        }}
-                                        onOpenAutoFocus={(event) => {
-                                            event.preventDefault();
-                                            cancelImportRef.current?.focus();
-                                        }}
-                                    >
-                                        <DialogTitle>
-                                            {__(
-                                                'Import articles from this repository?',
-                                            )}
-                                        </DialogTitle>
-                                        <DialogDescription asChild>
-                                            <div className="space-y-3">
-                                                <p className="break-all">
-                                                    {zenn.repository} ·{' '}
-                                                    {zenn.branch}
-                                                </p>
-                                                <p>
-                                                    {__(
-                                                        'New articles will be added to your account. Linked articles without local changes may be updated. Conflicting articles will be skipped.',
-                                                    )}
-                                                </p>
-                                                <p>
-                                                    {__(
-                                                        'Published articles will also be public in InkRail. This operation does not write to GitHub.',
-                                                    )}
-                                                </p>
-                                            </div>
-                                        </DialogDescription>
-                                        <pre
-                                            role="log"
-                                            aria-live="polite"
-                                            className="max-h-72 overflow-auto text-xs whitespace-pre-wrap"
-                                        >
-                                            {importLogs.join('\n')}
-                                        </pre>
-                                        <DialogFooter className="gap-2">
-                                            <DialogClose asChild>
-                                                <Button
-                                                    ref={cancelImportRef}
-                                                    type="button"
-                                                    variant="secondary"
-                                                    disabled={importing}
-                                                >
-                                                    {__(
-                                                        importLogs.length > 0
-                                                            ? 'Close'
-                                                            : 'Cancel',
-                                                    )}
-                                                </Button>
-                                            </DialogClose>
+                                <div className="grid gap-4 md:grid-cols-2">
+                                    <section className="flex min-w-0 flex-col gap-4 rounded-lg border p-5">
+                                        <div className="space-y-2">
+                                            <h2 className="font-semibold">
+                                                {__('Articles')}
+                                            </h2>
+                                            <p className="text-sm text-muted-foreground">
+                                                {__(
+                                                    'Import Japanese articles from articles/. Published articles will also be public in InkRail.',
+                                                )}
+                                            </p>
+                                        </div>
+                                        <div className="mt-auto">
                                             <Button
                                                 type="button"
                                                 disabled={
-                                                    importing || importSucceeded
+                                                    !zenn.configured ||
+                                                    importing
                                                 }
                                                 onClick={() =>
-                                                    void importFromGitHub()
+                                                    openImport('articles')
                                                 }
                                             >
-                                                {importing && (
-                                                    <LoaderCircle
-                                                        className="animate-spin"
-                                                        aria-hidden="true"
-                                                    />
-                                                )}
-                                                {__(
-                                                    importing
-                                                        ? 'Importing articles…'
-                                                        : importLogs.length > 0
-                                                          ? 'Retry importing'
-                                                          : 'Start importing',
-                                                )}
+                                                <Download aria-hidden="true" />
+                                                {__('Import articles')}
                                             </Button>
-                                        </DialogFooter>
-                                    </DialogContent>
-                                </Dialog>
+                                        </div>
+                                    </section>
+                                    <section className="flex min-w-0 flex-col gap-4 rounded-lg border border-violet-200 bg-violet-50 p-5 dark:border-violet-800 dark:bg-violet-950/40">
+                                        <div className="space-y-2">
+                                            <h2 className="font-semibold text-violet-950 dark:text-violet-100">
+                                                sandbox/
+                                            </h2>
+                                            <p className="text-sm text-muted-foreground">
+                                                {__(
+                                                    'Import Markdown files from sandbox/ and public images from images/.',
+                                                )}
+                                            </p>
+                                        </div>
+                                        <div className="mt-auto flex flex-wrap gap-2">
+                                            <Button
+                                                disabled={
+                                                    !zenn.configured ||
+                                                    importing
+                                                }
+                                                onClick={() =>
+                                                    openImport('sandbox')
+                                                }
+                                            >
+                                                <Download aria-hidden="true" />
+                                                {__('Import into sandbox')}
+                                            </Button>
+                                            <Button asChild variant="outline">
+                                                <Link
+                                                    href={index({
+                                                        query: {
+                                                            namespace:
+                                                                'sandbox',
+                                                        },
+                                                    })}
+                                                >
+                                                    <Files aria-hidden="true" />
+                                                    {__(
+                                                        'View sandbox articles',
+                                                    )}
+                                                </Link>
+                                            </Button>
+                                        </div>
+                                    </section>
+                                </div>
                             </CardContent>
                         </Card>
+                        <Dialog
+                            open={importDialogOpen}
+                            onOpenChange={(open) => {
+                                if (importing) return;
+                                setImportDialogOpen(open);
+                                if (!open) setImportLogs([]);
+                            }}
+                        >
+                            <DialogContent
+                                onEscapeKeyDown={(event) => {
+                                    if (importing) event.preventDefault();
+                                }}
+                                onInteractOutside={(event) => {
+                                    if (importing) event.preventDefault();
+                                }}
+                                onOpenAutoFocus={(event) => {
+                                    event.preventDefault();
+                                    cancelImportRef.current?.focus();
+                                }}
+                            >
+                                <DialogTitle>
+                                    {__(
+                                        importTarget === 'sandbox'
+                                            ? 'Import sandbox documents from this repository?'
+                                            : 'Import articles from this repository?',
+                                    )}
+                                </DialogTitle>
+                                <DialogDescription asChild>
+                                    <div className="space-y-3">
+                                        <p className="break-all">
+                                            {zenn.repository} · {zenn.branch}
+                                        </p>
+                                        <p>
+                                            {__(
+                                                importTarget === 'sandbox'
+                                                    ? 'Markdown files under sandbox/ and images under images/ will be imported. Existing documents without local changes may be updated. Conflicting documents will be skipped.'
+                                                    : 'New articles will be added to your account. Linked articles without local changes may be updated. Conflicting articles will be skipped.',
+                                            )}
+                                        </p>
+                                        <p>
+                                            {__(
+                                                importTarget === 'sandbox'
+                                                    ? 'Imported sandbox documents stay private in InkRail. Images are publicly accessible. This operation does not write to GitHub.'
+                                                    : 'Published articles will also be public in InkRail. This operation does not write to GitHub.',
+                                            )}
+                                        </p>
+                                    </div>
+                                </DialogDescription>
+                                <pre
+                                    role="log"
+                                    aria-live="polite"
+                                    className="max-h-72 overflow-auto text-xs whitespace-pre-wrap"
+                                >
+                                    {importLogs.join('\n')}
+                                </pre>
+                                <DialogFooter className="gap-2">
+                                    <DialogClose asChild>
+                                        <Button
+                                            ref={cancelImportRef}
+                                            type="button"
+                                            variant="secondary"
+                                            disabled={importing}
+                                        >
+                                            {__(
+                                                importLogs.length > 0
+                                                    ? 'Close'
+                                                    : 'Cancel',
+                                            )}
+                                        </Button>
+                                    </DialogClose>
+                                    <Button
+                                        type="button"
+                                        disabled={importing || importSucceeded}
+                                        onClick={() => void importFromGitHub()}
+                                    >
+                                        {importing && (
+                                            <LoaderCircle
+                                                className="animate-spin"
+                                                aria-hidden="true"
+                                            />
+                                        )}
+                                        {__(
+                                            importing
+                                                ? 'Importing articles…'
+                                                : importLogs.length > 0
+                                                  ? 'Retry importing'
+                                                  : 'Start importing',
+                                        )}
+                                    </Button>
+                                </DialogFooter>
+                            </DialogContent>
+                        </Dialog>
                         {result && (
                             <section
                                 className="space-y-4 rounded-xl border p-6"
                                 aria-live="polite"
                             >
                                 <h2 className="font-semibold">
-                                    {__('Import results')}
+                                    {__(
+                                        resultTarget === 'sandbox'
+                                            ? 'Sandbox import results'
+                                            : 'Import results',
+                                    )}
                                 </h2>
                                 <p className="text-sm text-muted-foreground">
                                     {__(
@@ -377,102 +446,11 @@ export default function Dashboard({
                                 </ul>
                             </section>
                         )}
-                        <section className="space-y-4">
-                            <h2 className="text-lg font-semibold">
-                                {__('Linked articles')}{' '}
-                                <span className="text-sm font-normal text-muted-foreground">
-                                    ({zenn.articles.total})
-                                </span>
-                            </h2>
-                            <p className="text-sm text-muted-foreground">
-                                {__(
-                                    'Status shows local changes since the last import or send. Import again to check for GitHub updates.',
-                                )}
-                            </p>
-                            {zenn.articles.data.length === 0 ? (
-                                <p className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
-                                    {__(
-                                        'No articles are linked to this repository yet.',
-                                    )}
-                                </p>
-                            ) : (
-                                <ul className="divide-y border-y">
-                                    {zenn.articles.data.map((article) => (
-                                        <li
-                                            key={article.id}
-                                            className="flex flex-wrap items-center justify-between gap-4 py-5"
-                                        >
-                                            <div className="min-w-0 space-y-1">
-                                                <Link
-                                                    href={show(article.id)}
-                                                    className="font-medium hover:underline"
-                                                >
-                                                    {article.title}
-                                                </Link>
-                                                <p className="text-xs break-all text-muted-foreground">
-                                                    {article.path}
-                                                </p>
-                                            </div>
-                                            <Badge
-                                                variant="outline"
-                                                className={
-                                                    article.locallyChanged
-                                                        ? 'gap-1.5 border-amber-300 bg-amber-50 px-3 py-1 text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200'
-                                                        : 'gap-1.5 border-emerald-300 bg-emerald-50 px-3 py-1 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
-                                                }
-                                            >
-                                                {article.locallyChanged ? (
-                                                    <PencilLine aria-hidden="true" />
-                                                ) : (
-                                                    <CircleCheck aria-hidden="true" />
-                                                )}
-                                                {__(
-                                                    article.locallyChanged
-                                                        ? 'Local changes'
-                                                        : 'Unchanged locally',
-                                                )}
-                                            </Badge>
-                                        </li>
-                                    ))}
-                                </ul>
-                            )}
-                            {(zenn.articles.prev_page_url ||
-                                zenn.articles.next_page_url) && (
-                                <nav
-                                    aria-label={__('Pagination')}
-                                    className="flex justify-between gap-4"
-                                >
-                                    <div>
-                                        {zenn.articles.prev_page_url && (
-                                            <Button asChild variant="ghost">
-                                                <Link
-                                                    href={
-                                                        zenn.articles
-                                                            .prev_page_url
-                                                    }
-                                                >
-                                                    {__('Previous page')}
-                                                </Link>
-                                            </Button>
-                                        )}
-                                    </div>
-                                    <div>
-                                        {zenn.articles.next_page_url && (
-                                            <Button asChild variant="ghost">
-                                                <Link
-                                                    href={
-                                                        zenn.articles
-                                                            .next_page_url
-                                                    }
-                                                >
-                                                    {__('Next page')}
-                                                </Link>
-                                            </Button>
-                                        )}
-                                    </div>
-                                </nav>
-                            )}
-                        </section>
+                        <LinkedArticles articles={zenn.articles} />
+                        <LinkedArticles
+                            articles={zenn.sandboxArticles}
+                            sandbox
+                        />
                     </>
                 ) : (
                     <Card>

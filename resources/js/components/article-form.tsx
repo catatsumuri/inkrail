@@ -462,7 +462,13 @@ export default function ArticleForm({
                                     (returnTo
                                         ? `${returnTo}${returnHeading ? `#${encodeURIComponent(returnHeading)}` : ''}`
                                         : undefined) ??
-                                    (article ? show(article.id) : index())
+                                    (article
+                                        ? show(article.id)
+                                        : isSandbox
+                                          ? index({
+                                                query: { namespace: 'sandbox' },
+                                            })
+                                          : index())
                                 }
                             >
                                 <ArrowLeft aria-hidden="true" />

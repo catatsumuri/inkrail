@@ -7,6 +7,7 @@ use App\Actions\Zenn\WithZennSyncLock;
 use App\Models\Article;
 use App\Models\ArticleNamespace;
 use App\Models\User;
+use App\Support\RepositoryImageStore;
 use Closure;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -15,16 +16,32 @@ use Symfony\Component\Yaml\Yaml;
 
 class ImportSandboxDocuments
 {
-    public function __construct(private FetchZennArticles $fetch, private WithZennSyncLock $lock, private LogSecurityEvent $audit) {}
+    public function __construct(private FetchZennArticles $fetch, private WithZennSyncLock $lock, private LogSecurityEvent $audit, private RepositoryImageStore $images) {}
 
     /** @return array<string, mixed> */
-    public function __invoke(User $owner): array
+    public function __invoke(User $owner, ?Closure $progress = null): array
     {
         Gate::forUser($owner)->authorize('import-from-zenn');
 
-        return ($this->lock)(function (Closure $check) use ($owner): array {
-            $remote = ($this->fetch)($check, scope: 'sandbox');
+        $progress?->__invoke('progress', ['message' => 'Acquiring repository lock.']);
+
+        return ($this->lock)(function (Closure $check) use ($owner, $progress): array {
+            $remote = ($this->fetch)($check, $progress, scope: 'sandbox');
+            $progress?->__invoke('progress', ['message' => 'Saving articles.']);
             $counts = ['created' => 0, 'updated' => 0, 'unchanged' => 0, 'conflict' => 0, 'invalid' => 0, 'items' => []];
+            foreach ($remote['images'] as $image) {
+                $check();
+                try {
+                    if ($image['content'] === null) {
+                        throw new \InvalidArgumentException('Invalid image blob.');
+                    }
+                    $status = $this->images->put(substr($image['path'], 7), $image['content']);
+                } catch (\InvalidArgumentException) {
+                    $status = 'invalid';
+                }
+                $counts[$status]++;
+                $counts['items'][] = ['path' => $image['path'], 'status' => $status];
+            }
             foreach ($remote['files'] as $file) {
                 $check();
                 try {
