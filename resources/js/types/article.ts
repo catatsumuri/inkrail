@@ -1,4 +1,5 @@
 export type Article = {
+    is_sandbox?: boolean;
     edit_version?: number;
     topics?: string[];
     eyecatch?: string | null;

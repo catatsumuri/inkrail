@@ -301,5 +301,15 @@
     "Regular expression": "正規表現",
     "Whole word": "単語単位",
     "Replace all": "すべて置換",
-    "The public page shows saved changes only.": "公開ページには保存済みの内容が表示されます。"
+    "The public page shows saved changes only.": "公開ページには保存済みの内容が表示されます。",
+    "Sandbox": "Sandbox",
+    "All articles": "すべての記事",
+    "Writing spaces": "作業場所の切り替え",
+    "Write a sandbox note": "Sandbox にメモを書く",
+    "A workspace for notes and experiments. Sandbox notes cannot be published to InkRail or Zenn.": "メモや試行錯誤のための作業場所です。Sandbox の内容は InkRail・Zenn に公開できません。",
+    "All your articles and sandbox notes in one place.": "記事と Sandbox のメモをまとめて確認できます。",
+    "Only you can view these notes. Publishing is disabled.": "閲覧できるのは自分だけです。公開機能は無効です。",
+    "Your sandbox is ready": "まだ Sandbox にメモはありません",
+    "Try an idea, keep a rough note, or explore Markdown. Everything here stays private in InkRail.": "アイデアの断片や書きかけのメモ、Markdown の実験に。ここに書いた内容は InkRail では自分だけが閲覧できます。",
+    "Sandbox · Private": "Sandbox・自分のみ"
 }

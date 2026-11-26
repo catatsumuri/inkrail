@@ -38,6 +38,7 @@ type Props = {
     describedBy?: string;
     syntax?: 'all' | 'zenn';
     jumpTo?: number;
+    allowImages?: boolean;
 };
 
 export default function MarkdownEditor({
@@ -48,6 +49,7 @@ export default function MarkdownEditor({
     describedBy,
     syntax = 'all',
     jumpTo,
+    allowImages = true,
 }: Props) {
     const { __ } = lang();
     const [editorMode, setEditorMode] = useEditorMode();
@@ -137,6 +139,7 @@ export default function MarkdownEditor({
     }, [preview]);
 
     async function uploadImage(file: File) {
+        if (!allowImages) return;
         let reported = false;
 
         setUploading((count) => count + 1);
@@ -427,15 +430,17 @@ export default function MarkdownEditor({
                     <div className="flex shrink-0 items-center gap-2 border-b bg-muted/30 px-5 py-2 text-xs font-medium text-muted-foreground">
                         <Code2 aria-hidden="true" className="size-3.5" />
                         {__('Markdown')}
-                        <span className="ml-auto hidden items-center gap-1.5 font-normal xl:flex">
-                            <ImagePlus
-                                aria-hidden="true"
-                                className="size-3.5"
-                            />
-                            {uploading > 0
-                                ? __('Uploading image…')
-                                : __('Drop or paste an image to upload')}
-                        </span>
+                        {allowImages && (
+                            <span className="ml-auto hidden items-center gap-1.5 font-normal xl:flex">
+                                <ImagePlus
+                                    aria-hidden="true"
+                                    className="size-3.5"
+                                />
+                                {uploading > 0
+                                    ? __('Uploading image…')
+                                    : __('Drop or paste an image to upload')}
+                            </span>
+                        )}
 
                         <div className="ml-auto flex items-center gap-1">
                             {visiblePanel === 'both' && (

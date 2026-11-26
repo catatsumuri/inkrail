@@ -17,6 +17,10 @@ class RenderZennArticle
      */
     public function __invoke(Article $article): ?string
     {
+        if ($article->isSandbox()) {
+            return null;
+        }
+
         $translation = $article->translations->firstWhere('locale', self::LOCALE);
 
         if ($translation === null) {

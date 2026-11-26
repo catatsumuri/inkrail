@@ -73,18 +73,31 @@ class Article extends Model
     /** @param Builder<Article> $query */
     public function scopePubliclyVisible(Builder $query): void
     {
-        $query->where('is_published', true)->where(function ($query): void {
+        $query->whereDoesntHave('namespace', fn (Builder $namespaces): Builder => $namespaces->where('slug', 'sandbox'))->where('is_published', true)->where(function ($query): void {
             $query->whereNull('published_at')->orWhere('published_at', '<=', now());
         });
     }
 
     public function publicationStatus(): string
     {
+        if ($this->isSandbox()) {
+            return 'draft';
+        }
+
         return ! $this->is_published ? 'draft' : ($this->published_at?->isFuture() ? 'scheduled' : 'published');
+    }
+
+    public function isSandbox(): bool
+    {
+        return $this->namespace?->slug === 'sandbox';
     }
 
     public function resolvedTranslation(): ?ArticleTranslation
     {
+        if ($this->isSandbox()) {
+            return $this->translations->firstWhere('locale', 'ja');
+        }
+
         foreach (array_unique([app()->getLocale(), config('app.fallback_locale'), ...config('articles.locales')]) as $locale) {
             $translation = $this->translations->firstWhere('locale', $locale);
             if ($translation !== null) {
@@ -159,6 +172,9 @@ class Article extends Model
     /** @param array<string, array{title: string, content: string}> $translations */
     public function replaceTranslations(array $translations): void
     {
+        if ($this->isSandbox() && array_diff(array_keys($translations), ['ja']) !== []) {
+            throw new \LogicException('Sandbox documents have a single body.');
+        }
         DB::transaction(function () use ($translations): void {
             foreach ($translations as $locale => $translation) {
                 $existing = $this->translations()->withTrashed()->firstOrNew(['locale' => $locale]);
@@ -201,9 +217,21 @@ class Article extends Model
 
     protected static function booted(): void
     {
+        static::saving(function (Article $article): void {
+            if ($article->exists && $article->isDirty('namespace_id')) {
+                $originalNamespace = ArticleNamespace::query()->where('id', $article->getRawOriginal('namespace_id'))->first();
+                if ($originalNamespace?->slug === 'sandbox') {
+                    throw new \LogicException('Sandbox documents cannot leave their reserved namespace.');
+                }
+            }
+            if ($article->isSandbox()) {
+                $article->is_published = false;
+                $article->published_at = null;
+            }
+        });
         static::saved(function (Article $article): void {
             if ($article->pendingTranslation !== []) {
-                $locale = app()->getLocale();
+                $locale = $article->isSandbox() ? 'ja' : app()->getLocale();
                 $existing = $article->translations()->where('locale', $locale)->first();
                 $article->replaceTranslations([$locale => [
                     'title' => $article->pendingTranslation['title'] ?? $existing->title ?? '',

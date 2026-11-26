@@ -181,59 +181,73 @@ export default function History({
                 </Link>
                 <header className="space-y-4">
                     <h1 className="text-2xl font-semibold">{article.title}</h1>
-                    <TranslationStatus
-                        articleId={article.id}
-                        states={article.translationStatus}
-                    />
+                    {!article.is_sandbox && (
+                        <TranslationStatus
+                            articleId={article.id}
+                            states={article.translationStatus}
+                        />
+                    )}
                 </header>
                 <section className="grid gap-4 sm:grid-cols-2">
-                    {['en', 'ja'].map((language) => (
-                        <div
-                            key={language}
-                            className="min-w-0 rounded-lg border p-4"
-                        >
-                            <h2 className="mb-3 text-sm font-medium">
-                                {language === 'ja' ? '日本語' : 'English'}
-                            </h2>
-                            {translations[language] ? (
-                                <>
-                                    <h3 className="font-medium">
-                                        {translations[language].title}
-                                    </h3>
-                                    <pre className="max-h-64 overflow-auto py-3 text-sm break-words whitespace-pre-wrap">
-                                        {translations[language].content}
-                                    </pre>
-                                    <Operation
-                                        label={__('Delete language version')}
-                                        form={destroy.form({
-                                            article: article.id,
-                                            translationLocale: language,
-                                        })}
-                                        version={version}
-                                        destructive
-                                    />
-                                </>
-                            ) : (
-                                <p className="text-sm text-muted-foreground">
-                                    {article.translationStatus?.[language]
-                                        ?.state === 'deleted'
-                                        ? __('Deleted')
-                                        : __('Not created')}
-                                </p>
-                            )}
-                        </div>
-                    ))}
+                    {(article.is_sandbox ? ['ja'] : ['en', 'ja']).map(
+                        (language) => (
+                            <div
+                                key={language}
+                                className="min-w-0 rounded-lg border p-4"
+                            >
+                                <h2 className="mb-3 text-sm font-medium">
+                                    {article.is_sandbox
+                                        ? __('Content')
+                                        : language === 'ja'
+                                          ? '日本語'
+                                          : 'English'}
+                                </h2>
+                                {translations[language] ? (
+                                    <>
+                                        <h3 className="font-medium">
+                                            {translations[language].title}
+                                        </h3>
+                                        <pre className="max-h-64 overflow-auto py-3 text-sm break-words whitespace-pre-wrap">
+                                            {translations[language].content}
+                                        </pre>
+                                        {!article.is_sandbox && (
+                                            <Operation
+                                                label={__(
+                                                    'Delete language version',
+                                                )}
+                                                form={destroy.form({
+                                                    article: article.id,
+                                                    translationLocale: language,
+                                                })}
+                                                version={version}
+                                                destructive
+                                            />
+                                        )}
+                                    </>
+                                ) : (
+                                    <p className="text-sm text-muted-foreground">
+                                        {article.translationStatus?.[language]
+                                            ?.state === 'deleted'
+                                            ? __('Deleted')
+                                            : __('Not created')}
+                                    </p>
+                                )}
+                            </div>
+                        ),
+                    )}
                 </section>
-                <LanguageToggle
-                    locales={['en', 'ja']}
-                    value={locale}
-                    onValueChange={(language) =>
-                        router.get(index.url({ article: article.id }), {
-                            locale: language,
-                        })
-                    }
-                    label={__('Article language')}
-                />
+                {!article.is_sandbox && (
+                    <LanguageToggle
+                        locales={['en', 'ja']}
+                        value={locale}
+                        onValueChange={(language) =>
+                            router.get(index.url({ article: article.id }), {
+                                locale: language,
+                            })
+                        }
+                        label={__('Article language')}
+                    />
+                )}
                 <div className="flex flex-wrap items-end gap-3">
                     {[
                         { label: __('Before'), value: from, set: setFrom },

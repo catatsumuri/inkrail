@@ -3,6 +3,7 @@ import { lang } from '@erag/lang-sync-inertia/react';
 import { CircleCheck, Download, LoaderCircle, PencilLine } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { index, show } from '@/actions/App/Http/Controllers/ArticleController';
+import SandboxImportController from '@/actions/App/Http/Controllers/SandboxImportController';
 import ZennImportController from '@/actions/App/Http/Controllers/ZennImportController';
 import ArticleBackupsCard, {
     type ArticleBackups,
@@ -206,6 +207,25 @@ export default function Dashboard({
                                         {__('GitHub sync is not configured.')}
                                     </p>
                                 )}
+                                <Button
+                                    disabled={!zenn.configured}
+                                    onClick={() =>
+                                        router.post(
+                                            SandboxImportController.url(),
+                                        )
+                                    }
+                                >
+                                    sandbox/ · {__('Import from GitHub')}
+                                </Button>
+                                <Button asChild variant="outline">
+                                    <Link
+                                        href={index({
+                                            query: { namespace: 'sandbox' },
+                                        })}
+                                    >
+                                        sandbox/
+                                    </Link>
+                                </Button>
                                 <Dialog
                                     open={importDialogOpen}
                                     onOpenChange={(open) => {

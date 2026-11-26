@@ -32,6 +32,10 @@ class PushArticleToZenn
      */
     public function __invoke(Article $article, ?Closure $progress = null): array
     {
+        if ($article->fresh()?->isSandbox()) {
+            throw new ZennPushException('Sandbox documents cannot be sent to Zenn.');
+        }
+
         $progress?->__invoke('progress', ['message' => 'Acquiring repository lock.']);
         try {
             return ($this->syncLock)(function (Closure $checkLock) use ($article, $progress): array {

@@ -97,6 +97,9 @@ class ImportZennArticles
      */
     private function store(User $owner, string $repository, string $branch, string $path, string $sha, array $parsed, array $remotePaths): string
     {
+        if (($parsed['frontmatter']['namespace'] ?? null) === 'sandbox') {
+            return 'conflict';
+        }
         $byPath = Article::query()->where('zenn_repository', $repository)->where('zenn_branch', $branch)->where('zenn_path', $path)->lockForUpdate()->first();
         $byIdentity = $parsed['sync_id'] === null ? null : Article::query()->where('sync_id', $parsed['sync_id'])->lockForUpdate()->first();
 
@@ -105,6 +108,9 @@ class ImportZennArticles
         }
 
         $article = $byIdentity ?? $byPath;
+        if ($article?->isSandbox()) {
+            return 'conflict';
+        }
         if ($article !== null) {
             if ($article->user_id !== $owner->id || ($parsed['sync_id'] !== null && $article->sync_id !== $parsed['sync_id'])) {
                 return 'conflict';
