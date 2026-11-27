@@ -1,6 +1,7 @@
+import SocialHead, { type SocialMetadata } from '@/components/social-head';
 import LocaleSwitcher from '@/components/locale-switcher';
 import { lang } from '@erag/lang-sync-inertia/react';
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { ArrowRight, BookOpen, Languages, PenLine } from 'lucide-react';
 import { index as myArticles } from '@/actions/App/Http/Controllers/ArticleController';
 import { index as publicArticles } from '@/actions/App/Http/Controllers/PublicArticleController';
@@ -14,15 +15,17 @@ import { register } from '@/routes';
 
 export default function Welcome({
     publicIndexEnabled,
+    social,
 }: {
     publicIndexEnabled: boolean;
+    social: SocialMetadata;
 }) {
     const { auth, features } = usePage().props;
     const { __ } = lang();
 
     return (
         <>
-            <Head title={__('Welcome to InkRail')} />
+            <SocialHead social={social} />
             <div className="min-h-screen bg-background text-foreground">
                 <header className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4 px-6 py-6">
                     <span className="inline-flex items-center gap-2.5 text-xl font-semibold tracking-tight">
