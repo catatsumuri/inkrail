@@ -65,7 +65,7 @@ class PublicArticleController extends Controller
         }, $article->slug.'.md', [
             'Content-Type' => 'text/markdown; charset=UTF-8',
             'Cache-Control' => 'private, no-store',
-        ]);
+        ], 'inline');
     }
 
     private function preparePublicArticle(Request $request, Article $article): ?string

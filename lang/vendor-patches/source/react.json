@@ -385,5 +385,7 @@
     "Choose one backup ZIP at a time.": "Choose one backup ZIP at a time.",
     "Choose a ZIP file.": "Choose a ZIP file.",
     "The backup must be 100 MiB or smaller.": "The backup must be 100 MiB or smaller.",
-    "Download Markdown": "Download Markdown"
+    "Download Markdown": "Download Markdown",
+    "View source": "View source",
+    "RSS feed": "RSS feed"
 }

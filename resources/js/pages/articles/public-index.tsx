@@ -1,7 +1,9 @@
+import ArticleFeedController from '@/actions/App/Http/Controllers/ArticleFeedController';
+import { Button } from '@/components/ui/button';
 import ArticleLanguageNotice from '@/components/article-language-notice';
 import { lang } from '@erag/lang-sync-inertia/react';
 import { Link, usePage } from '@inertiajs/react';
-import { ArrowRight, ArrowUpRight } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, Rss } from 'lucide-react';
 import {
     index,
     show,
@@ -56,12 +58,27 @@ export default function PublicIndex({
                             />
                             InkRail
                         </p>
-                        <h1 className="font-serif text-5xl leading-[1.1] tracking-tight text-balance sm:text-7xl">
-                            {__('Public articles')}
-                            <span className="text-amber-600 dark:text-amber-400">
-                                .
-                            </span>
-                        </h1>
+                        <div className="flex flex-wrap items-center justify-between gap-4">
+                            <h1 className="font-serif text-5xl leading-[1.1] tracking-tight text-balance sm:text-7xl">
+                                {__('Public articles')}
+                                <span className="text-amber-600 dark:text-amber-400">
+                                    .
+                                </span>
+                            </h1>
+                            <Button asChild variant="outline" size="sm">
+                                <a
+                                    href={ArticleFeedController.url({
+                                        query: { lang: locale },
+                                    })}
+                                >
+                                    <Rss
+                                        aria-hidden="true"
+                                        className="size-4"
+                                    />
+                                    {__('RSS feed')}
+                                </a>
+                            </Button>
+                        </div>
                         <p className="max-w-md text-sm leading-relaxed text-muted-foreground sm:text-base">
                             {__('Ideas, notes, and things worth sharing.')}
                         </p>
