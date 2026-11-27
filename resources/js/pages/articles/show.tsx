@@ -182,7 +182,12 @@ export default function Show({
     }
     setLayoutProps({
         breadcrumbs: [
-            { title: __('Articles'), href: index() },
+            {
+                title: __(article.is_sandbox ? 'Sandbox' : 'My articles'),
+                href: article.is_sandbox
+                    ? index({ query: { namespace: 'sandbox' } })
+                    : index(),
+            },
             { title: article.title, href: show(article.id) },
         ],
     });
@@ -195,15 +200,31 @@ export default function Show({
                         <TooltipTrigger asChild>
                             <Button asChild variant="ghost" size="icon">
                                 <Link
-                                    href={index()}
-                                    aria-label={__('Back to my articles')}
+                                    href={
+                                        article.is_sandbox
+                                            ? index({
+                                                  query: {
+                                                      namespace: 'sandbox',
+                                                  },
+                                              })
+                                            : index()
+                                    }
+                                    aria-label={__(
+                                        article.is_sandbox
+                                            ? 'Back to sandbox'
+                                            : 'Back to my articles',
+                                    )}
                                 >
                                     <ArrowLeft aria-hidden="true" />
                                 </Link>
                             </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                            {__('Back to my articles')}
+                            {__(
+                                article.is_sandbox
+                                    ? 'Back to sandbox'
+                                    : 'Back to my articles',
+                            )}
                         </TooltipContent>
                     </Tooltip>
                     <div className="flex items-center gap-1 text-muted-foreground">
@@ -450,7 +471,14 @@ export default function Show({
                                 {article.topics.map((topic) => (
                                     <Link
                                         key={topic}
-                                        href={index({ query: { topic } })}
+                                        href={index({
+                                            query: {
+                                                topic,
+                                                ...(article.is_sandbox
+                                                    ? { namespace: 'sandbox' }
+                                                    : {}),
+                                            },
+                                        })}
                                         className="rounded-full border px-3 py-1 text-xs break-all text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                                     >
                                         {topic}

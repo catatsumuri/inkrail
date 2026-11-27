@@ -27,7 +27,7 @@ Route::post('sandbox', SandboxController::class)
 Route::post('locale', LocaleController::class)->name('locale.update');
 
 Route::get('images/{path}', [ArticleImageController::class, 'show'])
-    ->where('path', '[0-9a-f]{64}\.(png|jpg|gif|webp)')
+    ->where('path', '.+\.(png|jpg|jpeg|gif|webp)')
     ->name('images.show');
 
 Route::get('p', [PublicArticleController::class, 'index'])

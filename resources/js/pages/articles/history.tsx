@@ -127,7 +127,12 @@ export default function History({
     const [from, setFrom] = useState(selection.from?.id.toString() ?? '');
     setLayoutProps({
         breadcrumbs: [
-            { title: __('Articles'), href: articlesIndex() },
+            {
+                title: __(article.is_sandbox ? 'Sandbox' : 'My articles'),
+                href: article.is_sandbox
+                    ? articlesIndex({ query: { namespace: 'sandbox' } })
+                    : articlesIndex(),
+            },
             { title: article.title, href: show(article.id) },
             {
                 title: __('History and correspondence'),

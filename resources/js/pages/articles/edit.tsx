@@ -14,7 +14,12 @@ export default function Edit({ article }: { article: Article }) {
     const { __ } = lang();
     setLayoutProps({
         breadcrumbs: [
-            { title: __('Articles'), href: index() },
+            {
+                title: __(article.is_sandbox ? 'Sandbox' : 'My articles'),
+                href: article.is_sandbox
+                    ? index({ query: { namespace: 'sandbox' } })
+                    : index(),
+            },
             { title: article.title, href: show(article.id) },
             { title: __('Edit'), href: edit(article.id) },
         ],

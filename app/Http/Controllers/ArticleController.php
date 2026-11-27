@@ -23,7 +23,11 @@ class ArticleController extends Controller
         $topic = $request->validate(['topic' => ['nullable', 'string', 'max:255']])['topic'] ?? null;
         $articles = $request->user()->articles()->getQuery();
         $namespace = $request->validate(['namespace' => ['nullable', 'in:sandbox']])['namespace'] ?? null;
-        $articles->when($namespace === 'sandbox', fn (Builder $query): Builder => $query->whereHas('namespace', fn (Builder $query): Builder => $query->where('slug', 'sandbox')));
+        $articles->when(
+            $namespace === 'sandbox',
+            fn (Builder $query): Builder => $query->whereHas('namespace', fn (Builder $query): Builder => $query->where('slug', 'sandbox')),
+            fn (Builder $query): Builder => $query->whereDoesntHave('namespace', fn (Builder $query): Builder => $query->where('slug', 'sandbox')),
+        );
         $topics = (clone $articles)->without('translations')->select('zenn_frontmatter')->get()
             ->flatMap(fn (Article $article): array => $article->topics)->unique()->sort()->values()->all();
 
@@ -123,9 +127,10 @@ class ArticleController extends Controller
     public function destroy(Article $article): RedirectResponse
     {
         Gate::authorize('delete', $article);
+        $isSandbox = $article->isSandbox();
         $article->delete();
 
-        return to_route('articles.index');
+        return to_route('articles.index', $isSandbox ? ['namespace' => 'sandbox'] : []);
     }
 
     /** @return array<string, mixed> */
