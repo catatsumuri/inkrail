@@ -336,5 +336,6 @@
     "Drop a backup ZIP here or choose a file (up to 100 MiB).": "バックアップ ZIP をここにドロップするか、ファイルを選択してください（100 MiB 以下）。",
     "Choose one backup ZIP at a time.": "バックアップ ZIP は1つずつ選択してください。",
     "Choose a ZIP file.": "ZIP ファイルを選択してください。",
-    "The backup must be 100 MiB or smaller.": "バックアップは100 MiB 以下にしてください。"
+    "The backup must be 100 MiB or smaller.": "バックアップは100 MiB 以下にしてください。",
+    "Download Markdown": "Markdown をダウンロード"
 }

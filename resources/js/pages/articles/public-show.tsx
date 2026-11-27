@@ -1,3 +1,5 @@
+import { markdown } from '@/actions/App/Http/Controllers/PublicArticleController';
+import { Button } from '@/components/ui/button';
 import ArticleLanguageNotice from '@/components/article-language-notice';
 import { lang } from '@erag/lang-sync-inertia/react';
 import { Link, usePage } from '@inertiajs/react';
@@ -13,6 +15,7 @@ export default function PublicShow({
     article,
     editableArticleId,
     publicIndexEnabled,
+    markdownDownloadEnabled,
     social,
 }: {
     article: Pick<
@@ -27,6 +30,7 @@ export default function PublicShow({
     >;
     editableArticleId: number | null;
     publicIndexEnabled: boolean;
+    markdownDownloadEnabled: boolean;
     social: SocialMetadata;
 }) {
     const { __ } = lang();
@@ -54,6 +58,21 @@ export default function PublicShow({
                                 title={article.title}
                                 src={article.eyecatch_url}
                             />
+                            {markdownDownloadEnabled && (
+                                <Button asChild variant="outline" size="sm">
+                                    <a
+                                        href={markdown.url(article.slug, {
+                                            query: {
+                                                lang:
+                                                    article.resolvedLocale ??
+                                                    locale,
+                                            },
+                                        })}
+                                    >
+                                        {__('Download Markdown')}
+                                    </a>
+                                </Button>
+                            )}
                             {article.topics && article.topics.length > 0 && (
                                 <div className="flex flex-wrap gap-2">
                                     {article.topics.map((topic) => (
