@@ -332,5 +332,7 @@
     "No sandbox documents are linked to this repository yet.": "このリポジトリから取り込んだsandboxの記事はまだありません。",
     "Status shows local changes since the last sandbox import. Import again to check for GitHub updates. Shared images under images/ are public.": "前回のsandbox取り込み以降のローカル変更を表示しています。GitHub側の更新は再度取り込んで確認できます。images/ の画像は共通の公開領域です。",
     "Manage your articles here. Sandbox notes are listed separately.": "自分の記事を管理できます。Sandboxのメモは専用の一覧に表示されます。",
-    "Back to sandbox": "Sandbox一覧に戻る"
+    "Back to sandbox": "Sandbox一覧に戻る",
+    "Import Japanese articles from articles/ and public images from images/. Published articles will also be public in InkRail.": "articles/ 内の日本語の記事と、images/ 内の公開画像を取り込みます。公開済みの記事はInkRailでも公開されます。",
+    "Published articles and imported images are public in InkRail. This operation does not write to GitHub.": "公開済みの記事と取り込んだ画像はInkRailでも公開されます。この操作でGitHubへの書き込みは行いません。"
 }

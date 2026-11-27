@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\ImportSandboxDocuments;
 use App\Actions\Zenn\ImportZennArticles;
 use App\Actions\Zenn\PushArticleToZenn;
 use App\Actions\Zenn\RenderZennArticle;
@@ -13,7 +14,9 @@ use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Http\Client\Factory;
 use Illuminate\Http\Client\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
 use Symfony\Component\Yaml\Yaml;
 
@@ -451,4 +454,83 @@ test('streams a terminal failure when the import cannot read GitHub', function (
 
     expect($content)->toContain('"status":"failed"')->not->toContain('secret-token');
     expect(Activity::inLog('security')->where('event', 'articles.zenn_import_failed')->count())->toBe(1);
+});
+
+test('regular article imports also import public repository images without importing sandbox documents', function () {
+    Storage::fake('public');
+    config(['articles.image_disk' => 'public']);
+    $owner = User::factory()->withUsername('publisher')->create();
+    $image = UploadedFile::fake()->image('diagram.png')->get();
+    $article = zennImportMarkdown(body: '![Diagram](/images/nested/diagram.png)');
+    fakeZennImport([
+        'articles/original-article.md' => $article,
+        'sandbox/note.md' => '# Private note',
+        'images/nested/diagram.png' => $image,
+        'images/unreferenced.png' => $image,
+    ]);
+
+    $this->actingAs($owner)->post(route('zenn.import'))->assertRedirect(route('dashboard'))
+        ->assertSessionHas('zenn_import.created', 3);
+
+    expect($owner->articles()->count())->toBe(1);
+    expect($owner->articles()->sole()->isSandbox())->toBeFalse();
+    Storage::disk('public')->assertExists(['repository-images/nested/diagram.png', 'repository-images/unreferenced.png']);
+    auth()->logout();
+    expect($this->get('/images/nested/diagram.png')->assertOk()->streamedContent())->toBe($image);
+    Http::assertSentCount(4);
+    Http::assertNotSent(fn (Request $request): bool => $request->method() !== 'GET');
+});
+
+test('regular imports update shared images when the article is unchanged and sandbox imports see the update', function () {
+    Storage::fake('public');
+    config(['articles.image_disk' => 'public']);
+    $owner = User::factory()->withUsername('publisher')->create();
+    $first = UploadedFile::fake()->image('diagram.png', 2, 2)->get();
+    $second = UploadedFile::fake()->image('diagram.png', 3, 2)->get();
+    $files = ['articles/original-article.md' => zennImportMarkdown(), 'images/diagram.png' => $first];
+    fakeZennImport($files);
+    expect(app(ImportZennArticles::class)($owner)['created'])->toBe(2);
+    fakeZennImport($files);
+    expect(app(ImportZennArticles::class)($owner)['unchanged'])->toBe(2);
+    fakeZennImport([...$files, 'images/diagram.png' => $second]);
+
+    $result = app(ImportZennArticles::class)($owner);
+
+    expect($result['updated'])->toBe(1);
+    expect($result['unchanged'])->toBe(1);
+    expect($this->get('/images/diagram.png')->assertOk()->streamedContent())->toBe($second);
+    expect(app(ImportSandboxDocuments::class)($owner)['unchanged'])->toBe(1);
+    expect($owner->articles()->count())->toBe(1);
+    Http::assertSentCount(5);
+});
+
+test('regular imports skip invalid images while importing valid articles', function () {
+    Storage::fake('public');
+    config(['articles.image_disk' => 'public']);
+    $owner = User::factory()->withUsername('publisher')->create();
+    $original = UploadedFile::fake()->image('diagram.png')->get();
+    Storage::disk('public')->put('repository-images/diagram.png', $original);
+    fakeZennImport(['articles/original-article.md' => zennImportMarkdown(), 'images/diagram.png' => '<html>Not an image</html>']);
+
+    $result = app(ImportZennArticles::class)($owner);
+
+    expect($result['created'])->toBe(1);
+    expect($result['invalid'])->toBe(1);
+    expect($owner->articles()->count())->toBe(1);
+    expect(Storage::disk('public')->get('repository-images/diagram.png'))->toBe($original);
+    Http::assertSentCount(3);
+});
+
+test('regular streaming imports report image progress and results', function () {
+    Storage::fake('public');
+    config(['articles.image_disk' => 'public']);
+    $owner = User::factory()->withUsername('publisher')->create();
+    fakeZennImport(['images/diagram.png' => UploadedFile::fake()->image('diagram.png')->get()]);
+
+    $content = $this->actingAs($owner)->withHeader('Accept', 'text/event-stream')
+        ->post(route('zenn.import'))->assertOk()->streamedContent();
+
+    expect($content)->toContain('Reading image :current of :total.', '"status":"imported"', '"created":1')->not->toContain('secret-token');
+    Storage::disk('public')->assertExists('repository-images/diagram.png');
+    Http::assertSentCount(2);
 });

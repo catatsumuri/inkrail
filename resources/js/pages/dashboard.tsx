@@ -241,7 +241,7 @@ export default function Dashboard({
                                             </h2>
                                             <p className="text-sm text-muted-foreground">
                                                 {__(
-                                                    'Import Japanese articles from articles/. Published articles will also be public in InkRail.',
+                                                    'Import Japanese articles from articles/ and public images from images/. Published articles will also be public in InkRail.',
                                                 )}
                                             </p>
                                         </div>
@@ -348,7 +348,7 @@ export default function Dashboard({
                                             {__(
                                                 importTarget === 'sandbox'
                                                     ? 'Imported sandbox documents stay private in InkRail. Images are publicly accessible. This operation does not write to GitHub.'
-                                                    : 'Published articles will also be public in InkRail. This operation does not write to GitHub.',
+                                                    : 'Published articles and imported images are public in InkRail. This operation does not write to GitHub.',
                                             )}
                                         </p>
                                     </div>
