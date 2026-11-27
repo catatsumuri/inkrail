@@ -1,8 +1,9 @@
 import { Form } from '@inertiajs/react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { lang } from '@erag/lang-sync-inertia/react';
 import { Download, RotateCcw, Trash2, Upload } from 'lucide-react';
 import ArticleBackupController from '@/actions/App/Http/Controllers/ArticleBackupController';
+import { validateBackupFiles } from '@/lib/backup-files';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import {
@@ -221,6 +222,22 @@ export default function ArticleBackupsCard({
 }) {
     const { __ } = lang();
 
+    const inputRef = useRef<HTMLInputElement>(null);
+    const dragDepth = useRef(0);
+    const [dragging, setDragging] = useState(false);
+    const [selection, setSelection] = useState<File | null>(null);
+    const [fileError, setFileError] = useState<string | null>(null);
+
+    function selectFiles(files: File[]) {
+        const error = validateBackupFiles(files);
+        setFileError(error);
+        if (error || files.length === 0) return;
+        const transfer = new DataTransfer();
+        transfer.items.add(files[0]);
+        if (inputRef.current) inputRef.current.files = transfer.files;
+        setSelection(files[0]);
+    }
+
     return (
         <Card>
             <CardHeader>
@@ -233,29 +250,96 @@ export default function ArticleBackupsCard({
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-                <div className="flex flex-wrap items-start gap-4">
+                <div className="flex flex-col items-start gap-4">
                     <CreateDialog />
                     <Form
                         {...ArticleBackupController.upload.form()}
                         options={{ preserveScroll: true }}
                         resetOnSuccess
-                        className="flex flex-wrap items-start gap-2"
+                        onSuccess={() => {
+                            setSelection(null);
+                            setFileError(null);
+                        }}
+                        className="w-full"
                     >
                         {({ processing, errors }) => (
-                            <div className="space-y-2">
-                                <div className="flex flex-wrap items-center gap-2">
+                            <div className="space-y-3">
+                                <div
+                                    className={`flex min-h-0 flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-5 py-4 text-center transition-colors ${dragging ? 'border-primary bg-primary/10 ring-4 ring-primary/10' : 'border-muted-foreground/35 bg-muted/20 hover:border-primary/60 hover:bg-muted/40'}`}
+                                    onDragEnter={(event) => {
+                                        event.preventDefault();
+                                        if (
+                                            processing ||
+                                            !event.dataTransfer.types.includes(
+                                                'Files',
+                                            )
+                                        )
+                                            return;
+                                        dragDepth.current++;
+                                        setDragging(true);
+                                    }}
+                                    onDragOver={(event) =>
+                                        event.preventDefault()
+                                    }
+                                    onDragLeave={() => {
+                                        dragDepth.current = Math.max(
+                                            0,
+                                            dragDepth.current - 1,
+                                        );
+                                        if (dragDepth.current === 0)
+                                            setDragging(false);
+                                    }}
+                                    onDrop={(event) => {
+                                        event.preventDefault();
+                                        dragDepth.current = 0;
+                                        setDragging(false);
+                                        if (!processing)
+                                            selectFiles(
+                                                Array.from(
+                                                    event.dataTransfer.files,
+                                                ),
+                                            );
+                                    }}
+                                >
+                                    <div className="flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                                        <Upload
+                                            aria-hidden="true"
+                                            className="size-5"
+                                        />
+                                    </div>
+                                    <p className="max-w-lg text-sm font-medium">
+                                        {__(
+                                            'Drop a backup ZIP here or choose a file (up to 100 MiB).',
+                                        )}
+                                    </p>
                                     <Input
+                                        ref={inputRef}
+                                        disabled={processing}
+                                        onChange={(event) => {
+                                            const files = Array.from(
+                                                event.target.files ?? [],
+                                            );
+                                            selectFiles(files);
+                                            if (validateBackupFiles(files)) {
+                                                event.target.value = '';
+                                                setSelection(null);
+                                            }
+                                        }}
                                         type="file"
                                         name="backup"
                                         accept=".zip"
                                         required
                                         aria-label={__('Backup file')}
-                                        className="w-auto"
+                                        className="max-w-xs cursor-pointer bg-background text-left"
                                     />
                                     <Button
                                         type="submit"
                                         variant="outline"
-                                        disabled={processing}
+                                        disabled={
+                                            processing ||
+                                            !selection ||
+                                            !!fileError
+                                        }
                                     >
                                         {processing ? (
                                             <Spinner />
@@ -265,7 +349,17 @@ export default function ArticleBackupsCard({
                                         {__('Upload backup')}
                                     </Button>
                                 </div>
-                                <InputError message={errors.backup} />
+                                <p aria-live="polite" className="text-sm">
+                                    {selection &&
+                                        `${selection.name} · ${formatSize(selection.size)}`}
+                                </p>
+                                <InputError
+                                    message={
+                                        fileError
+                                            ? __(fileError)
+                                            : errors.backup
+                                    }
+                                />
                             </div>
                         )}
                     </Form>

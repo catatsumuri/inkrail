@@ -1,8 +1,16 @@
+import ArticleTitleHeader from '@/components/article-title-header';
 import ArticlePublicationTime from '@/components/article-publication-time';
 import { useEffect, useState } from 'react';
 import ArticleLanguageNotice from '@/components/article-language-notice';
 import { lang } from '@erag/lang-sync-inertia/react';
-import { Form, Head, Link, router, setLayoutProps } from '@inertiajs/react';
+import {
+    Form,
+    Head,
+    Link,
+    router,
+    setLayoutProps,
+    usePage,
+} from '@inertiajs/react';
 import {
     ArrowLeft,
     CloudUpload,
@@ -52,6 +60,7 @@ export default function Show({
     canPushToZenn: boolean;
 }) {
     const { __ } = lang();
+    const { locale } = usePage().props;
     const [saveDialogOpen, setSaveDialogOpen] = useState(false);
     const [saving, setSaving] = useState(false);
     const [saveLogs, setSaveLogs] = useState<string[]>([]);
@@ -173,7 +182,12 @@ export default function Show({
     }
     setLayoutProps({
         breadcrumbs: [
-            { title: '記事', href: index() },
+            {
+                title: __(article.is_sandbox ? 'Sandbox' : 'My articles'),
+                href: article.is_sandbox
+                    ? index({ query: { namespace: 'sandbox' } })
+                    : index(),
+            },
             { title: article.title, href: show(article.id) },
         ],
     });
@@ -186,15 +200,31 @@ export default function Show({
                         <TooltipTrigger asChild>
                             <Button asChild variant="ghost" size="icon">
                                 <Link
-                                    href={index()}
-                                    aria-label={__('Back to my articles')}
+                                    href={
+                                        article.is_sandbox
+                                            ? index({
+                                                  query: {
+                                                      namespace: 'sandbox',
+                                                  },
+                                              })
+                                            : index()
+                                    }
+                                    aria-label={__(
+                                        article.is_sandbox
+                                            ? 'Back to sandbox'
+                                            : 'Back to my articles',
+                                    )}
                                 >
                                     <ArrowLeft aria-hidden="true" />
                                 </Link>
                             </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                            {__('Back to my articles')}
+                            {__(
+                                article.is_sandbox
+                                    ? 'Back to sandbox'
+                                    : 'Back to my articles',
+                            )}
                         </TooltipContent>
                     </Tooltip>
                     <div className="flex items-center gap-1 text-muted-foreground">
@@ -205,7 +235,7 @@ export default function Show({
                                         <Button
                                             asChild
                                             variant="ghost"
-                                            size="icon"
+                                            size="sm"
                                         >
                                             <Link
                                                 href={publicShow(article.slug)}
@@ -216,6 +246,7 @@ export default function Show({
                                                 )}
                                             >
                                                 <ExternalLink aria-hidden="true" />
+                                                {__('View public page')}
                                             </Link>
                                         </Button>
                                     </TooltipTrigger>
@@ -298,7 +329,7 @@ export default function Show({
                                     </p>
                                     {article.published_at && (
                                         <p>
-                                            {new Intl.DateTimeFormat('ja-JP', {
+                                            {new Intl.DateTimeFormat(locale, {
                                                 timeZone: 'Asia/Tokyo',
                                                 dateStyle: 'medium',
                                                 timeStyle: 'short',
@@ -431,15 +462,23 @@ export default function Show({
                                 {article.slug}
                             </span>
                         </div>
-                        <h1 className="text-3xl leading-tight font-semibold tracking-tight break-words sm:text-4xl">
-                            {article.title}
-                        </h1>
+                        <ArticleTitleHeader
+                            title={article.title}
+                            src={article.eyecatch_url}
+                        />
                         {article.topics && article.topics.length > 0 && (
                             <div className="flex flex-wrap gap-2">
                                 {article.topics.map((topic) => (
                                     <Link
                                         key={topic}
-                                        href={index({ query: { topic } })}
+                                        href={index({
+                                            query: {
+                                                topic,
+                                                ...(article.is_sandbox
+                                                    ? { namespace: 'sandbox' }
+                                                    : {}),
+                                            },
+                                        })}
                                         className="rounded-full border px-3 py-1 text-xs break-all text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                                     >
                                         {topic}
@@ -466,14 +505,18 @@ export default function Show({
                                 />
                             </div>
                         )}
-                        <ArticleLanguageNotice
-                            resolvedLocale={article.resolvedLocale}
-                        />
-                        <TranslationStatus
-                            articleId={article.id}
-                            states={article.translationStatus}
-                        />
-                        {!article.is_published && (
+                        {!article.is_sandbox && (
+                            <ArticleLanguageNotice
+                                resolvedLocale={article.resolvedLocale}
+                            />
+                        )}
+                        {!article.is_sandbox && (
+                            <TranslationStatus
+                                articleId={article.id}
+                                states={article.translationStatus}
+                            />
+                        )}
+                        {!article.is_published && !article.is_sandbox && (
                             <p className="text-sm text-muted-foreground">
                                 {__(
                                     'This draft is only visible to you. Publish it to share its URL.',

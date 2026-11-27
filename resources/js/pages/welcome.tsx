@@ -1,6 +1,7 @@
+import SocialHead, { type SocialMetadata } from '@/components/social-head';
 import LocaleSwitcher from '@/components/locale-switcher';
 import { lang } from '@erag/lang-sync-inertia/react';
-import { Form, Head, Link, usePage } from '@inertiajs/react';
+import { Form, Link, usePage } from '@inertiajs/react';
 import { ArrowRight, Check, Copy, Github, ArrowUpRight } from 'lucide-react';
 import { index as myArticles } from '@/actions/App/Http/Controllers/ArticleController';
 import {
@@ -60,8 +61,10 @@ const supportingStack = [
 
 export default function Welcome({
     publicIndexEnabled,
+    social,
 }: {
     publicIndexEnabled: boolean;
+    social: SocialMetadata;
 }) {
     const { auth, demoMode } = usePage().props;
     const { __ } = lang();
@@ -104,7 +107,7 @@ export default function Welcome({
 
     return (
         <>
-            <Head title={__('InkRail Live Demo')} />
+            <SocialHead social={social} />
             <div className="min-h-screen bg-[#f6f5f0] text-foreground dark:bg-[#191a18]">
                 <header className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 border-b px-6 py-5">
                     <span className="inline-flex items-center gap-2.5 text-xl font-semibold tracking-tight">

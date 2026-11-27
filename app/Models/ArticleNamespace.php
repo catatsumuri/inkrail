@@ -18,6 +18,20 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 #[Fillable(['name', 'slug'])]
 class ArticleNamespace extends Model
 {
+    protected static function booted(): void
+    {
+        static::updating(function (ArticleNamespace $namespace): void {
+            if ($namespace->getRawOriginal('slug') === 'sandbox' && $namespace->isDirty(['slug', 'name'])) {
+                throw new \LogicException('The sandbox namespace is reserved.');
+            }
+        });
+        static::deleting(function (ArticleNamespace $namespace): void {
+            if ($namespace->slug === 'sandbox') {
+                throw new \LogicException('The sandbox namespace is reserved.');
+            }
+        });
+    }
+
     /** @use HasFactory<ArticleNamespaceFactory> */
     use HasFactory;
 

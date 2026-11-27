@@ -2,11 +2,23 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Article;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreArticleImageRequest extends FormRequest
 {
+    public function authorize(): bool
+    {
+        if ($this->filled('article_id')) {
+            $article = Article::findOrFail($this->integer('article_id'));
+
+            return $this->user()?->can('update', $article) === true && ! $article->isSandbox();
+        }
+
+        return $this->user() !== null;
+    }
+
     /**
      * @return array<string, ValidationRule|array<mixed>|string>
      */

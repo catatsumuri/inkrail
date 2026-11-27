@@ -171,6 +171,7 @@ class CreateArticleBackup
             'edit_version' => $article->edit_version,
             'owner' => $usernames->get($article->user_id),
             'namespace' => $namespaceSlugs->get($article->namespace_id),
+            'github_source' => DB::table('article_github_sources')->where('article_id', $article->id)->first(),
             'zenn_repository' => $article->zenn_repository,
             'zenn_branch' => $article->zenn_branch,
             'zenn_path' => $article->zenn_path,

@@ -14,6 +14,7 @@ import InputError from '@/components/input-error';
 import ArticleEyecatchInput from '@/components/article-eyecatch-input';
 import LanguageToggle from '@/components/language-toggle';
 import { articleTemplate } from '@/lib/article-template';
+import { handleSaveShortcut } from '@/lib/save-shortcut';
 import MarkdownEditor from '@/components/markdown-editor';
 import TranslationStatus from '@/components/translation-status';
 import { Badge } from '@/components/ui/badge';
@@ -22,9 +23,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { Article } from '@/types/article';
 
-export default function ArticleForm({ article }: { article?: Article }) {
+export default function ArticleForm({
+    article,
+    namespace,
+}: {
+    article?: Article;
+    namespace?: string | null;
+}) {
+    const isSandbox = article?.is_sandbox || namespace === 'sandbox';
     const { __ } = lang();
-    const { auth, locale, articleLocales } = usePage().props;
+    const { auth, locale, articleLocales: configuredLocales } = usePage().props;
+    const articleLocales = isSandbox ? ['ja'] : configuredLocales;
     const [publicationMode, setPublicationMode] = useState(
         article?.is_published
             ? article.published_at
@@ -45,6 +54,7 @@ export default function ArticleForm({ article }: { article?: Article }) {
     );
     const continueEditing = useRef(true);
     const modifierHeldOnSave = useRef(false);
+    const saveButtonRef = useRef<HTMLButtonElement>(null);
     const [modifierHeld, setModifierHeld] = useState(false);
     const modifierKeyLabel = /Mac|iPhone|iPad/.test(navigator.platform)
         ? '⌘'
@@ -53,6 +63,18 @@ export default function ArticleForm({ article }: { article?: Article }) {
     const [saveButtonTarget, setSaveButtonTarget] = useState<Element | null>(
         null,
     );
+
+    useEffect(() => {
+        function saveWithKeyboard(event: KeyboardEvent) {
+            modifierHeldOnSave.current = false;
+            handleSaveShortcut(event, saveButtonRef.current);
+        }
+
+        window.addEventListener('keydown', saveWithKeyboard, true);
+
+        return () =>
+            window.removeEventListener('keydown', saveWithKeyboard, true);
+    }, []);
 
     useEffect(() => {
         function updateSaveButtonTarget() {
@@ -105,7 +127,12 @@ export default function ArticleForm({ article }: { article?: Article }) {
         };
     });
     const [editingLocale, setEditingLocale] = useState(() => {
-        const preferred = jumpLocale ?? locale;
+        const requested = jumpLocale ?? locale;
+        const preferred =
+            article?.translations?.[requested] === undefined &&
+            article?.resolvedLocale !== undefined
+                ? article.resolvedLocale
+                : requested;
 
         return articleLocales.includes(preferred)
             ? preferred
@@ -118,6 +145,24 @@ export default function ArticleForm({ article }: { article?: Article }) {
             {...(article ? update.form(article.id) : store.form())}
             transform={({ topics_input, ...data }) => ({
                 ...data,
+                ...(namespace === 'sandbox' ? { namespace: 'sandbox' } : {}),
+                ...(isSandbox
+                    ? {
+                          title: (
+                              data.translations as Record<
+                                  string,
+                                  { title: string; content: string }
+                              >
+                          ).ja.title,
+                          content: (
+                              data.translations as Record<
+                                  string,
+                                  { title: string; content: string }
+                              >
+                          ).ja.content,
+                          translations: undefined,
+                      }
+                    : {}),
                 continue_editing: continueEditing.current,
                 topics: String(topics_input ?? '')
                     .split(',')
@@ -176,20 +221,24 @@ export default function ArticleForm({ article }: { article?: Article }) {
                                 name="edit_version"
                                 value={loadedVersion}
                             />
-                            <TranslationStatus
-                                articleId={article.id}
-                                states={article.translationStatus}
-                            />
+                            {!article.is_sandbox && (
+                                <TranslationStatus
+                                    articleId={article.id}
+                                    states={article.translationStatus}
+                                />
+                            )}
                         </>
                     )}
                     <InputError message={errors.edit_version} />
-                    <LanguageToggle
-                        locales={articleLocales}
-                        value={editingLocale}
-                        onValueChange={setEditingLocale}
-                        label={__('Article language')}
-                        states={article?.translationStatus}
-                    />
+                    {!isSandbox && (
+                        <LanguageToggle
+                            locales={articleLocales}
+                            value={editingLocale}
+                            onValueChange={setEditingLocale}
+                            label={__('Article language')}
+                            states={article?.translationStatus}
+                        />
+                    )}
                     <InputError message={errors.translations} />
                     {articleLocales.map((language) => (
                         <div
@@ -221,6 +270,7 @@ export default function ArticleForm({ article }: { article?: Article }) {
                                     {__('Content')}
                                 </Label>
                                 <MarkdownEditor
+                                    allowImages={!isSandbox}
                                     id={`content-${language}`}
                                     name={`translations[${language}][content]`}
                                     defaultValue={
@@ -324,12 +374,14 @@ export default function ArticleForm({ article }: { article?: Article }) {
                             }
                         />
                     </div>
-                    <ArticleEyecatchInput
-                        defaultValue={article?.eyecatch}
-                        error={errors.eyecatch}
-                        onUploadingChange={setUploadingEyecatch}
-                    />
-                    {!auth.user?.is_sandbox && (
+                    {!isSandbox && (
+                        <ArticleEyecatchInput
+                            defaultValue={article?.eyecatch}
+                            error={errors.eyecatch}
+                            onUploadingChange={setUploadingEyecatch}
+                        />
+                    )}
+                    {!auth.user?.is_sandbox && !isSandbox && (
                         <div className="grid gap-2">
                             <Label htmlFor="publication_mode">
                                 {__('Publication')}
@@ -415,7 +467,13 @@ export default function ArticleForm({ article }: { article?: Article }) {
                                     (returnTo
                                         ? `${returnTo}${returnHeading ? `#${encodeURIComponent(returnHeading)}` : ''}`
                                         : undefined) ??
-                                    (article ? show(article.id) : index())
+                                    (article
+                                        ? show(article.id)
+                                        : isSandbox
+                                          ? index({
+                                                query: { namespace: 'sandbox' },
+                                            })
+                                          : index())
                                 }
                             >
                                 <ArrowLeft aria-hidden="true" />
@@ -427,13 +485,17 @@ export default function ArticleForm({ article }: { article?: Article }) {
                         createPortal(
                             <>
                                 <span className="pointer-events-none fixed right-4 bottom-[4.75rem] z-40 hidden rounded-full bg-background/80 px-3 py-1 text-xs text-muted-foreground shadow-sm backdrop-blur sm:right-8 sm:bottom-[5.25rem] pointer-fine:block">
-                                    {__(':key+click to save and return', {
-                                        key: modifierKeyLabel,
-                                    })}
+                                    {__(
+                                        ':key+S to save · :key+click to save and return',
+                                        {
+                                            key: modifierKeyLabel,
+                                        },
+                                    )}
                                 </span>
                                 <Button
                                     type="submit"
                                     value="continue"
+                                    ref={saveButtonRef}
                                     form={formId}
                                     onClick={(event) => {
                                         modifierHeldOnSave.current =
@@ -442,7 +504,7 @@ export default function ArticleForm({ article }: { article?: Article }) {
                                     disabled={processing || uploadingEyecatch}
                                     className="fixed right-4 bottom-4 z-40 h-12 min-w-40 rounded-full bg-blue-600 px-6 text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700 focus-visible:ring-blue-500/50 sm:right-8 sm:bottom-6 dark:bg-blue-500 dark:hover:bg-blue-600"
                                     title={__(
-                                        'Save and keep editing (Ctrl+click to save and return)',
+                                        'Save and keep editing (Ctrl+S to save, Ctrl+click to save and return)',
                                     )}
                                 >
                                     {processing ? (

@@ -11,6 +11,33 @@
     --ink-card: var(--card);
 }
 
+.ink-markdown .ink-code-block {
+    --ink-border: #444c56;
+    --ink-foreground: #e1e4e8;
+    --ink-muted: #343b43;
+    --ink-muted-foreground: #adbac7;
+    --ink-primary: #79b8ff;
+    --ink-code-highlight: #3080ff26;
+    color-scheme: dark;
+    background-color: #24292e;
+    color: var(--ink-foreground);
+}
+
+.ink-markdown .ink-code-block .ink-code-header {
+    background-color: #2d333b;
+}
+
+.ink-markdown .ink-code-block .ink-code-pre {
+    color: var(--ink-foreground);
+}
+
+.ink-markdown .ink-code-block .ink-code-tokens span {
+    color: var(--shiki-dark, inherit);
+    font-style: var(--shiki-dark-font-style, inherit);
+    font-weight: var(--shiki-dark-font-weight, inherit);
+    text-decoration: var(--shiki-dark-text-decoration, inherit);
+}
+
 .ink-markdown .ink-html-embed {
     /* Override the renderer's inline frame styling with the app theme. */
     border-color: color-mix(

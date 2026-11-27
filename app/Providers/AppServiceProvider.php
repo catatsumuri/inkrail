@@ -101,7 +101,7 @@ class AppServiceProvider extends ServiceProvider
 
         Gate::define('import-from-zenn', fn (Authenticatable $user): bool => $user instanceof User && ! $user->is_sandbox && $isPublisher($user));
 
-        Gate::define('push-to-zenn', fn (Authenticatable $user, Article $article): bool => $isPublisher($user) && $article->user_id === $user->getAuthIdentifier());
+        Gate::define('push-to-zenn', fn (Authenticatable $user, Article $article): bool => ! $article->isSandbox() && $isPublisher($user) && $article->user_id === $user->getAuthIdentifier());
     }
 
     /**

@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\SecurityEventController;
 use App\Http\Controllers\ArticleBackupController;
 use App\Http\Controllers\ArticleController;
+use App\Http\Controllers\ArticleFeedController;
 use App\Http\Controllers\ArticleHistoryController;
 use App\Http\Controllers\ArticleImageController;
 use App\Http\Controllers\DashboardController;
@@ -13,6 +14,7 @@ use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\MarkNotificationAsReadController;
 use App\Http\Controllers\PublicArticleController;
 use App\Http\Controllers\SandboxController;
+use App\Http\Controllers\SandboxImportController;
 use App\Http\Controllers\ZennImportController;
 use App\Http\Controllers\ZennPushController;
 use Illuminate\Support\Facades\Route;
@@ -30,11 +32,15 @@ Route::post('sandbox', SandboxController::class)
 Route::post('locale', LocaleController::class)->name('locale.update');
 
 Route::get('images/{path}', [ArticleImageController::class, 'show'])
-    ->where('path', '[0-9a-f]{64}\.(png|jpg|gif|webp)')
+    ->where('path', '.+\.(png|jpg|jpeg|gif|webp)')
     ->name('images.show');
+
+Route::get('rss.xml', ArticleFeedController::class)->name('public.articles.feed');
 
 Route::get('p', [PublicArticleController::class, 'index'])
     ->name('public.articles.index');
+
+Route::get('p/{article:slug}.md', [PublicArticleController::class, 'markdown'])->name('public.articles.markdown');
 
 Route::get('p/{article:slug}', [PublicArticleController::class, 'show'])
     ->name('public.articles.show');
@@ -48,6 +54,7 @@ Route::delete('notifications/{notification}', DeleteNotificationController::clas
     ->name('notifications.destroy');
 
 Route::middleware(['auth', 'verified'])->group(function () {
+    Route::post('sandbox/import', SandboxImportController::class)->middleware(['can:import-from-zenn', 'throttle:6,1'])->name('sandbox.import');
     Route::get('articles/{article}/history', [ArticleHistoryController::class, 'index'])->name('articles.history');
     Route::post('articles/{article}/translation-review', [ArticleHistoryController::class, 'confirm'])->name('articles.review');
     Route::post('articles/{article}/revisions/{revision}/restore', [ArticleHistoryController::class, 'restore'])->name('articles.restore');

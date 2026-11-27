@@ -9,6 +9,7 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PublicArticleController extends Controller
 {
@@ -27,22 +28,17 @@ class PublicArticleController extends Controller
             'selectedTopic' => $topic,
             'social' => $this->socialMetadata(
                 __('Public articles'), __('Ideas, notes, and things worth sharing.'), 'website',
-                route('public.articles.index', array_filter(['topic' => $topic, 'page' => $request->integer('page', 1) > 1 ? $request->integer('page') : null], fn (mixed $value): bool => $value !== null)),
+                route($request->routeIs('home') ? 'home' : 'public.articles.index', array_filter(['topic' => $topic, 'page' => $request->integer('page', 1) > 1 ? $request->integer('page') : null], fn (mixed $value): bool => $value !== null)),
             ),
             'articles' => $articles
                 ->when($topic !== null, fn (Builder $query): Builder => $query->whereJsonContains('zenn_frontmatter->topics', $topic))
-                ->select(['id', 'slug', 'zenn_frontmatter', 'published_at', 'created_at'])->orderBy('id')->paginate(20)->withQueryString()->through(fn (Article $article): array => [...$article->only(['title', 'slug', 'topics', 'eyecatch_url']), 'published_at' => $article->published_at ?? $article->created_at, ...$article->languageMetadata()]),
+                ->select(['id', 'slug', 'zenn_frontmatter', 'published_at', 'created_at'])->latest('id')->paginate(20)->withQueryString()->through(fn (Article $article): array => [...$article->only(['title', 'slug', 'topics', 'eyecatch_url']), 'published_at' => $article->published_at ?? $article->created_at, ...$article->languageMetadata()]),
         ]);
     }
 
     public function show(Request $request, Article $article): Response
     {
-        abort_unless($article->publicationStatus() === 'published' && (! config('app.demo_mode') || $article->user->is_showcase_owner), 404);
-
-        $forcedLocale = $request->validate(['lang' => ['nullable', Rule::in(config('articles.locales'))]])['lang'] ?? null;
-        if ($forcedLocale !== null) {
-            app()->setLocale($forcedLocale);
-        }
+        $forcedLocale = $this->preparePublicArticle($request, $article);
 
         return Inertia::render('articles/public-show', [
             'social' => $this->socialMetadata(
@@ -53,28 +49,34 @@ class PublicArticleController extends Controller
             ),
             'article' => [...$article->only(['title', 'content', 'slug', 'topics', 'eyecatch_url']), 'published_at' => $article->published_at ?? $article->created_at, ...$article->languageMetadata()],
             'editableArticleId' => $request->user()?->can('update', $article) ? $article->id : null,
+            'markdownDownloadEnabled' => (bool) config('articles.markdown_download_enabled'),
             'publicIndexEnabled' => (bool) config('articles.public_index_enabled'),
         ]);
     }
 
-    /** @return array{title: string, url: string, meta: array<string, string>} */
-    private function socialMetadata(string $title, string $description, string $type, string $url, ?string $image = null): array
+    public function markdown(Request $request, Article $article): StreamedResponse
     {
-        $meta = [
-            'description' => $description,
-            'og:title' => $title,
-            'og:description' => $description,
-            'og:type' => $type,
-            'og:url' => $url,
-            'og:site_name' => (string) config('app.name'),
-            'twitter:card' => $image === null ? 'summary' : 'summary_large_image',
-            'twitter:title' => $title,
-            'twitter:description' => $description,
-        ];
-        if ($image !== null) {
-            $meta += ['og:image' => $image, 'og:image:alt' => $title, 'twitter:image' => $image, 'twitter:image:alt' => $title];
+        abort_unless(config('articles.markdown_download_enabled'), 404);
+        $this->preparePublicArticle($request, $article);
+        $content = $article->content;
+
+        return response()->streamDownload(static function () use ($content): void {
+            echo $content;
+        }, $article->slug.'.md', [
+            'Content-Type' => 'text/markdown; charset=UTF-8',
+            'Cache-Control' => 'private, no-store',
+        ]);
+    }
+
+    private function preparePublicArticle(Request $request, Article $article): ?string
+    {
+        abort_unless($article->publicationStatus() === 'published' && (! config('app.demo_mode') || $article->user->is_showcase_owner), 404);
+
+        $forcedLocale = $request->validate(['lang' => ['nullable', Rule::in(config('articles.locales'))]])['lang'] ?? null;
+        if ($forcedLocale !== null) {
+            app()->setLocale($forcedLocale);
         }
 
-        return ['title' => $title, 'url' => $url, 'meta' => $meta];
+        return $forcedLocale;
     }
 }

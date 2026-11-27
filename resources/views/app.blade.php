@@ -34,6 +34,12 @@
         <link rel="icon" href="/favicon.svg" type="image/svg+xml">
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
+        @if (config('articles.public_index_enabled'))
+            @foreach (config('articles.locales') as $feedLocale)
+                <link rel="alternate" type="application/rss+xml" hreflang="{{ $feedLocale }}" title="{{ config('app.name') }} RSS ({{ $feedLocale }})" href="{{ route('public.articles.feed', ['lang' => $feedLocale]) }}">
+            @endforeach
+        @endif
+
         @fonts
 
         @viteReactRefresh

@@ -3,6 +3,7 @@
 namespace App\Actions\Zenn;
 
 use App\Exceptions\ZennImportException;
+use App\Support\RepositoryImageStore;
 use Closure;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
@@ -12,8 +13,8 @@ use Illuminate\Support\Facades\Http;
 /** @phpstan-type RemoteArticle array{path: string, sha: string, content: ?string} */
 class FetchZennArticles
 {
-    /** @return array{repository: string, branch: string, files: list<RemoteArticle>} */
-    public function __invoke(Closure $checkLock, ?Closure $progress = null): array
+    /** @return array{repository: string, branch: string, files: list<RemoteArticle>, images: list<RemoteArticle>} */
+    public function __invoke(Closure $checkLock, ?Closure $progress = null, string $scope = 'articles'): array
     {
         $repository = config('services.github_zenn.repository');
         $branch = config('services.github_zenn.branch');
@@ -41,7 +42,13 @@ class FetchZennArticles
             $entries = [];
             foreach ($tree['tree'] as $entry) {
                 if (($entry['type'] ?? null) !== 'blob' || ! in_array($entry['mode'] ?? '', ['100644', '100755'], true)
-                    || ! is_string($entry['path'] ?? null) || preg_match('/\Aarticles\/[a-z0-9_-]{12,50}\.md\z/', $entry['path']) !== 1) {
+                    || ! is_string($entry['path'] ?? null)) {
+                    continue;
+                }
+
+                $isImage = $scope === 'sandbox' && str_starts_with($entry['path'], 'images/')
+                    && RepositoryImageStore::isValidPath(substr($entry['path'], 7));
+                if (! $isImage && preg_match($scope === 'sandbox' ? '/\Asandbox\/(?!.*\/\.{1,2}\/)[^\\\\\x00-\x1f]+\.md\z/' : '/\Aarticles\/[a-z0-9_-]{12,50}\.md\z/', $entry['path']) !== 1) {
                     continue;
                 }
 
@@ -49,27 +56,39 @@ class FetchZennArticles
                     throw new ZennImportException('GitHub returned an invalid blob identity.');
                 }
 
+                if ($scope === 'sandbox' && array_intersect(explode('/', $entry['path']), ['', '.', '..']) !== []) {
+                    continue;
+                }
+
                 $entries[] = $entry;
             }
 
             $files = [];
+            $images = [];
             foreach ($entries as $index => $entry) {
-                $progress?->__invoke('progress', ['message' => 'Reading article :current of :total.', 'replace' => ['current' => $index + 1, 'total' => count($entries)]]);
+                $isImage = str_starts_with($entry['path'], 'images/');
+                $progress?->__invoke('progress', ['message' => $isImage ? 'Reading image :current of :total.' : 'Reading article :current of :total.', 'replace' => ['current' => $index + 1, 'total' => count($entries)]]);
+                $maxBytes = $isImage ? RepositoryImageStore::MAX_BYTES : 2_000_000;
                 $content = null;
-                if (($entry['size'] ?? PHP_INT_MAX) <= 2_000_000) {
+                if (($entry['size'] ?? PHP_INT_MAX) <= $maxBytes) {
                     $blob = $client->get("/repos/{$repository}/git/blobs/{$entry['sha']}")->throw();
                     $encoded = $blob->json('content');
                     if ($blob->json('encoding') === 'base64' && is_string($encoded)) {
                         $decoded = base64_decode($encoded, true);
-                        if (is_string($decoded) && strlen($decoded) <= 2_000_000 && sha1('blob '.strlen($decoded)."\0".$decoded) === $entry['sha']) {
+                        if (is_string($decoded) && strlen($decoded) <= $maxBytes && sha1('blob '.strlen($decoded)."\0".$decoded) === $entry['sha']) {
                             $content = $decoded;
                         }
                     }
                 }
-                $files[] = ['path' => $entry['path'], 'sha' => $entry['sha'], 'content' => $content];
+                $file = ['path' => $entry['path'], 'sha' => $entry['sha'], 'content' => $content];
+                if ($isImage) {
+                    $images[] = $file;
+                } else {
+                    $files[] = $file;
+                }
             }
 
-            return ['repository' => $repository, 'branch' => $branch, 'files' => $files];
+            return ['repository' => $repository, 'branch' => $branch, 'files' => $files, 'images' => $images];
         } catch (ConnectionException|RequestException) {
             throw new ZennImportException('The Zenn repository could not be read from GitHub.');
         }
