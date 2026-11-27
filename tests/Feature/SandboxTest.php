@@ -24,6 +24,7 @@ test('starting a sandbox authenticates a temporary visitor with private copies a
     config(['app.demo_mode' => true]);
     $this->seed();
     $original = Article::where('slug', 'showcase-markdown')->sole();
+    $original->update(['eyecatch' => 'showcase-markdown.png']);
     $owner = $original->user;
 
     $this->post(route('sandbox.start'))->assertRedirect(route('articles.index'));
@@ -35,6 +36,7 @@ test('starting a sandbox authenticates a temporary visitor with private copies a
     expect($visitor->articles()->where('is_published', true)->exists())->toBeFalse();
     $copy = $visitor->articles()->whereRelation('translations', 'title', $original->title)->sole();
     expect($copy->content)->toBe($original->content);
+    expect($copy->eyecatch_url)->toBe('/images/showcase-markdown.png');
     expect($copy->slug)->not->toBe($original->slug);
     expect($owner->is_showcase_owner)->toBeTrue();
     expect(Hash::check('password', $owner->password))->toBeFalse();

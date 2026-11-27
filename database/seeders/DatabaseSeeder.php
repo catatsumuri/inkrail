@@ -25,6 +25,10 @@ class DatabaseSeeder extends Seeder
             return;
         }
 
+        if (! $user->is_showcase_owner) {
+            $user->forceFill(['is_showcase_owner' => true])->save();
+        }
+
         $articles = [
             [
                 'title' => 'Welcome to InkRail',
@@ -52,6 +56,9 @@ class DatabaseSeeder extends Seeder
                 ->where('slug', $article['slug'])
                 ->orWhereHas('translations', fn ($query) => $query->whereIn('title', [$article['title'], $article['legacy_title']])))->first();
             if ($seededArticle !== null) {
+                if ($seededArticle->eyecatch === null) {
+                    $seededArticle->update(['eyecatch' => $article['slug'].'.png']);
+                }
                 $english = $seededArticle->translations()->where('locale', 'en')->first();
                 if ($english !== null && $english->title === $article['legacy_title'] && $english->content === $article['legacy_content']) {
                     $english->update(['title' => $article['title'], 'content' => $article['content']]);
@@ -71,7 +78,7 @@ class DatabaseSeeder extends Seeder
                 continue;
             }
 
-            $created = $user->articles()->create(['slug' => $article['slug'], 'is_published' => $article['is_published']]);
+            $created = $user->articles()->create(['slug' => $article['slug'], 'is_published' => $article['is_published'], 'eyecatch' => $article['slug'].'.png']);
             $created->replaceTranslations(['en' => ['title' => $article['title'], 'content' => $article['content']], 'ja' => ['title' => $article['legacy_title'], 'content' => $article['ja_content'] ?? $article['legacy_content']]]);
         }
 

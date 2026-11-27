@@ -120,3 +120,31 @@ test('unchanged Japanese guides become English without changing identity or publ
     expect($article->fresh()->content)->toContain('Drafts are visible only to their owner.');
     expect($user->articles()->count())->toBe(8);
 });
+
+test('sample articles receive bundled covers without replacing custom covers', function () {
+    config(['app.demo_mode' => true]);
+    $this->seed();
+    $articles = User::where('email', 'test@example.com')->sole()->articles()->get();
+    expect($articles)->toHaveCount(8);
+    foreach ($articles as $article) {
+        expect($article->eyecatch)->not->toBeNull();
+        expect(is_file(public_path('images/'.$article->eyecatch)))->toBeTrue();
+    }
+    $article = $articles->first();
+    $article->update(['eyecatch' => 'custom.png']);
+    $this->seed();
+    expect($article->fresh()->eyecatch)->toBe('custom.png');
+});
+
+test('enabling demo mode after normal seeding establishes the showcase owner', function () {
+    config(['app.demo_mode' => false]);
+    $this->seed();
+    $user = User::where('email', 'test@example.com')->sole();
+    expect($user->is_showcase_owner)->toBeFalse();
+    config(['app.demo_mode' => true]);
+    $this->seed();
+    expect($user->fresh()->is_showcase_owner)->toBeTrue();
+    expect($user->articles()->count())->toBe(8);
+    $this->post(route('sandbox.start'))->assertRedirect(route('articles.index'));
+    expect(auth()->user()->is_sandbox)->toBeTrue();
+});

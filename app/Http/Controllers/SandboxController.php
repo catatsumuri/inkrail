@@ -36,6 +36,7 @@ class SandboxController extends Controller
             foreach ($showcase->articles()->orderBy('id')->get() as $article) {
                 $copy = $user->articles()->create([
                     'is_published' => false,
+                    'eyecatch' => $article->eyecatch,
                 ]);
                 $copy->replaceTranslations($article->translations->mapWithKeys(fn ($translation) => [$translation->locale => ['title' => $translation->title, 'content' => $translation->content]])->all());
             }

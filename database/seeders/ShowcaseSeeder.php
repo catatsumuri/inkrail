@@ -26,6 +26,9 @@ class ShowcaseSeeder extends Seeder
                     'is_published' => true,
                 ],
             );
+            if ($article->eyecatch === null) {
+                $article->update(['eyecatch' => 'showcase-'.$syntax.'.png']);
+            }
             $article->translations()->firstOrCreate(['locale' => 'en'], ['title' => $title, 'content' => File::get(database_path('seeders/showcase/en/'.$syntax.'.md'))]);
             $legacyTitles = json_decode(File::get(database_path('seeders/showcase/ja/titles.json')), true);
             if (isset($legacyTitles[$syntax]) && File::exists(database_path('seeders/showcase/ja/'.$syntax.'.md'))) {
