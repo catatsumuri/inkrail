@@ -7,6 +7,7 @@ use App\Exceptions\ZennImportException;
 use App\Models\Article;
 use App\Models\ArticleNamespace;
 use App\Models\User;
+use App\Support\RepositoryImageStore;
 use Carbon\CarbonImmutable;
 use Closure;
 use Illuminate\Contracts\Cache\LockTimeoutException;
@@ -29,6 +30,7 @@ class ImportZennArticles
         private RenderZennArticle $render,
         private LogSecurityEvent $logSecurityEvent,
         private WithZennSyncLock $syncLock,
+        private RepositoryImageStore $images,
     ) {}
 
     /** @return ImportResult */
@@ -47,6 +49,7 @@ class ImportZennArticles
     private function import(User $owner, Closure $checkLock, ?Closure $progress): array
     {
         $remote = ($this->fetch)($checkLock, $progress);
+        $imageResult = $this->images->importFiles($remote['images'], $checkLock);
         $progress?->__invoke('progress', ['message' => 'Saving articles.']);
         $documents = [];
         $identityCounts = [];
@@ -62,10 +65,10 @@ class ImportZennArticles
             }
         }
 
-        $result = DB::transaction(function () use ($owner, $remote, $documents, $identityCounts, $checkLock): array {
+        $result = DB::transaction(function () use ($owner, $remote, $documents, $identityCounts, $checkLock, $imageResult): array {
             $checkLock();
             User::query()->whereKey($owner->id)->lockForUpdate()->firstOrFail();
-            $result = ['created' => 0, 'updated' => 0, 'unchanged' => 0, 'conflict' => 0, 'invalid' => 0, 'items' => []];
+            $result = $imageResult;
             $paths = array_column($documents, 'path');
             foreach ($documents as $document) {
                 $checkLock();

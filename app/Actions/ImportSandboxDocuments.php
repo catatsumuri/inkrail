@@ -28,20 +28,7 @@ class ImportSandboxDocuments
         return ($this->lock)(function (Closure $check) use ($owner, $progress): array {
             $remote = ($this->fetch)($check, $progress, scope: 'sandbox');
             $progress?->__invoke('progress', ['message' => 'Saving articles.']);
-            $counts = ['created' => 0, 'updated' => 0, 'unchanged' => 0, 'conflict' => 0, 'invalid' => 0, 'items' => []];
-            foreach ($remote['images'] as $image) {
-                $check();
-                try {
-                    if ($image['content'] === null) {
-                        throw new \InvalidArgumentException('Invalid image blob.');
-                    }
-                    $status = $this->images->put(substr($image['path'], 7), $image['content']);
-                } catch (\InvalidArgumentException) {
-                    $status = 'invalid';
-                }
-                $counts[$status]++;
-                $counts['items'][] = ['path' => $image['path'], 'status' => $status];
-            }
+            $counts = $this->images->importFiles($remote['images'], $check);
             foreach ($remote['files'] as $file) {
                 $check();
                 try {

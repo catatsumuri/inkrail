@@ -46,7 +46,7 @@ class FetchZennArticles
                     continue;
                 }
 
-                $isImage = $scope === 'sandbox' && str_starts_with($entry['path'], 'images/')
+                $isImage = str_starts_with($entry['path'], 'images/')
                     && RepositoryImageStore::isValidPath(substr($entry['path'], 7));
                 if (! $isImage && preg_match($scope === 'sandbox' ? '/\Asandbox\/(?!.*\/\.{1,2}\/)[^\\\\\x00-\x1f]+\.md\z/' : '/\Aarticles\/[a-z0-9_-]{12,50}\.md\z/', $entry['path']) !== 1) {
                     continue;

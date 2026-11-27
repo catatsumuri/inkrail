@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\ArticleImage;
+use Closure;
 use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
 use RuntimeException;
@@ -22,6 +23,31 @@ class RepositoryImageStore
         return preg_match('/[\\\\\x00-\x1f\x7f%?#]/', $path) !== 1
             && array_intersect(explode('/', $path), ['', '.', '..']) === []
             && isset(self::MIME_TYPES[pathinfo($path, PATHINFO_EXTENSION)]);
+    }
+
+    /**
+     * @param  list<array{path: string, sha: string, content: ?string}>  $images
+     * @return array{created: int, updated: int, unchanged: int, conflict: int, invalid: int, items: list<array{path: string, status: string}>}
+     */
+    public function importFiles(array $images, Closure $checkLock): array
+    {
+        $result = ['created' => 0, 'updated' => 0, 'unchanged' => 0, 'conflict' => 0, 'invalid' => 0, 'items' => []];
+        foreach ($images as $image) {
+            $checkLock();
+            try {
+                if ($image['content'] === null) {
+                    throw new InvalidArgumentException('Invalid image blob.');
+                }
+                $status = $this->put(substr($image['path'], 7), $image['content']);
+            } catch (InvalidArgumentException) {
+                $status = 'invalid';
+            }
+            $result[$status]++;
+            $result['items'][] = ['path' => $image['path'], 'status' => $status];
+            $checkLock();
+        }
+
+        return $result;
     }
 
     /** @return 'created'|'updated'|'unchanged' */

@@ -333,5 +333,7 @@
     "No sandbox documents are linked to this repository yet.": "No sandbox documents are linked to this repository yet.",
     "Status shows local changes since the last sandbox import. Import again to check for GitHub updates. Shared images under images/ are public.": "Status shows local changes since the last sandbox import. Import again to check for GitHub updates. Shared images under images/ are public.",
     "Manage your articles here. Sandbox notes are listed separately.": "Manage your articles here. Sandbox notes are listed separately.",
-    "Back to sandbox": "Back to sandbox"
+    "Back to sandbox": "Back to sandbox",
+    "Import Japanese articles from articles/ and public images from images/. Published articles will also be public in InkRail.": "Import Japanese articles from articles/ and public images from images/. Published articles will also be public in InkRail.",
+    "Published articles and imported images are public in InkRail. This operation does not write to GitHub.": "Published articles and imported images are public in InkRail. This operation does not write to GitHub."
 }
