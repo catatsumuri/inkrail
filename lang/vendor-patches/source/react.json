@@ -333,5 +333,9 @@
     "No sandbox documents are linked to this repository yet.": "No sandbox documents are linked to this repository yet.",
     "Status shows local changes since the last sandbox import. Import again to check for GitHub updates. Shared images under images/ are public.": "Status shows local changes since the last sandbox import. Import again to check for GitHub updates. Shared images under images/ are public.",
     "Manage your articles here. Sandbox notes are listed separately.": "Manage your articles here. Sandbox notes are listed separately.",
-    "Back to sandbox": "Back to sandbox"
+    "Back to sandbox": "Back to sandbox",
+    "Drop a backup ZIP here or choose a file (up to 100 MiB).": "Drop a backup ZIP here or choose a file (up to 100 MiB).",
+    "Choose one backup ZIP at a time.": "Choose one backup ZIP at a time.",
+    "Choose a ZIP file.": "Choose a ZIP file.",
+    "The backup must be 100 MiB or smaller.": "The backup must be 100 MiB or smaller."
 }

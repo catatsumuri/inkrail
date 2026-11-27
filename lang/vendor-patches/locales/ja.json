@@ -332,5 +332,9 @@
     "No sandbox documents are linked to this repository yet.": "このリポジトリから取り込んだsandboxの記事はまだありません。",
     "Status shows local changes since the last sandbox import. Import again to check for GitHub updates. Shared images under images/ are public.": "前回のsandbox取り込み以降のローカル変更を表示しています。GitHub側の更新は再度取り込んで確認できます。images/ の画像は共通の公開領域です。",
     "Manage your articles here. Sandbox notes are listed separately.": "自分の記事を管理できます。Sandboxのメモは専用の一覧に表示されます。",
-    "Back to sandbox": "Sandbox一覧に戻る"
+    "Back to sandbox": "Sandbox一覧に戻る",
+    "Drop a backup ZIP here or choose a file (up to 100 MiB).": "バックアップ ZIP をここにドロップするか、ファイルを選択してください（100 MiB 以下）。",
+    "Choose one backup ZIP at a time.": "バックアップ ZIP は1つずつ選択してください。",
+    "Choose a ZIP file.": "ZIP ファイルを選択してください。",
+    "The backup must be 100 MiB or smaller.": "バックアップは100 MiB 以下にしてください。"
 }
