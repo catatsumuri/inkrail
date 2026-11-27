@@ -127,9 +127,10 @@ class ArticleController extends Controller
     public function destroy(Article $article): RedirectResponse
     {
         Gate::authorize('delete', $article);
+        $isSandbox = $article->isSandbox();
         $article->delete();
 
-        return to_route('articles.index');
+        return to_route('articles.index', $isSandbox ? ['namespace' => 'sandbox'] : []);
     }
 
     /** @return array<string, mixed> */

@@ -13,6 +13,18 @@ use Inertia\Testing\AssertableInertia;
 
 uses(LazilyRefreshDatabase::class);
 
+test('deleting a sandbox document returns its owner to the sandbox list', function () {
+    $owner = User::factory()->create();
+    $article = $owner->articles()->create(['title' => 'Sandbox note']);
+    $article->namespace()->associate(ArticleNamespace::where('slug', 'sandbox')->sole());
+    $article->save();
+
+    $this->actingAs($owner)->delete(route('articles.destroy', $article))
+        ->assertRedirect(route('articles.index', ['namespace' => 'sandbox']));
+
+    $this->assertModelMissing($article);
+});
+
 test('article lists and topic filters keep sandbox documents separate', function () {
     $owner = User::factory()->create();
     $regular = $owner->articles()->create(['title' => 'Regular', 'topics' => ['regular', 'shared']]);
