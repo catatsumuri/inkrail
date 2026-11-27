@@ -58,24 +58,11 @@ export default function PublicShow({
                                 title={article.title}
                                 src={article.eyecatch_url}
                             />
-                            {markdownDownloadEnabled && (
-                                <Button asChild variant="outline" size="sm">
-                                    <a
-                                        href={markdown.url(article.slug, {
-                                            query: {
-                                                lang:
-                                                    article.resolvedLocale ??
-                                                    locale,
-                                            },
-                                        })}
-                                    >
-                                        {__('Download Markdown')}
-                                    </a>
-                                </Button>
-                            )}
-                            {article.topics && article.topics.length > 0 && (
-                                <div className="flex flex-wrap gap-2">
-                                    {article.topics.map((topic) => (
+                            {(markdownDownloadEnabled ||
+                                (article.topics &&
+                                    article.topics.length > 0)) && (
+                                <div className="flex flex-wrap items-center gap-2">
+                                    {article.topics?.map((topic) => (
                                         <span
                                             key={topic}
                                             className="rounded-full border bg-background/70 text-xs text-muted-foreground"
@@ -98,6 +85,28 @@ export default function PublicShow({
                                             )}
                                         </span>
                                     ))}
+                                    {markdownDownloadEnabled && (
+                                        <Button
+                                            asChild
+                                            variant="outline"
+                                            size="sm"
+                                        >
+                                            <a
+                                                href={markdown.url(
+                                                    article.slug,
+                                                    {
+                                                        query: {
+                                                            lang:
+                                                                article.resolvedLocale ??
+                                                                locale,
+                                                        },
+                                                    },
+                                                )}
+                                            >
+                                                {__('View source')}
+                                            </a>
+                                        </Button>
+                                    )}
                                 </div>
                             )}
                         </header>

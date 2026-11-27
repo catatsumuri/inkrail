@@ -11,7 +11,7 @@ test('markdown download preserves the exact source and remains independent of th
     config(['articles.markdown_download_enabled' => true, 'articles.public_index_enabled' => false]);
     $content = "# Title\r\n\n:::message\n日本語 & <b>raw</b>\n:::\n";
     $article = User::factory()->create()->articles()->create(['title' => 'Title', 'slug' => 'source', 'content' => $content, 'is_published' => true]);
-    $this->get('/p/source.md')->assertOk()->assertDownload('source.md')
+    $this->get('/p/source.md')->assertOk()->assertHeader('Content-Disposition', 'inline; filename=source.md')
         ->assertHeader('Content-Type', 'text/markdown; charset=UTF-8')->assertStreamedContent($content);
     $this->get('/p/source')->assertOk()->assertInertia(fn (Assert $page) => $page->where('markdownDownloadEnabled', true));
     config(['articles.markdown_download_enabled' => false]);
