@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\SecurityEventController;
 use App\Http\Controllers\ArticleBackupController;
 use App\Http\Controllers\ArticleController;
+use App\Http\Controllers\ArticleFeedController;
 use App\Http\Controllers\ArticleHistoryController;
 use App\Http\Controllers\ArticleImageController;
 use App\Http\Controllers\DashboardController;
@@ -29,6 +30,8 @@ Route::post('locale', LocaleController::class)->name('locale.update');
 Route::get('images/{path}', [ArticleImageController::class, 'show'])
     ->where('path', '.+\.(png|jpg|jpeg|gif|webp)')
     ->name('images.show');
+
+Route::get('rss.xml', ArticleFeedController::class)->name('public.articles.feed');
 
 Route::get('p', [PublicArticleController::class, 'index'])
     ->name('public.articles.index');
