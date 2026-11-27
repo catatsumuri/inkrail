@@ -119,3 +119,35 @@ test('does not expose draft metadata or add article cards to private pages', fun
     expect($head['meta'])->not->toHaveKeys(['og:title', 'twitter:card']);
     expect($head['canonical'])->toBe('');
 });
+
+test('serves localized homepage cards to crawlers in the initial HTML', function (string $locale) {
+    config(['articles.home_page' => 'welcome']);
+    app()->setLocale($locale);
+    $head = articleSocialHead($this->withHeader('User-Agent', 'Twitterbot/1.0')->get('https://inkrail.example/?utm_source=social'));
+
+    expect($head['meta']['og:title'])->toBe([__('Welcome to InkRail')]);
+    expect($head['meta']['og:description'])->toBe([__('Write in Markdown, keep your drafts private, and publish articles in English and Japanese when they are ready.')]);
+    expect($head['meta']['twitter:title'])->toBe($head['meta']['og:title']);
+    expect($head['meta']['twitter:description'])->toBe($head['meta']['og:description']);
+    expect($head['meta']['og:type'])->toBe(['website']);
+    expect($head['meta']['og:site_name'])->toBe([config('app.name')]);
+    expect($head['meta']['twitter:card'])->toBe(['summary']);
+    expect($head['meta'])->not->toHaveKeys(['og:image', 'twitter:image']);
+    expect($head['canonical'])->toBe('https://inkrail.example');
+    expect($head['meta']['og:url'])->toBe([$head['canonical']]);
+})->with(['en', 'ja']);
+
+test('uses the root canonical when the homepage displays public articles', function () {
+    config(['articles.home_page' => 'articles', 'articles.public_index_enabled' => true]);
+    $head = articleSocialHead($this->get('https://inkrail.example/?page=2&utm_source=social'));
+    expect($head['canonical'])->toBe('https://inkrail.example?page=2');
+    expect($head['meta']['og:url'])->toBe([$head['canonical']]);
+    expect($head['meta']['og:type'])->toBe(['website']);
+    expect($head['meta']['twitter:card'])->toBe(['summary']);
+});
+
+test('keeps welcome cards when the public index is disabled', function () {
+    config(['articles.home_page' => 'articles', 'articles.public_index_enabled' => false]);
+    $head = articleSocialHead($this->get('/'));
+    expect($head['meta']['og:title'])->toBe([__('Welcome to InkRail')]);
+});

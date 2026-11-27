@@ -28,7 +28,7 @@ class PublicArticleController extends Controller
             'selectedTopic' => $topic,
             'social' => $this->socialMetadata(
                 __('Public articles'), __('Ideas, notes, and things worth sharing.'), 'website',
-                route('public.articles.index', array_filter(['topic' => $topic, 'page' => $request->integer('page', 1) > 1 ? $request->integer('page') : null], fn (mixed $value): bool => $value !== null)),
+                route($request->routeIs('home') ? 'home' : 'public.articles.index', array_filter(['topic' => $topic, 'page' => $request->integer('page', 1) > 1 ? $request->integer('page') : null], fn (mixed $value): bool => $value !== null)),
             ),
             'articles' => $articles
                 ->when($topic !== null, fn (Builder $query): Builder => $query->whereJsonContains('zenn_frontmatter->topics', $topic))
@@ -78,26 +78,5 @@ class PublicArticleController extends Controller
         }
 
         return $forcedLocale;
-    }
-
-    /** @return array{title: string, url: string, meta: array<string, string>} */
-    private function socialMetadata(string $title, string $description, string $type, string $url, ?string $image = null): array
-    {
-        $meta = [
-            'description' => $description,
-            'og:title' => $title,
-            'og:description' => $description,
-            'og:type' => $type,
-            'og:url' => $url,
-            'og:site_name' => (string) config('app.name'),
-            'twitter:card' => $image === null ? 'summary' : 'summary_large_image',
-            'twitter:title' => $title,
-            'twitter:description' => $description,
-        ];
-        if ($image !== null) {
-            $meta += ['og:image' => $image, 'og:image:alt' => $title, 'twitter:image' => $image, 'twitter:image:alt' => $title];
-        }
-
-        return ['title' => $title, 'url' => $url, 'meta' => $meta];
     }
 }
