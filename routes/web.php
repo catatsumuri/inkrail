@@ -36,6 +36,8 @@ Route::get('rss.xml', ArticleFeedController::class)->name('public.articles.feed'
 Route::get('p', [PublicArticleController::class, 'index'])
     ->name('public.articles.index');
 
+Route::get('p/{article:slug}.md', [PublicArticleController::class, 'markdown'])->name('public.articles.markdown');
+
 Route::get('p/{article:slug}', [PublicArticleController::class, 'show'])
     ->name('public.articles.show');
 

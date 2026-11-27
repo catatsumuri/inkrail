@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'markdown_download_enabled' => env('ARTICLES_MARKDOWN_DOWNLOAD_ENABLED', false),
     'locales' => ['en', 'ja'],
     'public_index_enabled' => env('ARTICLES_PUBLIC_INDEX_ENABLED', true),
 

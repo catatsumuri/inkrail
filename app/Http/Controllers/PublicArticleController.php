@@ -9,6 +9,7 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PublicArticleController extends Controller
 {
@@ -37,12 +38,7 @@ class PublicArticleController extends Controller
 
     public function show(Request $request, Article $article): Response
     {
-        abort_unless($article->publicationStatus() === 'published' && (! config('app.demo_mode') || $article->user->is_showcase_owner), 404);
-
-        $forcedLocale = $request->validate(['lang' => ['nullable', Rule::in(config('articles.locales'))]])['lang'] ?? null;
-        if ($forcedLocale !== null) {
-            app()->setLocale($forcedLocale);
-        }
+        $forcedLocale = $this->preparePublicArticle($request, $article);
 
         return Inertia::render('articles/public-show', [
             'social' => $this->socialMetadata(
@@ -53,8 +49,35 @@ class PublicArticleController extends Controller
             ),
             'article' => [...$article->only(['title', 'content', 'slug', 'topics', 'eyecatch_url']), 'published_at' => $article->published_at ?? $article->created_at, ...$article->languageMetadata()],
             'editableArticleId' => $request->user()?->can('update', $article) ? $article->id : null,
+            'markdownDownloadEnabled' => (bool) config('articles.markdown_download_enabled'),
             'publicIndexEnabled' => (bool) config('articles.public_index_enabled'),
         ]);
+    }
+
+    public function markdown(Request $request, Article $article): StreamedResponse
+    {
+        abort_unless(config('articles.markdown_download_enabled'), 404);
+        $this->preparePublicArticle($request, $article);
+        $content = $article->content;
+
+        return response()->streamDownload(static function () use ($content): void {
+            echo $content;
+        }, $article->slug.'.md', [
+            'Content-Type' => 'text/markdown; charset=UTF-8',
+            'Cache-Control' => 'private, no-store',
+        ]);
+    }
+
+    private function preparePublicArticle(Request $request, Article $article): ?string
+    {
+        abort_unless($article->publicationStatus() === 'published' && (! config('app.demo_mode') || $article->user->is_showcase_owner), 404);
+
+        $forcedLocale = $request->validate(['lang' => ['nullable', Rule::in(config('articles.locales'))]])['lang'] ?? null;
+        if ($forcedLocale !== null) {
+            app()->setLocale($forcedLocale);
+        }
+
+        return $forcedLocale;
     }
 
     /** @return array{title: string, url: string, meta: array<string, string>} */
