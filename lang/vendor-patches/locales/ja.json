@@ -340,5 +340,16 @@
     "Download Markdown": "Markdown をダウンロード",
     "View source": "ソースを表示",
     "RSS feed": "RSS フィード",
-    "Drop a cover image here or choose a file.": "アイキャッチ画像をここにドロップするか、ファイルを選択してください。"
+    "Drop a cover image here or choose a file.": "アイキャッチ画像をここにドロップするか、ファイルを選択してください。",
+    "Also delete the source file from GitHub": "GitHubの元ファイルも削除する",
+    "Only this Markdown file will be deleted. Shared images and other articles will be kept. If the file is already absent, only the local document will be deleted. GitHub commit history will remain.": "削除するのはこのMarkdownファイルだけです。共有画像と他の記事は保持します。すでにファイルが存在しない場合はローカル文書だけを削除します。GitHubのコミット履歴は残ります。",
+    "The document or GitHub link has changed. Reload before deleting.": "文書またはGitHubの連携情報が変更されました。再読み込みしてから削除してください。",
+    "The linked GitHub source cannot be safely deleted with the current configuration.": "現在の設定では連携中のGitHubファイルを安全に削除できません。",
+    "This GitHub file is also linked to a regular article. Deletion was stopped.": "このGitHubファイルは通常記事にも連携しています。削除を中止しました。",
+    "The GitHub file has changed since import. Import again before deleting.": "取り込み後にGitHubのファイルが変更されました。再度取り込んでから削除してください。",
+    "GitHub did not confirm the deletion. The local document was kept. Reload and retry.": "GitHubでの削除を確認できませんでした。ローカル文書は保持しています。再読み込みしてから再試行してください。",
+    "The GitHub file is absent, but local deletion could not be completed. Retry to finish deleting the local document.": "GitHubのファイルは存在しませんが、ローカル文書の削除を完了できませんでした。再試行して削除を完了してください。",
+    "GitHub could not confirm the operation. The local document was kept. Reload and retry; the remote file may already be deleted.": "GitHubでの操作結果を確認できませんでした。ローカル文書は保持しています。GitHub側では削除済みの可能性があります。再読み込みしてから再試行してください。",
+    "Deletion could not be completed. The local document was kept.": "削除を完了できませんでした。ローカル文書は保持しています。",
+    "Delete document and GitHub source": "文書とGitHubの元ファイルを削除する"
 }

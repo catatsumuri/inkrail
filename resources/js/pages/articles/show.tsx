@@ -34,6 +34,7 @@ import {
 import ZennPushController from '@/actions/App/Http/Controllers/ZennPushController';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
     Tooltip,
     TooltipContent,
@@ -55,13 +56,21 @@ import { useClipboard } from '@/hooks/use-clipboard';
 export default function Show({
     article,
     canPushToZenn,
+    githubSourceDeletion,
 }: {
     article: Article;
     canPushToZenn: boolean;
+    githubSourceDeletion: {
+        repository: string;
+        branch: string;
+        path: string;
+        confirmation: string;
+    } | null;
 }) {
     const { __ } = lang();
     const { locale } = usePage().props;
     const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+    const [deleteGithubSource, setDeleteGithubSource] = useState(false);
     const [saving, setSaving] = useState(false);
     const [saveLogs, setSaveLogs] = useState<string[]>([]);
     async function saveToGitHub() {
@@ -382,7 +391,9 @@ export default function Show({
                                 {__('Edit article')}
                             </TooltipContent>
                         </Tooltip>
-                        <Dialog>
+                        <Dialog
+                            onOpenChange={() => setDeleteGithubSource(false)}
+                        >
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                     <DialogTrigger asChild>
@@ -411,24 +422,94 @@ export default function Show({
                                     )}
                                 </DialogDescription>
                                 <Form {...destroy.form(article.id)}>
-                                    {({ processing }) => (
-                                        <DialogFooter className="gap-2">
-                                            <DialogClose asChild>
-                                                <Button
-                                                    type="button"
-                                                    variant="secondary"
+                                    {({ processing, errors }) => (
+                                        <>
+                                            {githubSourceDeletion && (
+                                                <div className="my-4 space-y-3">
+                                                    <label className="flex items-start gap-2">
+                                                        <Checkbox
+                                                            name="delete_github_source"
+                                                            value="1"
+                                                            checked={
+                                                                deleteGithubSource
+                                                            }
+                                                            onCheckedChange={(
+                                                                checked,
+                                                            ) =>
+                                                                setDeleteGithubSource(
+                                                                    checked ===
+                                                                        true,
+                                                                )
+                                                            }
+                                                            disabled={
+                                                                processing
+                                                            }
+                                                        />
+                                                        <span>
+                                                            {__(
+                                                                'Also delete the source file from GitHub',
+                                                            )}
+                                                        </span>
+                                                    </label>
+                                                    <p className="text-sm break-all">
+                                                        {
+                                                            githubSourceDeletion.repository
+                                                        }{' '}
+                                                        /{' '}
+                                                        {
+                                                            githubSourceDeletion.branch
+                                                        }
+                                                        <br />
+                                                        {
+                                                            githubSourceDeletion.path
+                                                        }
+                                                    </p>
+                                                    <p className="text-sm text-muted-foreground">
+                                                        {__(
+                                                            'Only this Markdown file will be deleted. Shared images and other articles will be kept. If the file is already absent, only the local document will be deleted. GitHub commit history will remain.',
+                                                        )}
+                                                    </p>
+                                                    <input
+                                                        type="hidden"
+                                                        name="source_confirmation"
+                                                        value={
+                                                            githubSourceDeletion.confirmation
+                                                        }
+                                                    />
+                                                </div>
+                                            )}
+                                            {(errors.delete_github_source ||
+                                                errors.source_confirmation) && (
+                                                <p
+                                                    role="alert"
+                                                    className="my-4 text-sm text-destructive"
                                                 >
-                                                    {__('Cancel')}
+                                                    {errors.delete_github_source ||
+                                                        errors.source_confirmation}
+                                                </p>
+                                            )}
+                                            <DialogFooter className="gap-2">
+                                                <DialogClose asChild>
+                                                    <Button
+                                                        type="button"
+                                                        variant="secondary"
+                                                    >
+                                                        {__('Cancel')}
+                                                    </Button>
+                                                </DialogClose>
+                                                <Button
+                                                    type="submit"
+                                                    variant="destructive"
+                                                    disabled={processing}
+                                                >
+                                                    {__(
+                                                        deleteGithubSource
+                                                            ? 'Delete document and GitHub source'
+                                                            : 'Delete article',
+                                                    )}
                                                 </Button>
-                                            </DialogClose>
-                                            <Button
-                                                type="submit"
-                                                variant="destructive"
-                                                disabled={processing}
-                                            >
-                                                {__('Delete article')}
-                                            </Button>
-                                        </DialogFooter>
+                                            </DialogFooter>
+                                        </>
                                     )}
                                 </Form>
                             </DialogContent>
