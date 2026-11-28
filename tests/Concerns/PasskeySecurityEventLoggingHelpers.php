@@ -7,6 +7,12 @@ use Laravel\Passkeys\Passkey;
 
 trait PasskeySecurityEventLoggingHelpers
 {
+    use BootsWithFeaturesDisabled;
+
+    protected array $enabledFeatures = ['passkeys', 'password_confirmation'];
+
+    protected array $disabledFeatures = [];
+
     protected function actingAsPasswordConfirmed(User $user): static
     {
         return $this->actingAs($user)->withSession(['auth.password_confirmed_at' => time()]);
