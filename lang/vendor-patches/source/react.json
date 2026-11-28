@@ -352,5 +352,7 @@
     "The GitHub file is absent, but local deletion could not be completed. Retry to finish deleting the local document.": "The GitHub file is absent, but local deletion could not be completed. Retry to finish deleting the local document.",
     "GitHub could not confirm the operation. The local document was kept. Reload and retry; the remote file may already be deleted.": "GitHub could not confirm the operation. The local document was kept. Reload and retry; the remote file may already be deleted.",
     "Deletion could not be completed. The local document was kept.": "Deletion could not be completed. The local document was kept.",
-    "Delete document and GitHub source": "Delete document and GitHub source"
+    "Delete document and GitHub source": "Delete document and GitHub source",
+    "Sandbox GitHub links are restored only in the environment that created the backup. Backups from another environment restore content, history and images without those links. Conflicting links or repository images stop the entire restore.": "Sandbox GitHub links are restored only in the environment that created the backup. Backups from another environment restore content, history and images without those links. Conflicting links or repository images stop the entire restore.",
+    ":count Sandbox GitHub source link(s) from another environment were not restored.": ":count Sandbox GitHub source link(s) from another environment were not restored."
 }

@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\Backup\CreateArticleBackup;
 use App\Actions\Backup\RestoreArticleBackup;
 use App\Models\Article;
 use App\Models\ArticleImage;
@@ -146,7 +147,7 @@ test('restore rejects image paths that escape the image directory', function () 
     User::factory()->create();
     $zip = new ZipArchive;
     $zip->open($this->backupPath, ZipArchive::CREATE);
-    $zip->addFromString('manifest.json', json_encode(['format' => 1]));
+    $zip->addFromString('manifest.json', json_encode(['format' => CreateArticleBackup::FORMAT, 'source_id' => CreateArticleBackup::sourceId()]));
     $zip->addFromString('data.json', json_encode(['images' => [['path' => '../evil.php', 'mime' => 'image/png', 'size' => 1, 'owner' => null, 'created_at' => null, 'updated_at' => null]]]));
     $zip->close();
 
@@ -159,7 +160,7 @@ function archiveWithImages(string $path, array $images): void
 {
     $zip = new ZipArchive;
     $zip->open($path, ZipArchive::CREATE | ZipArchive::OVERWRITE);
-    $zip->addFromString('manifest.json', json_encode(['format' => 1]));
+    $zip->addFromString('manifest.json', json_encode(['format' => CreateArticleBackup::FORMAT, 'source_id' => CreateArticleBackup::sourceId()]));
     $zip->addFromString('data.json', json_encode(['images' => array_map(
         fn (string $name): array => ['path' => $name, 'mime' => 'image/png', 'size' => 1, 'owner' => null, 'created_at' => null, 'updated_at' => null],
         array_keys($images),

@@ -2,8 +2,12 @@
 
 namespace App\Actions\Backup;
 
+use App\Actions\Zenn\WithZennSyncLock;
 use App\Models\ArticleImage;
 use App\Models\User;
+use App\Support\RepositoryImageStore;
+use Closure;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use JsonException;
@@ -13,13 +17,16 @@ use ZipArchive;
 /**
  * Restores a CreateArticleBackup archive. Articles are matched by sync_id: an
  * existing article is overwritten (translations, revisions and reviews are
- * replaced wholesale), anything else is created. Nothing is ever deleted, and
- * the whole restore runs in one transaction.
+ * replaced wholesale), anything else is created. Articles outside the archive
+ * are kept. Sandbox source links are restored only in their original environment.
+ * The whole restore runs in one transaction.
  */
 class RestoreArticleBackup
 {
+    public function __construct(private WithZennSyncLock $withSyncLock) {}
+
     /**
-     * @return array{articles: int, created: int, updated: int, namespaces: int, images: int}
+     * @return array{articles: int, created: int, updated: int, namespaces: int, images: int, skipped_github_sources: int}
      */
     public function __invoke(string $path, ?User $fallbackUser = null): array
     {
@@ -34,7 +41,9 @@ class RestoreArticleBackup
         }
 
         try {
+            $manifest = $this->readManifest($zip);
             $data = $this->readData($zip);
+            $restoreSources = hash_equals(CreateArticleBackup::sourceId(), $manifest['source_id']);
             $fallbackUser ??= User::query()->orderBy('id')->first();
 
             if (! $fallbackUser instanceof User) {
@@ -45,35 +54,61 @@ class RestoreArticleBackup
             $resolveUser = fn (?string $username): int => $users->get($username, $fallbackUser->id);
 
             $images = $this->verifiedImages($zip, $data['images'] ?? []);
+            $repositoryImages = $this->verifiedRepositoryImages($zip, $data['repository_images'] ?? []);
             $writtenImages = [];
 
             try {
-                return DB::transaction(function () use ($zip, $data, $users, $resolveUser, $images, &$writtenImages): array {
-                    $namespaceIds = $this->restoreNamespaces($data['namespaces'] ?? []);
-                    $counts = ['articles' => 0, 'created' => 0, 'updated' => 0];
+                return ($this->withSyncLock)(function (Closure $check) use ($zip, $data, $users, $resolveUser, $images, $repositoryImages, $restoreSources, &$writtenImages): array {
+                    try {
+                        return DB::transaction(function () use ($zip, $data, $users, $resolveUser, $images, $repositoryImages, $restoreSources, $check, &$writtenImages): array {
+                            DB::table('users')->orderBy('id')->lockForUpdate()->get(['id']);
+                            DB::table('article_github_sources')->orderBy('id')->lockForUpdate()->get(['id']);
+                            DB::table('articles')->orderBy('id')->lockForUpdate()->get(['id']);
+                            foreach ($data['articles'] ?? [] as $article) {
+                                $check();
+                                $existingId = DB::table('articles')->where('sync_id', $article['sync_id'])->value('id');
+                                $this->assertNoConflicts($article, $existingId);
+                                $this->assertSourceCanBeRestored($article, $existingId, $restoreSources);
+                            }
+                            $this->assertRepositoryImagesDoNotConflict($repositoryImages);
+                            $namespaceIds = $this->restoreNamespaces($data['namespaces'] ?? []);
+                            $counts = ['articles' => 0, 'created' => 0, 'updated' => 0, 'skipped_github_sources' => 0];
 
-                    foreach ($data['articles'] ?? [] as $article) {
-                        $existingId = DB::table('articles')->where('sync_id', $article['sync_id'])->value('id');
+                            foreach ($data['articles'] ?? [] as $article) {
+                                $existingId = DB::table('articles')->where('sync_id', $article['sync_id'])->value('id');
 
-                        $this->assertNoConflicts($article, $existingId);
+                                $check();
+                                $this->assertNoConflicts($article, $existingId);
+                                $this->assertSourceCanBeRestored($article, $existingId, $restoreSources);
 
-                        $articleId = $this->storeArticle($article, $existingId, $namespaceIds, $resolveUser);
-                        $this->storeHistory($articleId, $article, fn (?string $username): ?int => $users->get($username));
+                                $articleId = $this->storeArticle($article, $existingId, $namespaceIds, $resolveUser, $restoreSources);
+                                $this->storeHistory($articleId, $article, fn (?string $username): ?int => $users->get($username));
 
-                        $counts['articles']++;
-                        $counts[$existingId === null ? 'created' : 'updated']++;
+                                $counts['articles']++;
+                                $counts[$existingId === null ? 'created' : 'updated']++;
+                                if (! $restoreSources && ($article['github_source'] ?? null) !== null) {
+                                    $counts['skipped_github_sources']++;
+                                }
+                            }
+
+                            $imageCount = $this->restoreImages($zip, $images, $resolveUser, $writtenImages, $check);
+                            $this->restoreRepositoryImages($zip, $repositoryImages, $writtenImages, $check);
+                            $check();
+
+                            return [
+                                ...$counts,
+                                'namespaces' => count($namespaceIds),
+                                'images' => $imageCount + count($repositoryImages),
+                            ];
+                        });
+                    } catch (\Throwable $exception) {
+                        $this->discardWrittenImages($writtenImages);
+
+                        throw $exception;
                     }
-
-                    return [
-                        ...$counts,
-                        'namespaces' => count($namespaceIds),
-                        'images' => $this->restoreImages($zip, $images, $resolveUser, $writtenImages),
-                    ];
                 });
-            } catch (\Throwable $exception) {
-                $this->discardWrittenImages($writtenImages);
-
-                throw $exception;
+            } catch (LockTimeoutException $exception) {
+                throw new RuntimeException('GitHub synchronization or another backup operation is in progress. Please try again.', previous: $exception);
             }
         } finally {
             $zip->close();
@@ -108,7 +143,10 @@ class RestoreArticleBackup
         $manifest = $this->readJson($zip, CreateArticleBackup::MANIFEST_FILE);
 
         if (($manifest['format'] ?? null) !== CreateArticleBackup::FORMAT) {
-            throw new RuntimeException('Unsupported backup format.');
+            throw new RuntimeException('Unsupported backup format. Create a new backup with the current version of InkRail.');
+        }
+        if (! is_string($manifest['source_id'] ?? null) || preg_match('/\A[0-9a-f]{64}\z/', $manifest['source_id']) !== 1) {
+            throw new RuntimeException('The backup archive is missing its source environment identifier.');
         }
 
         return $manifest;
@@ -202,12 +240,107 @@ class RestoreArticleBackup
         }
     }
 
+    /** @param array<string, mixed> $article */
+    private function assertSourceCanBeRestored(array $article, ?int $existingId, bool $restoreSources): void
+    {
+        if (! $restoreSources && $existingId !== null && DB::table('article_github_sources')->where('article_id', $existingId)->exists()) {
+            throw new RuntimeException('A Sandbox document is already linked to GitHub in this environment. A backup from another environment cannot overwrite it; nothing was restored.');
+        }
+        $source = $article['github_source'] ?? null;
+        if ($source === null) {
+            return;
+        }
+        if ($article['namespace'] !== 'sandbox' || ! is_array($source)
+            || ! is_string($source['repository'] ?? null) || preg_match('/\A[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\z/', $source['repository']) !== 1
+            || ! is_string($source['branch'] ?? null) || $source['branch'] === ''
+            || ! is_string($source['path'] ?? null) || ! str_starts_with($source['path'], 'sandbox/') || ! str_ends_with($source['path'], '.md')
+            || preg_match('/[\\\\\x00-\x1f\x7f]/', $source['path']) === 1 || array_intersect(explode('/', $source['path']), ['', '.', '..']) !== []
+            || ! is_string($source['remote_sha'] ?? null) || preg_match('/\A[0-9a-f]{40}\z/', $source['remote_sha']) !== 1
+            || ! is_string($source['local_fingerprint'] ?? null) || preg_match('/\A[0-9a-f]{64}\z/', $source['local_fingerprint']) !== 1
+            || ! array_key_exists('frontmatter', $source) || ($source['frontmatter'] !== null && ! is_array($source['frontmatter']))) {
+            throw new RuntimeException('The backup archive contains invalid Sandbox GitHub source metadata.');
+        }
+        if (! $restoreSources) {
+            return;
+        }
+        $linked = DB::table('article_github_sources')->where('repository', $source['repository'])->where('branch', $source['branch'])->where('path', $source['path'])
+            ->when($existingId !== null, fn ($query) => $query->where('article_id', '!=', $existingId))->exists();
+        $regular = DB::table('articles')->where('zenn_repository', $source['repository'])->where('zenn_branch', $source['branch'])->where('zenn_path', $source['path'])->exists();
+        if ($linked || $regular) {
+            throw new RuntimeException("Sandbox GitHub path \"{$source['path']}\" is already linked to a different article. Its sync ID was not changed; nothing was restored.");
+        }
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $images
+     * @return list<array<string, mixed>>
+     */
+    private function verifiedRepositoryImages(ZipArchive $zip, array $images): array
+    {
+        $seen = [];
+        foreach ($images as $image) {
+            $path = $image['path'] ?? null;
+            if (! is_string($path) || ! RepositoryImageStore::isValidPath($path) || isset($seen[$path])
+                || ! is_string($image['sha256'] ?? null) || preg_match('/\A[0-9a-f]{64}\z/', $image['sha256']) !== 1) {
+                throw new RuntimeException('The backup archive contains an invalid repository image path or checksum.');
+            }
+            $seen[$path] = true;
+            $stat = $zip->statName(CreateArticleBackup::REPOSITORY_FILES_DIRECTORY.$path);
+            if ($stat === false || $stat['size'] > RepositoryImageStore::MAX_BYTES) {
+                throw new RuntimeException("The backup archive is missing the repository image file {$path}, or it is too large.");
+            }
+            $bytes = $zip->getFromName(CreateArticleBackup::REPOSITORY_FILES_DIRECTORY.$path);
+            $mime = ['png' => 'image/png', 'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'gif' => 'image/gif', 'webp' => 'image/webp'][pathinfo($path, PATHINFO_EXTENSION)];
+            $info = is_string($bytes) ? @getimagesizefromstring($bytes) : false;
+            if ($info === false || $info['mime'] !== $mime || ! hash_equals($image['sha256'], hash('sha256', $bytes)) || strlen($bytes) !== ($image['size'] ?? null)) {
+                throw new RuntimeException("The repository image file {$path} in the backup archive is damaged.");
+            }
+        }
+
+        return $images;
+    }
+
+    /** @param list<array<string, mixed>> $images */
+    private function assertRepositoryImagesDoNotConflict(array $images): void
+    {
+        $disk = Storage::disk(ArticleImage::disk());
+        foreach ($images as $image) {
+            $storagePath = RepositoryImageStore::DIRECTORY.'/'.$image['path'];
+            if ($disk->exists($storagePath) && ! hash_equals($image['sha256'], hash('sha256', $disk->get($storagePath)))) {
+                throw new RuntimeException("Repository image \"{$image['path']}\" already exists with different content; nothing was restored.");
+            }
+        }
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $images
+     * @param  list<string>  $written
+     */
+    private function restoreRepositoryImages(ZipArchive $zip, array $images, array &$written, Closure $check): void
+    {
+        $disk = Storage::disk(ArticleImage::disk());
+        foreach ($images as $image) {
+            $check();
+            $path = RepositoryImageStore::DIRECTORY.'/'.$image['path'];
+            if (! $disk->exists($path)) {
+                $bytes = $zip->getFromName(CreateArticleBackup::REPOSITORY_FILES_DIRECTORY.$image['path']);
+                if ($bytes === false) {
+                    throw new RuntimeException('A repository image file could not be read from the backup.');
+                }
+                $written[] = $path;
+                if (! $disk->put($path, $bytes)) {
+                    throw new RuntimeException('A repository image file could not be restored.');
+                }
+            }
+        }
+    }
+
     /**
      * @param  array<string, mixed>  $article
      * @param  array<string, int>  $namespaceIds
      * @param  callable(?string): int  $resolveUser
      */
-    private function storeArticle(array $article, ?int $existingId, array $namespaceIds, callable $resolveUser): int
+    private function storeArticle(array $article, ?int $existingId, array $namespaceIds, callable $resolveUser, bool $restoreSources): int
     {
         $values = [
             'slug' => $article['slug'],
@@ -235,9 +368,12 @@ class RestoreArticleBackup
             }
             DB::table('articles')->where('id', $existingId)->update($values);
         }
-        if ($article['namespace'] === 'sandbox' && is_array($article['github_source'] ?? null)) {
+        if ($restoreSources && $article['namespace'] === 'sandbox' && is_array($article['github_source'] ?? null)) {
             $source = array_intersect_key($article['github_source'], array_flip(['repository', 'branch', 'path', 'remote_sha', 'local_fingerprint', 'frontmatter', 'created_at', 'updated_at']));
+            $source['frontmatter'] = $source['frontmatter'] === null ? null : json_encode($source['frontmatter'], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
             DB::table('article_github_sources')->updateOrInsert(['article_id' => $existingId], $source);
+        } elseif ($restoreSources && $article['namespace'] === 'sandbox') {
+            DB::table('article_github_sources')->where('article_id', $existingId)->delete();
         }
 
         return $existingId;
@@ -344,16 +480,19 @@ class RestoreArticleBackup
      * @param  callable(?string): int  $resolveUser
      * @param  list<string>  $written
      */
-    private function restoreImages(ZipArchive $zip, array $images, callable $resolveUser, array &$written): int
+    private function restoreImages(ZipArchive $zip, array $images, callable $resolveUser, array &$written, Closure $check): int
     {
         $disk = Storage::disk(ArticleImage::disk());
 
         foreach ($images as $image) {
+            $check();
             $imagePath = ArticleImage::DIRECTORY.'/'.$image['path'];
 
             if (! $disk->exists($imagePath)) {
-                $disk->put($imagePath, (string) $zip->getFromName(CreateArticleBackup::FILES_DIRECTORY.$image['path']));
                 $written[] = $imagePath;
+                if (! $disk->put($imagePath, (string) $zip->getFromName(CreateArticleBackup::FILES_DIRECTORY.$image['path']))) {
+                    throw new RuntimeException('An image file could not be restored.');
+                }
             }
 
             DB::table('article_images')->updateOrInsert(['path' => $image['path']], [
