@@ -339,5 +339,6 @@
     "The backup must be 100 MiB or smaller.": "バックアップは100 MiB 以下にしてください。",
     "Download Markdown": "Markdown をダウンロード",
     "View source": "ソースを表示",
-    "RSS feed": "RSS フィード"
+    "RSS feed": "RSS フィード",
+    "Drop a cover image here or choose a file.": "アイキャッチ画像をここにドロップするか、ファイルを選択してください。"
 }

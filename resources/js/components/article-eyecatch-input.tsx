@@ -22,6 +22,9 @@ export default function ArticleEyecatchInput({
     const { __ } = lang();
     const [value, setValue] = useState(defaultValue ?? '');
     const fileInput = useRef<HTMLInputElement>(null);
+    const dragDepth = useRef(0);
+    const [dragging, setDragging] = useState(false);
+    const uploading = useRef(false);
     const upload = useHttp<{ image: File | null }, { url: string }>({
         image: null,
     });
@@ -32,6 +35,8 @@ export default function ArticleEyecatchInput({
         );
 
     async function uploadImage(file: File) {
+        if (uploading.current) return;
+        uploading.current = true;
         onUploadingChange(true);
         upload.transform(() => ({ image: file }));
         try {
@@ -42,6 +47,7 @@ export default function ArticleEyecatchInput({
                 upload.errors.image ?? __('Could not upload the image.'),
             );
         } finally {
+            uploading.current = false;
             onUploadingChange(false);
         }
     }
@@ -49,17 +55,44 @@ export default function ArticleEyecatchInput({
     return (
         <div className="grid max-w-3xl gap-3">
             <Label htmlFor="eyecatch">{__('Cover image')}</Label>
-            <div className="flex flex-wrap gap-2">
-                <Input
-                    id="eyecatch"
-                    name="eyecatch"
-                    value={value}
-                    onChange={(event) => setValue(event.target.value)}
-                    placeholder="image.png"
-                    aria-invalid={Boolean(error)}
-                    aria-describedby="eyecatch-help eyecatch-error"
-                    className="min-w-48 flex-1"
-                />
+            <Input
+                id="eyecatch"
+                name="eyecatch"
+                value={value}
+                onChange={(event) => setValue(event.target.value)}
+                placeholder="image.png"
+                aria-invalid={Boolean(error)}
+                aria-describedby="eyecatch-help eyecatch-error"
+                className="min-w-48 flex-1"
+            />
+            <div
+                className={`flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-5 py-4 text-center transition-colors ${dragging ? 'border-primary bg-primary/10 ring-4 ring-primary/10' : 'border-muted-foreground/35 bg-muted/20 hover:border-primary/60 hover:bg-muted/40'}`}
+                onDragEnter={(event) => {
+                    event.preventDefault();
+                    if (
+                        uploading.current ||
+                        !event.dataTransfer.types.includes('Files')
+                    )
+                        return;
+                    dragDepth.current++;
+                    setDragging(true);
+                }}
+                onDragOver={(event) => event.preventDefault()}
+                onDragLeave={() => {
+                    dragDepth.current = Math.max(0, dragDepth.current - 1);
+                    if (dragDepth.current === 0) setDragging(false);
+                }}
+                onDrop={(event) => {
+                    event.preventDefault();
+                    dragDepth.current = 0;
+                    setDragging(false);
+                    const file = event.dataTransfer.files[0];
+                    if (file) void uploadImage(file);
+                }}
+            >
+                <p className="text-sm font-medium">
+                    {__('Drop a cover image here or choose a file.')}
+                </p>
                 <Button
                     type="button"
                     variant="outline"
