@@ -116,7 +116,11 @@ class ArticleBackupController extends Controller
         }
 
         ($this->logSecurityEvent)('articles.backup_restored', $request->user(), ['filename' => $filename, 'articles' => $result['articles']]);
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Restored :count article(s) from the backup.', ['count' => $result['articles']])]);
+        $message = __('Restored :count article(s) from the backup.', ['count' => $result['articles']]);
+        if ($result['skipped_github_sources'] > 0) {
+            $message .= ' '.__(':count Sandbox GitHub source link(s) from another environment were not restored.', ['count' => $result['skipped_github_sources']]);
+        }
+        Inertia::flash('toast', ['type' => $result['skipped_github_sources'] > 0 ? 'warning' : 'success', 'message' => $message]);
 
         return to_route('dashboard');
     }

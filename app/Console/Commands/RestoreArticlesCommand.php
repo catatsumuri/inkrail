@@ -52,6 +52,9 @@ class RestoreArticlesCommand extends Command
         }
 
         $this->info("Restored {$result['articles']} article(s) ({$result['created']} created, {$result['updated']} updated), {$result['namespaces']} namespace(s) and {$result['images']} image(s).");
+        if ($result['skipped_github_sources'] > 0) {
+            $this->warn("{$result['skipped_github_sources']} Sandbox GitHub source link(s) from another environment were not restored.");
+        }
 
         return self::SUCCESS;
     }

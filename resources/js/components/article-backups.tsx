@@ -65,6 +65,11 @@ function RestoreDialog({ filename }: { filename: string }) {
                                 'Articles in the backup overwrite the articles they were saved from, matched by their sync ID rather than the database ID, including translations and history. Nothing is deleted, and articles not in the backup are kept.',
                             )}
                         </p>
+                        <p>
+                            {__(
+                                'Sandbox GitHub links are restored only in the environment that created the backup. Backups from another environment restore content, history and images without those links. Conflicting links or repository images stop the entire restore.',
+                            )}
+                        </p>
                     </div>
                 </DialogDescription>
                 <Form

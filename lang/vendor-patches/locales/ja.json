@@ -351,5 +351,7 @@
     "The GitHub file is absent, but local deletion could not be completed. Retry to finish deleting the local document.": "GitHubのファイルは存在しませんが、ローカル文書の削除を完了できませんでした。再試行して削除を完了してください。",
     "GitHub could not confirm the operation. The local document was kept. Reload and retry; the remote file may already be deleted.": "GitHubでの操作結果を確認できませんでした。ローカル文書は保持しています。GitHub側では削除済みの可能性があります。再読み込みしてから再試行してください。",
     "Deletion could not be completed. The local document was kept.": "削除を完了できませんでした。ローカル文書は保持しています。",
-    "Delete document and GitHub source": "文書とGitHubの元ファイルを削除する"
+    "Delete document and GitHub source": "文書とGitHubの元ファイルを削除する",
+    "Sandbox GitHub links are restored only in the environment that created the backup. Backups from another environment restore content, history and images without those links. Conflicting links or repository images stop the entire restore.": "SandboxのGitHub連携は、バックアップを作成した環境でのみ復元します。別環境のバックアップからは連携を引き継がず、本文・履歴・画像を復元します。連携先やリポジトリ画像が衝突した場合、復元全体を中止します。",
+    ":count Sandbox GitHub source link(s) from another environment were not restored.": "別環境のSandbox GitHub連携 :count 件は引き継ぎませんでした。"
 }
