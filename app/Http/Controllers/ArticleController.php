@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\DeleteSandboxDocumentWithSource;
 use App\Models\Article;
 use App\Models\ArticleNamespace;
 use App\Support\ArticleEyecatch;
@@ -74,13 +75,20 @@ class ArticleController extends Controller
         return to_route($request->boolean('continue_editing') ? 'articles.edit' : 'articles.show', $article);
     }
 
-    public function show(Article $article): Response
+    public function show(Article $article, DeleteSandboxDocumentWithSource $deleteSource): Response
     {
         Gate::authorize('view', $article);
+
+        $source = $article->isSandbox() && Gate::allows('delete', $article) && Gate::allows('import-from-zenn')
+            ? DB::table('article_github_sources')->where('article_id', $article->id)->first() : null;
 
         return Inertia::render('articles/show', [
             'article' => [...$article->only(['id', 'title', 'content', 'slug', 'is_published', 'published_at', 'edit_version', 'topics', 'eyecatch', 'eyecatch_url']), 'is_sandbox' => $article->isSandbox(), 'publication_status' => $article->publicationStatus(), ...$article->languageMetadata(), 'translationStatus' => $article->translationStatus(), 'translations' => $article->translations->mapWithKeys(fn ($translation) => [$translation->locale => $translation->only(['title', 'content'])])->all()],
             'canPushToZenn' => Gate::allows('push-to-zenn', $article),
+            'githubSourceDeletion' => $source === null ? null : [
+                'repository' => $source->repository, 'branch' => $source->branch, 'path' => $source->path,
+                'confirmation' => $deleteSource->confirmation($article, $source),
+            ],
         ]);
     }
 
@@ -124,11 +132,19 @@ class ArticleController extends Controller
         return to_route($request->boolean('continue_editing') ? 'articles.edit' : 'articles.show', $article);
     }
 
-    public function destroy(Article $article): RedirectResponse
+    public function destroy(Request $request, Article $article, DeleteSandboxDocumentWithSource $deleteSource): RedirectResponse
     {
         Gate::authorize('delete', $article);
+        $request->validate([
+            'delete_github_source' => ['sometimes', 'boolean'],
+            'source_confirmation' => [Rule::requiredIf($request->boolean('delete_github_source')), 'nullable', 'string', 'size:64'],
+        ]);
         $isSandbox = $article->isSandbox();
-        $article->delete();
+        if ($request->boolean('delete_github_source')) {
+            $deleteSource($request->user(), $article, $request->string('source_confirmation')->toString());
+        } else {
+            $article->delete();
+        }
 
         return to_route('articles.index', $isSandbox ? ['namespace' => 'sandbox'] : []);
     }

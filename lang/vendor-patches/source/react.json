@@ -341,5 +341,16 @@
     "Download Markdown": "Download Markdown",
     "View source": "View source",
     "RSS feed": "RSS feed",
-    "Drop a cover image here or choose a file.": "Drop a cover image here or choose a file."
+    "Drop a cover image here or choose a file.": "Drop a cover image here or choose a file.",
+    "Also delete the source file from GitHub": "Also delete the source file from GitHub",
+    "Only this Markdown file will be deleted. Shared images and other articles will be kept. If the file is already absent, only the local document will be deleted. GitHub commit history will remain.": "Only this Markdown file will be deleted. Shared images and other articles will be kept. If the file is already absent, only the local document will be deleted. GitHub commit history will remain.",
+    "The document or GitHub link has changed. Reload before deleting.": "The document or GitHub link has changed. Reload before deleting.",
+    "The linked GitHub source cannot be safely deleted with the current configuration.": "The linked GitHub source cannot be safely deleted with the current configuration.",
+    "This GitHub file is also linked to a regular article. Deletion was stopped.": "This GitHub file is also linked to a regular article. Deletion was stopped.",
+    "The GitHub file has changed since import. Import again before deleting.": "The GitHub file has changed since import. Import again before deleting.",
+    "GitHub did not confirm the deletion. The local document was kept. Reload and retry.": "GitHub did not confirm the deletion. The local document was kept. Reload and retry.",
+    "The GitHub file is absent, but local deletion could not be completed. Retry to finish deleting the local document.": "The GitHub file is absent, but local deletion could not be completed. Retry to finish deleting the local document.",
+    "GitHub could not confirm the operation. The local document was kept. Reload and retry; the remote file may already be deleted.": "GitHub could not confirm the operation. The local document was kept. Reload and retry; the remote file may already be deleted.",
+    "Deletion could not be completed. The local document was kept.": "Deletion could not be completed. The local document was kept.",
+    "Delete document and GitHub source": "Delete document and GitHub source"
 }
