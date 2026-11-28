@@ -15,6 +15,8 @@ use Illuminate\Foundation\Bootstrap\LoadConfiguration;
  * right after configuration loads and before service providers register.
  *
  * Declare `protected array $disabledFeatures = ['passkeys'];` on the test.
+ * Optional `$enabledFeatures` flags are explicitly enabled independently of
+ * the developer's environment before the requested flags are disabled.
  */
 trait BootsWithFeaturesDisabled
 {
@@ -25,6 +27,10 @@ trait BootsWithFeaturesDisabled
         $app->afterBootstrapping(
             LoadConfiguration::class,
             function ($app) {
+                foreach ($this->enabledFeatures ?? [] as $flag) {
+                    $app['config']->set("features.{$flag}", true);
+                }
+
                 foreach ($this->disabledFeatures as $flag) {
                     $app['config']->set("features.{$flag}", false);
                 }

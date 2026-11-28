@@ -13,6 +13,8 @@ class PasswordConfirmationDisabledTest extends TestCase
 {
     use BootsWithFeaturesDisabled, RefreshDatabase;
 
+    protected array $enabledFeatures = ['two_factor', 'passkeys'];
+
     protected array $disabledFeatures = ['password_confirmation'];
 
     public function test_session_management_routes_do_not_exist_when_disabled(): void
@@ -36,16 +38,22 @@ class PasswordConfirmationDisabledTest extends TestCase
 
     public function test_two_factor_setup_does_not_require_password_confirmation(): void
     {
-        $this->actingAs(User::factory()->create())
-            ->postJson('/user/two-factor-authentication')
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->postJson(route('two-factor.enable'))
             ->assertOk();
+
+        $this->assertNotNull($user->fresh()->two_factor_secret);
     }
 
     public function test_passkey_management_does_not_require_password_confirmation(): void
     {
         $this->actingAs(User::factory()->create())
-            ->getJson('/user/passkeys/options')
-            ->assertSuccessful();
+            ->getJson(route('passkey.registration-options'))
+            ->assertOk()
+            ->assertJsonStructure(['options' => ['challenge']])
+            ->assertSessionHas('passkey.registration_options');
     }
 
     public function test_pages_report_password_confirmation_as_disabled(): void
